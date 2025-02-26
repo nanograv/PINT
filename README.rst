@@ -19,7 +19,11 @@ PINT
 
 .. image:: https://img.shields.io/badge/arXiv-2012.00074-red
    :target: https://arxiv.org/abs/2012.00074
-   :alt: PINT Paper on arXiv
+   :alt: PINT Paper 1 on arXiv
+
+.. image:: https://img.shields.io/badge/arXiv-2405.01977-red
+   :target: https://arxiv.org/abs/2405.01977
+   :alt: PINT Paper 2 on arXiv
 
 .. image:: https://img.shields.io/badge/ascl-1902.007-blue.svg?colorB=262255
    :target: https://www.ascl.net/1902.007
@@ -58,8 +62,8 @@ IMPORTANT Notes!
 PINT has a naming conflict with the `pint <https://pypi.org/project/Pint/>`_ units package available from PyPI (i.e. using pip) and conda.  
 Do **NOT** ``pip install pint`` or ``conda install pint``!  See below!
 
-PINT requires ``longdouble`` (80- or 128-bit floating point) arithmetic within ``numpy``, which is currently not supported natively on M1/M2 Macs. 
-However, you can use an x86 version of ``conda`` even on an M1/M2 Mac (which will run under Rosetta emulation): 
+PINT requires ``longdouble`` (80- or 128-bit floating point) arithmetic within ``numpy``, which is currently not supported natively on M1/M2/M3 Macs. 
+However, you can use an x86 version of ``conda`` even on an M1/M2/M3 Mac (which will run under Rosetta emulation): 
 see `instructions for using Apple Intel packages on Apple 
 silicon <https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon>`_. 
 It's possible to have `parallel versions of conda for x86 and 
@@ -121,16 +125,18 @@ If you have tasks that aren't covered in the material above, you can
 email pint@nanograv.org or one of the people below:
 
 * Scott Ransom (sransom@nrao.edu)
-* Paul Ray (Paul.Ray@nrl.navy.mil)
+* Paul Ray (paul.s.ray3.civ@us.navy.mil)
 * David Kaplan (kaplan@uwm.edu)  
+* Abhimanyu Susobhanan (abhimanyu.susobhanan@nanograv.org)
 
 Want to do something new? Submit a github `issue <https://github.com/nanograv/PINT/issues>`_.
   
 .. _documentation:   http://nanograv-pint.readthedocs.io/en/latest/
 
-And for more details, please read and cite(!) the PINT paper_.
+And for more details, please read and cite(!) the PINT paper_1_ and paper_2_.
 
-.. _paper:   https://ui.adsabs.harvard.edu/abs/2021ApJ...911...45L/abstract
+.. _paper_1:   https://ui.adsabs.harvard.edu/abs/2021ApJ...911...45L/abstract
+.. _paper_2:   https://ui.adsabs.harvard.edu/abs/2024ApJ...971..150S/abstract
 
 Articles that cite the PINT paper can be found in an ADS `Library <https://ui.adsabs.harvard.edu/search/q=citations(bibcode%3A2021ApJ...911...45L)&sort=date%20desc%2C%20bibcode%20desc&p_=0>`_.
 A list of software packages that use PINT can be found `here <https://nanograv-pint.readthedocs.io/en/latest/dependent-packages.html>`_.

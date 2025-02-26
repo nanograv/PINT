@@ -9,32 +9,12 @@ the released changes.
 
 ## Unreleased
 ### Changed
-- Moved `get_derived_params` to `timing_model`
+- In `Residuals`, store correlated noise amplitudes instead of noise residuals. `Residuals.noise_resids` is now a `@property`.
 ### Added
-- Added numdifftools to setup.cfg to match requirements.txt
-- Documentation: Added `convert_parfile` to list of command-line tools in RTD
-- DDH binary model
-- function `pint.utils.xxxselections` to do DMX-style selections for any parameter name
-- Plot model DM in pintk
-- More tests for pintk
-- Maximum likelihood fitting for ECORR
-    - `is_time_correlated` class attribute in correlated `NoiseComponent`s
-    - `has_time_correlated_errors` property in `TimingModel`
-    - `Residuals._calc_ecorr_chi2()` method for fast chi2 computation using Sherman-Morrison identity
-    - `pint.utils.sherman_morrison_dot` and `pint.utils.woodbury_dot`
-    - Refactored repeated code out of `Residuals.calc_phase_mean` and `Residuals.calc_time_mean`
-    - Simplified `Residuals._calc_gls_chi2()` so that it uses Woodbury identity directly
-    - Refactored WLS chi2 code out of `Residuals.calc_chi2()` into a new function `Residuals._calc_wls_chi2()`
-    - `Residuals.d_lnlikelihood_d_whitenoise_param` will throw a `NotImplementedError` when correlated noise is present.
-    - `DownhillFitter._fit_noise()` doesn't use derivatives when correlated noise is present.
-    - Documentation: Noise fitting example notebook.
+- Simulate correlated DM noise for wideband TOAs
+- Type hints in `pint.models.timing_model`
 ### Fixed
-- `MCMC_walkthrough` notebook now runs
-- Fixed runtime data README 
-- Fixed `derived_params` when OMDOT has 0 uncertainty
-- `model.find_empty_masks` will now also look at DMX and SWX parameters
-- Fixed `make_fake_toas_fromtim`
-- Better exceptions for unsupported/unimplemented binary models (BTX, MSS, etc.)
-- Use `Hessian` instead of `Hessdiag` in `DownhillFitter._fit_noise`; compute noise parameter uncertainties only once in `DownhillFitter.fit_toas`.
-- Consistent naming in `TimingModel.get_params_mapping()`
+- Made `TimingModel.is_binary()` more robust. 
 ### Removed
+- Definition of `@cached_property` to support Python<=3.7
+- The broken `data.nanograv.org` URL from the list of solar system ephemeris mirrors

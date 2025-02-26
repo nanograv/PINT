@@ -20,41 +20,42 @@ Active developers are indicated by (*). Authors of the PINT paper are indicated 
 * Akash Anumarlapudi (*)
 * Anne Archibald (#*)
 * Matteo Bachetti (#)
-* Bastian Beischer 
+* Bastian Beranek 
 * Deven Bhakta (*)
 * Chloe Champagne (#)
+* Colin Clark
 * Jonathan Colen (#)
-* Thankful Cromartie 
+* H Thankful Cromartie 
 * Christoph Deil 
 * Paul Demorest (#)
 * Julia Deneva 
 * Justin Ellis 
 * William Fiore (*)
+* Rutger van Haasteren (#*)
 * Fabian Jankowski 
-* Rick Jenet (#)
+* Frederick Jenet (#)
 * Ross Jennings (#*)
-* Luo Jing (#)
+* Jing Luo (#)
 * David Kaplan (*)
+* Marten van Kerkwijk 
 * Matthew Kerr (#*)
 * Michael Lam (#)
 * Bjorn Larsen (*)
 * Sasha Levina 
 * Nikhil Mahajan 
-* Alex McEwen 
+* Alexander McEwen 
 * Patrick O'Neill (*)
 * Tim Pennucci 
 * Camryn Phillips (#)
-* Matt Pitkin 
+* Matthew Pitkin 
 * Scott Ransom (#*)
 * Paul Ray (#*)
 * Brent Shapiro-Albert 
-* Chris Sheehy 
-* Renee Spiewak 
+* Christopher Sheehy 
+* Renée Spiewak 
 * Kevin Stovall (#)
 * Abhimanyu Susobhanan (*)
-* Joe Swiggum (*)
+* Joseph Swiggum (*)
 * Jackson Taylor 
 * Michele Vallisneri 
-* Rutger van Haasteren (#)
-* Marten van Kerkwijk 
 * Josef Zimmerman (#)

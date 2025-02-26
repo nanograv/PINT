@@ -4,12 +4,11 @@ import numpy as np
 from loguru import logger as log
 
 from astropy import units as u
-from pint.models import get_model, get_model_and_toas
+from pint.models import get_model
 from pint.models import model_builder as mb
-from pint.models.timing_model import Component, MissingParameter
+from pint.models.timing_model import MissingParameter
 from pint.fitter import Fitter
 from pint.residuals import Residuals
-from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
 import pint.utils
 from pinttestdata import datadir
@@ -249,8 +248,8 @@ def test_multiple_wavex_unit_conversion():
         wxcoses=[2, 3],
         frozens=False,
     )
-    assert getattr(model, f"WXFREQ_0002").value == freqs[0].to(u.d**-1).value
-    assert getattr(model, f"WXFREQ_0003").value == freqs[1].to(u.d**-1).value
+    assert getattr(model, "WXFREQ_0002").value == freqs[0].to(u.d**-1).value
+    assert getattr(model, "WXFREQ_0003").value == freqs[1].to(u.d**-1).value
 
 
 def test_cos_amp_missing():

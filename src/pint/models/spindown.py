@@ -1,11 +1,13 @@
 """Polynomial pulsar spindown."""
+
 # spindown.py
 # Defines Spindown timing model class
 import astropy.units as u
 import numpy
 
+from pint.exceptions import MissingParameter
 from pint.models.parameter import MJDParameter, prefixParameter
-from pint.models.timing_model import MissingParameter, PhaseComponent
+from pint.models.timing_model import PhaseComponent
 from pint.pulsar_mjd import Time
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
@@ -56,6 +58,7 @@ class Spindown(SpindownBase):
                 description_template=self.F_description,
                 type_match="float",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         # self.add_param(
@@ -75,6 +78,7 @@ class Spindown(SpindownBase):
                 name="PEPOCH",
                 description="Reference epoch for spin-down",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 

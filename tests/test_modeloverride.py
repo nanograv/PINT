@@ -1,7 +1,4 @@
-import contextlib
 import io
-import os
-import time
 import pytest
 
 import astropy.units as u

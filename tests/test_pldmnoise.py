@@ -10,7 +10,6 @@ To do:
     Add test that checks for same results between PINT and enterprise
 """
 
-
 import astropy.units as u
 import contextlib
 import io

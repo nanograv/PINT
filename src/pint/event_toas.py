@@ -17,14 +17,15 @@ The versions that look like ``get_..._TOAs()`` are preferred: the others are ret
 .. autofunction:: pint.event_toas.load_XMM_TOAs(eventname [, minmjd, maxmjd, errors, ephem, planets])
 
 """
+
 import os
 from functools import partial
 
 import astropy.io.fits as pyfits
-from astropy.time import Time
-from astropy.coordinates import EarthLocation
-from astropy import units as u
 import numpy as np
+from astropy import units as u
+from astropy.coordinates import EarthLocation
+from astropy.time import Time
 from loguru import logger as log
 
 import pint.toa as toa
@@ -323,7 +324,6 @@ def get_fits_TOAs(
     ephem=None,
     planets=False,
     include_bipm=False,
-    include_gps=False,
     errors=_default_uncertainty["default"],
 ):
     """
@@ -362,8 +362,6 @@ def get_fits_TOAs(
         Defaults to False.
     include_bipm : bool, optional
         Use TT(BIPM) instead of TT(TAI)
-    include_gps : bool, optional
-        Apply GPS to UTC clock corrections
     errors : astropy.units.Quantity or float, optional
         The uncertainty on the TOA; if it's a float it is assumed to be
         in microseconds
@@ -446,7 +444,6 @@ def get_fits_TOAs(
     return toa.get_TOAs_array(
         t,
         obs,
-        include_gps=include_gps,
         include_bipm=include_bipm,
         planets=planets,
         ephem=ephem,
@@ -528,7 +525,6 @@ def get_event_TOAs(
     ephem=None,
     planets=False,
     include_bipm=False,
-    include_gps=False,
     errors=_default_uncertainty["default"],
 ):
     """
@@ -561,8 +557,6 @@ def get_event_TOAs(
         Defaults to False.
     include_bipm : bool, optional
         Use TT(BIPM) instead of TT(TAI)
-    include_gps : bool, optional
-        Apply GPS to UTC clock corrections
     errors : astropy.units.Quantity or float, optional
         The uncertainty on the TOA; if it's a float it is assumed to be
         in microseconds
@@ -589,7 +583,6 @@ def get_event_TOAs(
         ephem=ephem,
         planets=planets,
         include_bipm=include_bipm,
-        include_gps=include_gps,
         errors=errors,
     )
 

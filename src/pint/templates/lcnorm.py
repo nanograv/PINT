@@ -6,6 +6,7 @@ n-dimensional ball of unit radius.
 
 author: M. Kerr <matthew.kerr@gmail.com>
 """
+
 import numpy as np
 
 # can some of the code be reduced with inheritance here?

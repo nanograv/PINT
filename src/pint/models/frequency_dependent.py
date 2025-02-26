@@ -1,11 +1,13 @@
 """Frequency-dependent delays to model profile evolution."""
+
 from warnings import warn
 
 import astropy.units as u
 import numpy as np
 
+from pint.exceptions import MissingParameter
 from pint.models.parameter import prefixParameter
-from pint.models.timing_model import DelayComponent, MissingParameter
+from pint.models.timing_model import DelayComponent
 
 
 class FD(DelayComponent):
@@ -43,6 +45,7 @@ class FD(DelayComponent):
                 descriptionTplt=self._description_template,
                 # unitTplt=lambda x: "second",
                 type_match="float",
+                convert_tcb2tdb=False,
             )
         )
 

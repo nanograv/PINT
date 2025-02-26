@@ -1,8 +1,9 @@
 """Kopeikin corrected DD model."""
 
+import warnings
+
 import astropy.units as u
 import numpy as np
-import warnings
 
 from .DD_model import DDmodel
 
@@ -518,9 +519,7 @@ class DDKmodel(DDmodel):
         PX_kpc = self.PX.to(u.kpc, equivalencies=u.parallax())
         kom_projection = self.delta_I0() * self.cos_KOM + self.delta_J0() * self.sin_KOM
         d_kin_d_T0 = self.d_kin_d_par("T0")
-        d_delta_omega_d_T0 = (
-            cos_kin / sin_kin**2 / PX_kpc * d_kin_d_T0 * kom_projection
-        )
+        d_delta_omega_d_T0 = cos_kin / sin_kin**2 / PX_kpc * d_kin_d_T0 * kom_projection
         return d_delta_omega_d_T0.to(
             self.OM.unit / self.T0.unit, equivalencies=u.dimensionless_angles()
         )

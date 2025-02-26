@@ -12,7 +12,6 @@ from astropy import units as u
 
 import pint.models
 import pint.scripts.fermiphase as fermiphase
-import pint.toa as toa
 from pint.fermi_toas import get_Fermi_TOAs, _default_uncertainty
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pinttestdata import datadir
@@ -63,7 +62,6 @@ def test_process_and_accuracy():
     ts = get_Fermi_TOAs(
         eventfileraw,
         weightcolumn="PSRJ0030+0451",
-        include_gps=False,
         include_bipm=False,
         planets=False,
         ephem="DE405",
@@ -92,7 +90,6 @@ def test_for_toa_errors_default():
     ts = get_Fermi_TOAs(
         eventfileraw,
         weightcolumn="PSRJ0030+0451",
-        include_gps=False,
         include_bipm=False,
         planets=False,
         ephem="DE405",
@@ -106,7 +103,6 @@ def test_for_toa_errors_manual(errors):
     ts = get_Fermi_TOAs(
         eventfileraw,
         weightcolumn="PSRJ0030+0451",
-        include_gps=False,
         include_bipm=False,
         planets=False,
         ephem="DE405",

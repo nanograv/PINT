@@ -1,10 +1,8 @@
 """The DDS model - Damour and Deruelle with alternate Shapiro delay parametrization."""
-import astropy.constants as c
+
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
-
-from pint import Tsun
 
 from .DD_model import DDmodel
 

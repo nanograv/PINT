@@ -1,6 +1,8 @@
 import pytest
 from os import path
 import io
+import numpy as np
+from copy import deepcopy
 
 import astropy.units as u
 import numpy
@@ -8,9 +10,15 @@ import pytest
 from astropy.time import Time
 from pinttestdata import datadir
 
-from pint.observatory import Observatory
+from pint.observatory import (
+    Observatory,
+    get_observatory,
+)
+from pint.exceptions import ClockCorrectionOutOfRange
+
 from pint.observatory.clock_file import ClockFile
 from pint.toa import get_TOAs
+from pint.models import get_model_and_toas
 
 
 class TestClockcorrection:
@@ -30,7 +38,7 @@ class TestClockcorrection:
 
         # Test that an error is raised when time is outside of clock file range.
         # Normally it just prints a warning, but I'm not sure how to test for that, so I set limits="error"
-        with pytest.raises(RuntimeError):
+        with pytest.raises(ClockCorrectionOutOfRange):
             t = cf.time[-1] + 1.0 * u.d
             cf.evaluate(t, limits="error")
 
@@ -67,3 +75,66 @@ def test_clockcorr_roundtrip():
             assert float(line.split()[2]) == 55555
         if line.startswith("toa2"):
             assert float(line.split()[2]) == 55556
+
+
+def test_clk_uncorr():
+    m, t = get_model_and_toas(
+        datadir / "J0030+0451.mdc1.par", datadir / "J0030+0451.mdc1.tim", allow_tcb=True
+    )
+    assert m.CLOCK.value == "UNCORR"
+    assert not t.clock_corr_info["include_bipm"]
+    assert all("clkcorr" not in flags for flags in t.get_flags())
+
+
+toastr = """
+FORMAT 1
+unk 0.000000 60000.000000000 0.000 bat 
+unk 0.000000 60000.000000000 0.000 gbt 
+unk 0.000000 60000.000000000 0.000 coe 
+unk 0.000000 60000.000000000 0.000 coe_gps 
+"""
+
+
+def test_bipm_corr():
+    # Check that requests for BIPM and GPS corrections are respected
+    # And that they are not applied to barycenteric TOAs
+    timfile = io.StringIO(toastr)
+    obs = get_observatory("coe")
+    t = Time(60000.0, scale="utc", format="mjd")
+    bipm_delta = obs.bipm_correction(t, bipm_version="BIPM2021")
+    gps_delta = obs.gps_correction(t)
+    tsYY = get_TOAs(timfile, include_bipm=True, bipm_version="BIPM2021")
+    # No correction should have been applied tot the bat TOA
+    assert np.abs(tsYY.table["mjd"][0].mjd - t.mjd) < 1.0e-10 / 86400.0
+    # COE TOA should have gotten only BIPM correction
+    assert np.abs(tsYY.table["mjd"][2] - t - bipm_delta) < 0.1 * u.ns
+    # COE_GPS TOA should have gotten both GPS and BIPM correction
+    assert np.abs(tsYY.table["mjd"][3] - t - bipm_delta - gps_delta) < 0.1 * u.ns
+
+    # Now check that clock corrections have been backed out before writing to a tim file
+    o = io.StringIO()
+    tsYY.write_TOA_file(o)
+    o.seek(0)
+    lines = [ll.strip() for ll in o.readlines()]
+    for ll in lines:
+        if ll.startswith("C") or ll.startswith("FORMAT"):
+            next
+        else:
+            assert np.abs(float(ll.split()[2]) - 60000.0) < 1.0e-9 / 86400
+
+    # Check that to_TOA_list undoes clock corrections when requested and leaves them in when not
+    tsZZ = deepcopy(tsYY)
+    lst = tsYY.to_TOA_list(undo_clkcorr=False)
+    assert "clkcorr" in lst[1].flags
+
+    lst = tsZZ.to_TOA_list(undo_clkcorr=True)
+    assert "clkcorr" not in lst[1].flags
+
+    # Now make sure BIPM corrections are not applied when not requested
+    timfile = io.StringIO(toastr)
+    tsNN = get_TOAs(timfile, include_bipm=False, bipm_version="BIPM2021")
+    # No correction should have been applied to the bat or the COE TOA
+    # ACTUALLY the GPS to UTC correction should still have been applied for coe.
+    # but at MJD 60000.0 the correction is 0.7 ns so doesn't cause this to fail.
+    assert np.abs(tsNN.table["mjd"][0].mjd - t.mjd) < 1.0e-9 / 86400
+    assert np.abs(tsNN.table["mjd"][2] - t) < 1.0 * u.ns

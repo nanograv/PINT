@@ -1,11 +1,14 @@
 from loguru import logger as log
-from pint.models.astrometry import AstrometryEquatorial, AstrometryEcliptic
 
+import pint.models
+from pint.models.astrometry import AstrometryEcliptic, AstrometryEquatorial
 
 # FIXME: shouldn't this be in the AstrometryEquatorial and AstrometryEcliptic classes?
 
 
-def model_ecliptic_to_equatorial(model, force=False):
+def model_ecliptic_to_equatorial(
+    model: pint.models.TimingModel, force: bool = False
+) -> pint.models.TimingModel:
     r"""Converts Astrometry model component, Ecliptic to Equatorial
 
     Parameters
@@ -55,7 +58,9 @@ def model_ecliptic_to_equatorial(model, force=False):
     return model
 
 
-def model_equatorial_to_ecliptic(model, force=False):
+def model_equatorial_to_ecliptic(
+    model: pint.models.TimingModel, force: bool = False
+) -> pint.models.TimingModel:
     """Converts Astrometry model component, Equatorial to Ecliptic
 
     Parameters
@@ -67,7 +72,7 @@ def model_equatorial_to_ecliptic(model, force=False):
 
     Returns
     -------
-    model
+    model : `pint.models.TimingModel`
         new model with AstrometryEcliptic component
     """
 

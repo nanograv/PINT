@@ -2,8 +2,6 @@ from astropy import units as u, constants as c
 import astropy.time
 import numpy as np
 import io
-import os
-import copy
 import pytest
 
 from pint.models import get_model

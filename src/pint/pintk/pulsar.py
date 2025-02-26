@@ -5,6 +5,7 @@ and will contain the pre/post fit model, toas,
 pre/post fit residuals, and other useful information.
 self.selected_toas = selected toas, self.all_toas = all toas in tim file
 """
+
 import copy
 
 import astropy.units as u
@@ -20,7 +21,7 @@ from pint.simulation import (
 )
 from pint.residuals import Residuals
 from pint.toa import get_TOAs, merge_TOAs
-from pint.utils import FTest
+from pint.utils import FTest, akaike_information_criterion
 
 import pint.logging
 from loguru import logger as log
@@ -29,19 +30,20 @@ from loguru import logger as log
 plot_labels = [
     "pre-fit",
     "post-fit",
+    "WB DM res",
+    "white-res",
+    "WB DM",
+    "model DM",
     "mjd",
     "year",
-    "orbital phase",
-    "serial",
     "day of year",
+    "rounded MJD",
+    "serial",
+    "orbital phase",
+    "elongation",
     "frequency",
     "TOA error",
-    "rounded MJD",
-    "model DM",
-    "WB DM",
-    "WB DM res",
     "WB DM err",
-    "elongation",
 ]
 
 # Some parameters we do not want to add a fitting checkbox for:
@@ -76,14 +78,22 @@ class Pulsar:
 
         self.parfile = parfile
         self.timfile = timfile
-        self.prefit_model = pint.models.get_model(self.parfile)
+        self.prefit_model = pint.models.get_model(
+            self.parfile,
+            allow_tcb=True,
+            allow_T2=True,
+        )
 
         if ephem is not None:
             log.info(
                 f"Overriding model ephemeris {self.prefit_model.EPHEM.value} with {ephem}"
             )
             self.prefit_model.EPHEM.value = ephem
-        self.all_toas = get_TOAs(self.timfile, model=self.prefit_model, usepickle=True)
+        self.all_toas = get_TOAs(
+            self.timfile,
+            model=self.prefit_model,
+            usepickle=True,
+        )
         self.all_toas.table.sort("index")
         self.all_toas.get_clusters(add_column=True)
         # Make sure that if we used a model, that any phase jumps from
@@ -100,8 +110,9 @@ class Pulsar:
 
         self.all_toas.print_summary()
 
-        self.prefit_resids = Residuals(self.all_toas, self.prefit_model)
-        self.selected_prefit_resids = self.prefit_resids
+        self.use_pulse_numbers = False
+        self.fitted = False
+        self.update_resids()
         print(
             "RMS pre-fit PINT residuals are %.3f us\n"
             % self.prefit_resids.rms_weighted().to(u.us).value
@@ -121,11 +132,9 @@ class Pulsar:
         else:
             self.fit_method = fitter
         self.fitter = None
-        self.fitted = False
         self.stashed = None  # for temporarily stashing some TOAs
         self.faketoas1 = None  # for random models
         self.faketoas = None  # for random models
-        self.use_pulse_numbers = False
 
     @property
     def name(self):
@@ -142,7 +151,9 @@ class Pulsar:
         return key in self.prefit_model.params
 
     def reset_model(self):
-        self.prefit_model = pint.models.get_model(self.parfile)
+        self.prefit_model = pint.models.get_model(
+            self.parfile, allow_T2=True, allow_tcb=True
+        )
         self.add_model_params()
         self.postfit_model = None
         self.postfit_resids = None
@@ -163,7 +174,9 @@ class Pulsar:
         self.update_resids()
 
     def resetAll(self):
-        self.prefit_model = pint.models.get_model(self.parfile)
+        self.prefit_model = pint.models.get_model(
+            self.parfile, allow_T2=True, allow_tcb=True
+        )
         self.postfit_model = None
         self.postfit_resids = None
         self.fitted = False
@@ -205,18 +218,36 @@ class Pulsar:
         # update the pre and post fit residuals using all_toas
         track_mode = "use_pulse_numbers" if self.use_pulse_numbers else None
         self.prefit_resids = Residuals(
-            self.all_toas, self.prefit_model, track_mode=track_mode
+            self.all_toas, self.prefit_model, subtract_mean=False, track_mode=track_mode
         )
         if self.selected_toas.ntoas and self.selected_toas.ntoas != self.all_toas.ntoas:
             self.selected_prefit_resids = Residuals(
-                self.selected_toas, self.prefit_model, track_mode=track_mode
+                self.selected_toas,
+                self.prefit_model,
+                subtract_mean=False,
+                track_mode=track_mode,
             )
         else:
             self.selected_prefit_resids = self.prefit_resids
         if self.fitted:
             self.postfit_resids = Residuals(
-                self.all_toas, self.postfit_model, track_mode=track_mode
+                self.all_toas,
+                self.postfit_model,
+                subtract_mean=False,
+                track_mode=track_mode,
             )
+            if (
+                self.selected_toas.ntoas > 0
+                and self.selected_toas.ntoas != self.all_toas.ntoas
+            ):
+                self.selected_postfit_resids = Residuals(
+                    self.selected_toas,
+                    self.postfit_model,
+                    subtract_mean=False,
+                    track_mode=track_mode,
+                )
+            else:
+                self.selected_postfit_resids = self.postfit_resids
 
     def orbitalphase(self):
         """
@@ -470,7 +501,7 @@ class Pulsar:
             self.prefit_resids = self.postfit_resids
             self.add_model_params()
 
-        self.selected_resids = Residuals(self.selected_toas, self.prefit_model)
+        self.update_resids()
 
         wrms = self.selected_resids.rms_weighted()
         print("------------------------------------")
@@ -496,12 +527,7 @@ class Pulsar:
             self.prefit_resids = self.postfit_resids
             self.add_model_params()
 
-        if self.selected_toas.ntoas != self.all_toas.ntoas:
-            self.selected_prefit_resids = Residuals(
-                self.selected_toas, self.prefit_model
-            )
-        else:
-            self.selected_prefit_resids = self.prefit_resids
+        self.update_resids()
 
         # Have to change the fitter for each fit since TOAs and models change
         log.info(f"Using {self.fit_method}")
@@ -533,12 +559,7 @@ class Pulsar:
         self.selected_toas.compute_pulse_numbers(self.postfit_model)
 
         # Compute the residuals using correct pulse numbers
-        self.postfit_resids = Residuals(self.all_toas, self.postfit_model)
-        self.selected_postfit_resids = (
-            self.postfit_resids
-            if np.all(selected)
-            else Residuals(self.selected_toas, self.postfit_model)
-        )
+        self.update_resids()
 
         # Need this since it isn't updated using self.fitter.update_model()
         self.fitter.model.CHI2.value = self.selected_postfit_resids.chi2
@@ -572,6 +593,8 @@ class Pulsar:
                 getattr(pm_no_jumps, param).value = 0.0
                 getattr(pm_no_jumps, param).frozen = True
         self.prefit_resids_no_jumps = Residuals(self.all_toas, pm_no_jumps)
+        self.update_resids()
+        self.prefit_resids_no_jumps = self.prefit_resids
 
         # Store some key params for possible F-testing
         self.lastfit = {
@@ -583,6 +606,11 @@ class Pulsar:
 
         # adds extra prefix params for fitting
         self.add_model_params()
+
+        if not self.all_toas.is_wideband():
+            print(
+                f"Akaike information criterion = {akaike_information_criterion(self.fitter.model, self.fitter.toas)}"
+            )
 
     def random_models(self, selected):
         """Compute and plot random models"""
@@ -626,7 +654,6 @@ class Pulsar:
                 obs="coe",
                 freq=1 * u.THz,  # effectively infinite frequency
                 include_bipm=sim_sel.clock_corr_info["include_bipm"],
-                include_gps=sim_sel.clock_corr_info["include_gps"],
             )
         self.faketoas1.compute_pulse_numbers(self.postfit_model)
         self.faketoas1.get_clusters(add_column=True)

@@ -1,4 +1,5 @@
 """Generate LaTeX summary of a timing model and TOAs."""
+
 from pint.models import (
     TimingModel,
     DispersionDMX,
@@ -30,18 +31,18 @@ def publish_param(param: Parameter):
 def publish(
     model: TimingModel,
     toas: TOAs,
-    include_dmx=False,
-    include_noise=False,
-    include_jumps=False,
-    include_zeros=False,
-    include_fd=False,
-    include_glitches=False,
-    include_swx=False,
-    include_tzr=False,
-    include_prefix_summary=True,
-    include_set_params=True,
-    include_derived_params=True,
-    include_fit_summary=True,
+    include_dmx: bool = False,
+    include_noise: bool = False,
+    include_jumps: bool = False,
+    include_zeros: bool = False,
+    include_fd: bool = False,
+    include_glitches: bool = False,
+    include_swx: bool = False,
+    include_tzr: bool = False,
+    include_prefix_summary: bool = True,
+    include_set_params: bool = True,
+    include_derived_params: bool = True,
+    include_fit_summary: bool = True,
 ):
     """Generate LaTeX summary of a given timing model and TOAs.
 
@@ -264,7 +265,7 @@ def publish(
         for fp in model.free_params:
             param = getattr(model, fp)
             if (
-                all([not isinstance(param._parent, exc) for exc in exclude_components])
+                all(not isinstance(param._parent, exc) for exc in exclude_components)
                 and fp not in exclude_params
                 and (param.value != 0 or include_zeros)
             ):
@@ -280,10 +281,7 @@ def publish(
 
                 if (
                     all(
-                        [
-                            not isinstance(param._parent, exc)
-                            for exc in exclude_components
-                        ]
+                        not isinstance(param._parent, exc) for exc in exclude_components
                     )
                     and param.value is not None
                     and param.frozen

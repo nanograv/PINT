@@ -113,6 +113,7 @@ class TestTOAs:
         assert toas.table["error"].unit == u.us
         assert toas.table["mjd"][0].precision == 9
         assert toas.table["mjd"][0].location is not None
+        assert toas.get_Tspan() == toas.table["mjd"].max() - toas.table["mjd"].min()
 
     def test_multiple_observatories_stay_attached(self):
         obs1 = "gbt"

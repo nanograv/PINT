@@ -1,4 +1,5 @@
 """Tool for selecting a subset of TOAs."""
+
 import numpy as np
 
 __all__ = ["TOASelect"]

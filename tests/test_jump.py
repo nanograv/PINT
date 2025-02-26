@@ -1,4 +1,5 @@
 """Tests for jump model component """
+
 import logging
 import os
 import pytest
@@ -100,7 +101,12 @@ def test_jump_params_to_flags(setup_NGC6440E):
     cp = setup_NGC6440E.m.components["PhaseJump"]
 
     par = p.maskParameter(
-        name="JUMP", key="freq", value=0.2, key_value=[1440, 1700], units=u.s
+        name="JUMP",
+        key="freq",
+        value=0.2,
+        key_value=[1440, 1700],
+        units=u.s,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
     cp.add_param(par, setup=True)
 
@@ -128,7 +134,12 @@ def test_jump_params_to_flags(setup_NGC6440E):
 
     # check that adding overlapping jump works
     par2 = p.maskParameter(
-        name="JUMP", key="freq", value=0.2, key_value=[1600, 1900], units=u.s
+        name="JUMP",
+        key="freq",
+        value=0.2,
+        key_value=[1600, 1900],
+        units=u.s,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )  # frequency range overlaps with par, 2nd jump will have common TOAs w/ 1st
     cp.add_param(par2, setup=True)
     # add flags based off jumps added to model
@@ -146,7 +157,12 @@ def test_multijump_toa(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     cp = setup_NGC6440E.m.components["PhaseJump"]
     par = p.maskParameter(
-        name="JUMP", key="freq", value=0.2, key_value=[1440, 1700], units=u.s
+        name="JUMP",
+        key="freq",
+        value=0.2,
+        key_value=[1440, 1700],
+        units=u.s,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
     selected_toa_ind = [48, 49, 54]
     cp.add_param(par, setup=True)
@@ -171,7 +187,12 @@ def test_unfrozen_jump(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     # this has no TOAs
     par = p.maskParameter(
-        name="JUMP", key="freq", value=0.2, key_value=[3000, 3200], units=u.s
+        name="JUMP",
+        key="freq",
+        value=0.2,
+        key_value=[3000, 3200],
+        units=u.s,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     setup_NGC6440E.m.components["PhaseJump"].add_param(par, setup=True)
     setup_NGC6440E.m.JUMP1.frozen = False
@@ -183,7 +204,12 @@ def test_find_empty_masks(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     # this has no TOAs
     par = p.maskParameter(
-        name="JUMP", key="freq", value=0.2, key_value=[3000, 3200], units=u.s
+        name="JUMP",
+        key="freq",
+        value=0.2,
+        key_value=[3000, 3200],
+        units=u.s,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     setup_NGC6440E.m.components["PhaseJump"].add_param(par, setup=True)
     setup_NGC6440E.m.JUMP1.frozen = False

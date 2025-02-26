@@ -1,15 +1,16 @@
 """Damour and Deruelle binary model."""
-import numpy as np
-from astropy import units as u, constants as c
 
+import numpy as np
+from astropy import constants as c, units as u
+
+import pint.derived_quantities
 from pint import Tsun
-from pint.models.parameter import floatParameter, funcParameter, intParameter
+from pint.models.parameter import floatParameter, funcParameter
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries.DD_model import DDmodel
-from pint.models.stand_alone_psr_binaries.DDS_model import DDSmodel
 from pint.models.stand_alone_psr_binaries.DDGR_model import DDGRmodel
 from pint.models.stand_alone_psr_binaries.DDH_model import DDHmodel
-import pint.derived_quantities
+from pint.models.stand_alone_psr_binaries.DDS_model import DDSmodel
 
 
 # these would be doable with lambda functions
@@ -63,6 +64,7 @@ class BinaryDD(PulsarBinary):
                 value=0.0,
                 units="s",
                 description="DD model aberration parameter A0",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -72,6 +74,7 @@ class BinaryDD(PulsarBinary):
                 value=0.0,
                 units="s",
                 description="DD model aberration parameter B0",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -81,6 +84,7 @@ class BinaryDD(PulsarBinary):
                 value=0.0,
                 units="second",
                 description="Time dilation & gravitational redshift",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -90,6 +94,7 @@ class BinaryDD(PulsarBinary):
                 value=0.0,
                 units="",
                 description="Relativistic deformation of the orbit",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -100,6 +105,7 @@ class BinaryDD(PulsarBinary):
                 value=0.0,
                 units="",
                 description="Relativistic deformation of the orbit",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -173,7 +179,11 @@ class BinaryDDS(BinaryDD):
 
         self.add_param(
             floatParameter(
-                name="SHAPMAX", value=0.0, description="Function of inclination angle"
+                name="SHAPMAX",
+                value=0.0,
+                units=u.dimensionless_unscaled,
+                description="Function of inclination angle",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.remove_param("SINI")
@@ -251,6 +261,7 @@ class BinaryDDGR(BinaryDD):
                 name="MTOT",
                 units=u.M_sun,
                 description="Total system mass in units of Solar mass",
+                tcb2tdb_scale_factor=(c.G / c.c**3),
             )
         )
         self.add_param(
@@ -259,6 +270,7 @@ class BinaryDDGR(BinaryDD):
                 units="deg/year",
                 description="Excess longitude of periastron advance compared to GR",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -269,6 +281,7 @@ class BinaryDDGR(BinaryDD):
                 unit_scale=True,
                 scale_factor=1e-12,
                 scale_threshold=1e-7,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         for p in ["OMDOT", "PBDOT", "GAMMA", "SINI", "DR", "DTH"]:
@@ -404,6 +417,7 @@ class BinaryDDH(BinaryDD):
                 units="second",
                 description="Shapiro delay parameter H3 as in Freire and Wex 2010 Eq(20)",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -413,6 +427,7 @@ class BinaryDDH(BinaryDD):
                 description="Shapiro delay parameter STIGMA as in Freire and Wex 2010 Eq(12)",
                 long_double=True,
                 aliases=["VARSIGMA", "STIG"],
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.remove_param("M2")

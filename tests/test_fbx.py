@@ -1,4 +1,5 @@
 """Various tests to assess the performance of the FBX model."""
+
 import os
 
 import astropy.units as u

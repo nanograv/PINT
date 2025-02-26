@@ -2,8 +2,7 @@
 
 import astropy.constants as const
 import astropy.units as u
-import numpy
-from loguru import logger as log
+import numpy as np
 
 from pint import (
     Tearth,
@@ -68,9 +67,9 @@ class SolarSystemShapiro(DelayComponent):
           psr_dir : unit vector in direction of pulsar
           T_obj : mass of object in seconds (GM/c^3)
         """
-        # TODO: numpy.sum currently loses units in some cases...
-        r = (numpy.sqrt(numpy.sum(obj_pos**2, axis=1))) * obj_pos.unit
-        rcostheta = numpy.sum(obj_pos * psr_dir, axis=1)
+        # TODO: np.sum currently loses units in some cases...
+        r = (np.sqrt(np.sum(obj_pos**2, axis=1))) * obj_pos.unit
+        rcostheta = np.sum(obj_pos * psr_dir, axis=1)
         # This is the 2nd to last term from Eqn 4.6 in Backer &
         # Hellings, ARAA, 1986 with gamma = 1 (as defined by GR).  We
         # have the opposite sign of the cos(theta) term, since our
@@ -79,7 +78,7 @@ class SolarSystemShapiro(DelayComponent):
         # pulsar (as described after Eqn 4.3 in the paper).
         # See also https://en.wikipedia.org/wiki/Shapiro_time_delay
         # where \Delta t = \frac{2GM}{c^3}\log(1-\vec{R}\cdot\vec{x})
-        return -2.0 * T_obj * numpy.log((r - rcostheta) / const.au).value
+        return -2.0 * T_obj * np.log((r - rcostheta) / const.au).value
 
     def solar_system_shapiro_delay(self, toas, acc_delay=None):
         """
@@ -94,30 +93,32 @@ class SolarSystemShapiro(DelayComponent):
         If planets are to be included, TOAs.compute_posvels() must
         have been called with the planets=True argument.
         """
-        # Start out with 0 delay with units of seconds
-        tbl = toas.table
-        delay = numpy.zeros(len(tbl))
-        for key, grp in toas.get_obs_groups():
-            if key.lower() == "barycenter":
-                log.debug("Skipping Shapiro delay for Barycentric TOAs")
-                continue
+
+        # Apply Shapiro delay correction only for non-barycentered TOAs.
+        non_bary_mask = toas.get_obss() != "barycenter"
+        delay = np.zeros(len(toas))
+
+        if np.any(non_bary_mask):
+            tbl_grp = toas.table if np.all(non_bary_mask) else toas.table[non_bary_mask]
+
             psr_dir = self._parent.ssb_to_psb_xyz_ICRS(
-                epoch=tbl[grp]["tdbld"].astype(numpy.float64)
+                epoch=tbl_grp["tdbld"].astype(np.float64)
             )
-            delay[grp] += self.ss_obj_shapiro_delay(
-                tbl[grp]["obs_sun_pos"], psr_dir, self._ss_mass_sec["sun"]
+            delay[non_bary_mask] += self.ss_obj_shapiro_delay(
+                tbl_grp["obs_sun_pos"], psr_dir, self._ss_mass_sec["sun"]
             )
-            try:
-                if self.PLANET_SHAPIRO.value:
+            if self.PLANET_SHAPIRO.value:
+                try:
                     for pl in ("jupiter", "saturn", "venus", "uranus", "neptune"):
-                        delay[grp] += self.ss_obj_shapiro_delay(
-                            tbl[grp][f"obs_{pl}_pos"],
+                        delay[non_bary_mask] += self.ss_obj_shapiro_delay(
+                            tbl_grp[f"obs_{pl}_pos"],
                             psr_dir,
                             self._ss_mass_sec[pl],
                         )
-            except KeyError as e:
-                raise KeyError(
-                    "Planet positions not found when trying to compute Solar System Shapiro delay. "
-                    "Make sure that you include `planets=True` in your `get_TOAs()` call, or use `get_model_and_toas()`."
-                ) from e
+                except KeyError as e:
+                    raise KeyError(
+                        "Planet positions not found when trying to compute Solar System Shapiro delay. "
+                        "Make sure that you include `planets=True` in your `get_TOAs()` call, or use `get_model_and_toas()`."
+                    ) from e
+
         return delay * u.second

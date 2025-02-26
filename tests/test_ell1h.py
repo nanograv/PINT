@@ -1,4 +1,5 @@
 """Tests of ELL1H model """
+
 import logging
 import os
 import pytest
@@ -95,17 +96,18 @@ def test_J1853_binary_delay(toasJ1853, modelJ1853, tempo2_res):
 # TODO need a better derivative test
 def test_derivative(toasJ1853, modelJ1853):
     log = logging.getLogger("TestJ1853.derivative_test")
-    test_params = ["H3", "H4", "STIGMA"]
+    # only H3 is set in this model, so the other derivatives don't make sense
+    test_params = ["H3"]  # , "H4", "STIGMA"]
     modelJ1853.H4.value = 0.0  # For test PBDOT
     modelJ1853.STIGMA.value = 0.0
     testp = tdu.get_derivative_params(modelJ1853)
     delay = modelJ1853.delay(toasJ1853)
     # Change parameter test step
     testp["H3"] = 6e-1
-    testp["H4"] = 1e-2
-    testp["STIGMA"] = 1e-2
+    #    testp["H4"] = 1e-2
+    #    testp["STIGMA"] = 1e-2
     for p in test_params:
-        log.debug("Runing derivative for %s", f"d_delay_d_{p}")
+        log.debug(f"Runing derivative for {p}: d_delay_d_{p}")
         ndf = modelJ1853.d_phase_d_param_num(toasJ1853, p, testp[p])
         adf = modelJ1853.d_phase_d_param(toasJ1853, delay, p)
         diff = adf - ndf

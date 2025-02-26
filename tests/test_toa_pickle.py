@@ -80,7 +80,6 @@ def test_pickle_changed_planets(temp_tim):
     [
         ("bipm_version", "BIPM2019", "BIPM2018"),
         ("include_bipm", True, False),
-        ("include_gps", True, False),
     ],
 )
 def test_pickle_invalidated_settings(temp_tim, k, v, wv):

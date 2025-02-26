@@ -1,4 +1,5 @@
 """Test basic functionality of the :module:`pint.utils`."""
+
 import io
 import os
 from itertools import product
@@ -6,6 +7,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import astropy.units as u
+from astropy.time import Time
 import numpy as np
 import pytest
 import scipy.stats
@@ -42,12 +44,14 @@ from pint.pulsar_mjd import (
 from pint.utils import (
     FTest,
     PosVel,
+    bayesian_information_criterion,
     compute_hash,
     dmxparse,
     interesting_lines,
     lines_of,
     list_parameters,
     open_or_use,
+    split_swx,
     taylor_horner,
     taylor_horner_deriv,
     find_prefix_bytime,
@@ -57,6 +61,7 @@ from pint.utils import (
     parse_time,
     info_string,
     akaike_information_criterion,
+    dmx_setup,
 )
 
 
@@ -842,6 +847,40 @@ def test_merge_dmx():
     assert getattr(model, f"DMX_{newindex:04d}").value == 1.5
 
 
+def test_split_swx():
+    """Check that the beginning of the new SWX window matches the split mjd"""
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 0
+    ELONG 0
+    PEPOCH 54000
+    """
+    swx_par = """
+    SWXDM_0001 1 
+    SWXP_0001 2 
+    SWXR1_0001 53999
+    SWXR2_0001 55000
+    SWXDM_0002 1 
+    SWXP_0002 2 
+    SWXR1_0002 55000
+    SWXR2_0002 56000
+    SWXDM_0003 1 
+    SWXP_0003 2 
+    SWXR1_0003 56000
+    SWXR2_0003 57000
+    """
+
+    split_date = Time(55500, format="mjd")
+    model = tm.get_model(io.StringIO("\n".join([par, swx_par])))
+    index, newindex = split_swx(model, split_date)
+    assert (
+        getattr(model, f"SWXR1_{newindex:04d}").value == split_date.value,
+        getattr(model, f"SWXR2_{index:04d}").value == split_date.value,
+    )
+
+
 def test_convert_dm():
     dm = 10 * dmu
     dm_codata = convert_dispersion_measure(dm)
@@ -874,8 +913,35 @@ def test_info_str():
     dinfo = info_string(detailed=True)
 
 
-def test_aic():
+def test_aic_bic_nb():
     m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
 
     assert np.isfinite(akaike_information_criterion(m, t))
+    assert np.isfinite(bayesian_information_criterion(m, t))
+
+
+@pytest.mark.parametrize(
+    "N",
+    [100, 1000],
+)
+@pytest.mark.parametrize("mintoas", [1, 2, 3])
+@pytest.mark.parametrize("minwidth", [10 * u.d, 20 * u.d, 100 * u.d])
+def test_dmxsetup(N, mintoas, minwidth):
+    t = (55000 + 1000 * np.random.random(size=N)) * u.d
+    R1, R2, N = dmx_setup(t, minwidth=minwidth, mintoas=mintoas)
+    assert np.all((R2 - R1) >= minwidth)
+    assert np.all(N[:-1] >= mintoas)
+
+    tTOA = toa.get_TOAs_array(t, "gbt")
+    R1TOA, R2TOA, NTOA = dmx_setup(tTOA, minwidth=minwidth, mintoas=mintoas)
+    # can't check this since the clock corrections lead to small differences
+    # assert np.all(R1TOA==R1)
+    # assert np.all(R2TOA==R2)
+    assert np.all(NTOA == N)
+
+    tTime = Time(t, format="mjd")
+    R1Time, R2Time, NTime = dmx_setup(tTime, minwidth=minwidth, mintoas=mintoas)
+    assert np.all(R1Time == R1)
+    assert np.all(R2Time == R2)
+    assert np.all(NTime == N)

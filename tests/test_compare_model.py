@@ -1,4 +1,5 @@
 from io import StringIO
+from copy import deepcopy
 
 import pytest
 
@@ -112,3 +113,13 @@ def test_compare_parfile_script():
 
     argv = f"{args} {parfile1} {parfile2}".split()
     compare_parfiles.main(argv)
+
+
+def test_compare_model_binary():
+    m1 = get_model(StringIO(par_bin))
+
+    m2 = deepcopy(m1)
+    m2.TASC.value = 57001
+
+    m1.compare(m2)
+    m2.compare(m1)

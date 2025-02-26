@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy import log
 from pint.residuals import Residuals as resids
-import os
 
 try:
     import tempo2_utils

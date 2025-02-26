@@ -69,7 +69,7 @@ class FDJump(DelayComponent):
         self.add_param(
             boolParameter(
                 name="FDJUMPLOG",
-                value=False,
+                value=True,
                 description="Whether to use log-frequency (Y) or linear-frequency (N) for computing FDJUMPs.",
             )
         )
@@ -79,6 +79,7 @@ class FDJump(DelayComponent):
                     name=f"FD{j}JUMP",
                     units="second",
                     description=f"System-dependent FD parameter of polynomial index {j}",
+                    convert_tcb2tdb=False,
                 )
             )
 

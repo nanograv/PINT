@@ -1,4 +1,5 @@
 """Various tests to assess the performance of early CHIME data."""
+
 import os
 import pytest
 

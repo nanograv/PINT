@@ -1,28 +1,23 @@
 """The BT (Blandford & Teukolsky) model."""
+
+import astropy.constants as consts
+import astropy.units as u
 import numpy as np
-from pint.models.parameter import floatParameter
+from astropy.time import Time
+
+from pint import ls
+from pint.exceptions import MissingParameter
+from pint.models.parameter import floatParameter, prefixParameter
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries.BT_model import BTmodel
 from pint.models.stand_alone_psr_binaries.BT_piecewise import BTpiecewise
-from pint.models.timing_model import MissingParameter, TimingModel
-import astropy.units as u
-from pint import GMsun, Tsun, ls
-from astropy.table import Table
-from astropy.time import Time
-from pint.models.parameter import (
-    MJDParameter,
-    floatParameter,
-    prefixParameter,
-    maskParameter,
-)
-
 from pint.toa_select import TOASelect
 
 
 class BinaryBT(PulsarBinary):
     """Blandford and Teukolsky binary model.
 
-    This binary model is described in Blandford and Teukolshy 1976. It is
+    This binary model is described in Blandford and Teukolsky (1976). It is
     a relatively simple parametrized post-Keplerian model that does not
     support Shapiro delay calculations.
 
@@ -37,12 +32,16 @@ class BinaryBT(PulsarBinary):
     Notes
     -----
     Because PINT's binary models all support specification of multiple orbital
-    frequency derivatives FBn, this is capable of behaving like the model called
-    BTX in tempo2. The model called BTX in tempo instead supports multiple
-    (non-interacting) companions, and that is not supported here. Neither can
-    PINT accept "BTX" as an alias for this model.
+    frequency derivatives ``FBn``, this is capable of behaving like the model called
+    ``BTX`` in ``tempo2``. The model called ``BTX`` in ``tempo`` instead supports multiple
+    (non-interacting) companions, and that is not supported here.
 
-    See Blandford & Teukolsky 1976, ApJ, 205, 580.
+    References
+    ----------
+    - Blandford & Teukolsky 1976, ApJ, 205, 580 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/1976ApJ...205..580B/abstract
+
     """
 
     register = True
@@ -58,6 +57,7 @@ class BinaryBT(PulsarBinary):
                 value=0.0,
                 units="second",
                 description="Time dilation & gravitational redshift",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.remove_param("M2")
@@ -81,22 +81,24 @@ class BinaryBT(PulsarBinary):
             self.GAMMA.frozen = True
 
 
-"""The BT (Blandford & Teukolsky) model with piecewise orbital parameters.
-See Blandford & Teukolsky 1976, ApJ, 205, 580.
-"""
-
-
 class BinaryBTPiecewise(PulsarBinary):
-    """Model implementing the BT model with piecewise orbital parameters A1X and T0X. This model lets the user specify time ranges and fit for a different piecewise orbital parameter in each time range,
-    This is a PINT pulsar binary BTPiecewise model class, a subclass of PulsarBinary.
-    It is a wrapper for stand alone BTPiecewise class defined in
-    ./stand_alone_psr_binary/BT_piecewise.py
-    The aim for this class is to connect the stand alone binary model with the PINT platform.
-    BTpiecewise special parameters, where xxxx denotes the 4-digit index of the piece:
-    T0X_xxxx Piecewise T0 values for piece
-    A1X_xxxx Piecewise A1 values for piece
-    XR1_xxxx Lower time boundary of piece
-    XR2_xxxx Upper time boundary of piece
+    """BT model with piecewise orbital parameters ``A1X`` and ``T0X``. This model lets the user specify time ranges and fit for a different piecewise orbital parameter in each time range.
+
+    ``BTpiecewise`` special parameters, where xxxx denotes the 4-digit index of the piece:
+
+        - ``T0X_xxxx``: Piecewise ``T0`` values for piece
+        - ``A1X_xxxx``: Piecewise ``A1`` values for piece
+        - ``XR1_xxxx``: Lower time boundary of piece
+        - ``XR2_xxxx``: Upper time boundary of piece
+
+    The actual calculations for this are done in
+    :class:`pint.models.stand_alone_psr_binaries.BT_piecewise.BTpiecewise`
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_bt.BinaryBTPiecewise
+
     """
 
     register = True
@@ -111,6 +113,7 @@ class BinaryBTPiecewise(PulsarBinary):
                 value=0.0,
                 units="second",
                 description="Time dilation & gravitational redshift",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.A1_value_funcs = []
@@ -137,7 +140,16 @@ class BinaryBTPiecewise(PulsarBinary):
         piece_index : int
                 Number to label the piece being added.
         """
-        if group_start_mjd is not None and group_end_mjd is not None:
+        if group_start_mjd is None:
+            if group_end_mjd is not None:
+                group_start_mjd = group_end_mjd - 100
+            else:
+                group_start_mjd = 50000
+                group_end_mjd = 60000
+
+        elif group_end_mjd is None:
+            group_end_mjd = group_start_mjd + 100
+        else:
             if isinstance(group_start_mjd, Time):
                 group_start_mjd = group_start_mjd.mjd
             elif isinstance(group_start_mjd, u.quantity.Quantity):
@@ -147,22 +159,11 @@ class BinaryBTPiecewise(PulsarBinary):
             elif isinstance(group_end_mjd, u.quantity.Quantity):
                 group_end_mjd = group_end_mjd.value
 
-        elif group_start_mjd is None or group_end_mjd is None:
-            if group_start_mjd is None and group_end_mjd is not None:
-                group_start_mjd = group_end_mjd - 100
-            elif group_start_mjd is not None and group_end_mjd is None:
-                group_end_mjd = group_start_mjd + 100
-            else:
-                group_start_mjd = 50000
-                group_end_mjd = 60000
-
         if piece_index is None:
             dct = self.get_prefix_mapping_component("XR1_")
-            if len(list(dct.keys())) > 0:
-                piece_index = np.max(list(dct.keys())) + 1
-            else:
-                piece_index = 0
-
+            piece_index = (
+                np.max(list(dct.keys())) + 1 if len(list(dct.keys())) > 0 else 0
+            )
         # check the validity of the desired group to add
 
         if group_end_mjd is not None and group_start_mjd is not None:
@@ -174,7 +175,7 @@ class BinaryBTPiecewise(PulsarBinary):
                 )
             elif piece_index > 9999:
                 raise ValueError(
-                    f"Invalid index for group. Cannot index beyond 9999 (yet?)"
+                    "Invalid index for group. Cannot index beyond 9999 (yet?)"
                 )
 
         i = f"{int(piece_index):04d}"
@@ -186,6 +187,7 @@ class BinaryBTPiecewise(PulsarBinary):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=group_start_mjd,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -196,6 +198,7 @@ class BinaryBTPiecewise(PulsarBinary):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=group_end_mjd,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.setup()
@@ -208,11 +211,7 @@ class BinaryBTPiecewise(PulsarBinary):
             Number or list/array of numbers corresponding to T0X/A1X indices to be removed from model.
         """
 
-        if (
-            isinstance(index, int)
-            or isinstance(index, float)
-            or isinstance(index, np.int64)
-        ):
+        if isinstance(index, (int, float, np.int64)):
             indices = [index]
         elif not isinstance(index, list) or not isinstance(index, np.ndarray):
             raise TypeError(
@@ -223,14 +222,16 @@ class BinaryBTPiecewise(PulsarBinary):
             for prefix in ["T0X_", "A1X_", "XR1_", "XR2_"]:
                 if hasattr(self, f"{prefix+index_rf}"):
                     self.remove_param(prefix + index_rf)
-            if hasattr(self.binary_instance, "param_pieces"):
-                if len(self.binary_instance.param_pieces) > 0:
-                    temp_piece_information = []
-                    for item in self.binary_instance.param_pieces:
-                        if item[0] != index_rf:
-                            temp_piece_information.append(item)
-                    self.binary_instance.param_pieces = temp_piece_information
-                # self.binary_instance.param_pieces = self.binary_instance.param_pieces.remove('index_rf')
+            if (
+                hasattr(self.binary_instance, "param_pieces")
+                and len(self.binary_instance.param_pieces) > 0
+            ):
+                temp_piece_information = [
+                    item
+                    for item in self.binary_instance.param_pieces
+                    if item[0] != index_rf
+                ]
+                self.binary_instance.param_pieces = temp_piece_information
 
         self.validate()
         self.setup()
@@ -251,7 +252,17 @@ class BinaryBTPiecewise(PulsarBinary):
                 param = key
                 paramx = kwargs[key]
 
-                if key == "T0":
+                if key == "A1":
+                    param_unit = ls
+                    if isinstance(paramx, u.quantity.Quantity):
+                        paramx = paramx.value
+                    elif isinstance(paramx, np.float64):
+                        paramx = paramx
+                    else:
+                        raise ValueError(
+                            f"Unspported data type '{type(paramx)}' for piecewise A1. Ensure the piecewise parameter value is a np.float64 or astropy.quantity.Quantity"
+                        )
+                elif key == "T0":
                     param_unit = u.d
                     if isinstance(paramx, u.quantity.Quantity):
                         paramx = paramx.value
@@ -261,19 +272,7 @@ class BinaryBTPiecewise(PulsarBinary):
                         paramx = paramx.mjd
                     else:
                         raise ValueError(
-                            "Unspported data type '%s' for piecewise T0. Ensure the piecewise parameter value is a np.float128, Time or astropy.quantity.Quantity"
-                            % type(paramx)
-                        )
-                elif key == "A1":
-                    param_unit = ls
-                    if isinstance(paramx, u.quantity.Quantity):
-                        paramx = paramx.value
-                    elif isinstance(paramx, np.float64):
-                        paramx = paramx
-                    else:
-                        raise ValueError(
-                            "Unspported data type '%s' for piecewise A1. Ensure the piecewise parameter value is a np.float64 or astropy.quantity.Quantity"
-                            % type(paramx)
+                            f"Unspported data type '{type(paramx)}' for piecewise T0. Ensure the piecewise parameter value is a np.float128, Time or astropy.quantity.Quantity"
                         )
                 key_found = True
 
@@ -283,36 +282,33 @@ class BinaryBTPiecewise(PulsarBinary):
             )
 
         if piece_index is None:
-            dct = self.get_prefix_mapping_component(param + "X_")
-            if len(list(dct.keys())) > 0:
-                piece_index = np.max(list(dct.keys())) + 1
-            else:
-                piece_index = 0
-        elif int(piece_index) in self.get_prefix_mapping_component(param + "X_"):
+            dct = self.get_prefix_mapping_component(f"{param}X_")
+            piece_index = (
+                np.max(list(dct.keys())) + 1 if len(list(dct.keys())) > 0 else 0
+            )
+        elif int(piece_index) in self.get_prefix_mapping_component(f"{param}X_"):
             raise ValueError(
-                "Index '%s' is already in use in this model. Please choose another."
-                % piece_index
+                f"Index '{piece_index}' is already in use in this model. Please choose another."
             )
         i = f"{int(piece_index):04d}"
 
         # handling if None are passed as arguments
-        if any(i is None for i in [param, param_unit, paramx]):
-            if param is not None:
-                # if parameter value or unit unset, set with default according to param
-                if param_unit is None:
-                    param_unit = (getattr(self, param)).units
-                if paramx is None:
-                    paramx = (getattr(self, param)).value
+        if any(i is None for i in [param, param_unit, paramx]) and param is not None:
+            if param_unit is None:
+                param_unit = (getattr(self, param)).units
+            if paramx is None:
+                paramx = (getattr(self, param)).value
         # check if name exists and is currently available
 
         self.add_param(
             prefixParameter(
-                name=param + f"X_{i}",
+                name=f"{param}X_{i}",
                 units=param_unit,
                 value=paramx,
-                description="Parameter" + param + "variation",
+                description=f"Parameter{param}variation",
                 parameter_type="float",
                 frozen=False,
+                tcb2tdb_scale_factor=(1 / consts.c if param == "A1" else u.Quantity(1)),
             )
         )
         self.setup()
@@ -355,36 +351,33 @@ class BinaryBTPiecewise(PulsarBinary):
                     )
 
             if hasattr(self, f"A1X_{piece_index}"):
-                if hasattr(self, f"A1X_{piece_index}"):
-                    if getattr(self, f"A1X_{piece_index}") is not None:
-                        self.binary_instance.add_binary_params(
-                            f"A1X_{piece_index}", getattr(self, f"A1X_{piece_index}")
-                        )
-                    else:
-                        self.binary_instance.add_binary_params(
-                            f"A1X_{piece_index}", self.A1.value
-                        )
-
-            if hasattr(self, f"XR1_{piece_index}"):
-                if getattr(self, f"XR1_{piece_index}") is not None:
+                if getattr(self, f"A1X_{piece_index}") is not None:
                     self.binary_instance.add_binary_params(
-                        f"XR1_{piece_index}", getattr(self, f"XR1_{piece_index}")
+                        f"A1X_{piece_index}", getattr(self, f"A1X_{piece_index}")
                     )
                 else:
-                    raise ValueError(f"No date provided to create a group with")
-            else:
-                raise ValueError(f"No name provided to create a group with")
-
-            if hasattr(self, f"XR2_{piece_index}"):
-                if getattr(self, f"XR2_{piece_index}") is not None:
                     self.binary_instance.add_binary_params(
-                        f"XR2_{piece_index}", getattr(self, f"XR2_{piece_index}")
+                        f"A1X_{piece_index}", self.A1.value
                     )
-                else:
-                    raise ValueError(f"No date provided to create a group with")
-            else:
-                raise ValueError(f"No name provided to create a group with")
 
+            if not hasattr(self, f"XR1_{piece_index}"):
+                raise ValueError("No name provided to create a group with")
+
+            if getattr(self, f"XR1_{piece_index}") is not None:
+                self.binary_instance.add_binary_params(
+                    f"XR1_{piece_index}", getattr(self, f"XR1_{piece_index}")
+                )
+            else:
+                raise ValueError("No date provided to create a group with")
+            if not hasattr(self, f"XR2_{piece_index}"):
+                raise ValueError("No name provided to create a group with")
+
+            if getattr(self, f"XR2_{piece_index}") is not None:
+                self.binary_instance.add_binary_params(
+                    f"XR2_{piece_index}", getattr(self, f"XR2_{piece_index}")
+                )
+            else:
+                raise ValueError("No date provided to create a group with")
         self.update_binary_object(None)
 
     def validate(self):
@@ -401,7 +394,7 @@ class BinaryBTPiecewise(PulsarBinary):
         super().validate()
         for p in ("T0", "A1"):
             if getattr(self, p).value is None:
-                raise MissingParameter("BT", p, "%s is required for BT" % p)
+                raise MissingParameter("BT", p, f"{p} is required for BT")
 
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
@@ -409,9 +402,8 @@ class BinaryBTPiecewise(PulsarBinary):
                 getattr(self, p).set("0")
                 getattr(self, p).frozen = True
 
-            if getattr(self, p).value is not None:
-                if self.T0.value is None:
-                    raise MissingParameter("BT", "T0", "T0 is required if *DOT is set")
+            if getattr(self, p).value is not None and self.T0.value is None:
+                raise MissingParameter("BT", "T0", "T0 is required if *DOT is set")
 
         if self.GAMMA.value is None:
             self.GAMMA.set("0")
@@ -438,30 +430,33 @@ class BinaryBTPiecewise(PulsarBinary):
                 )
             if len(np.setdiff1d(j_plb, j_pub)) > 0:
                 raise ValueError(
-                    f"Group index mismatch error. Check the indexes of XR1_/XR2_ parameters in the model"
+                    "Group index mismatch error. Check the indexes of XR1_/XR2_ parameters in the model"
                 )
-            if not len(ls_A1X) > 0:
-                if len(ls_pub) > 0 and len(ls_T0X) > 0:
-                    if len(np.setdiff1d(j_pub, j_T0X)) > 0:
-                        raise ValueError(
-                            f"Group index mismatch error. Check the indexes of T0X groups, make sure they match there are corresponding group ranges (XR1/XR2)"
-                        )
-            if not len(ls_T0X) > 0:
-                if len(ls_pub) > 0 and len(ls_A1X) > 0:
-                    if len(np.setdiff1d(j_pub, j_A1X)) > 0:
-                        raise ValueError(
-                            f"Group index mismatch error. Check the indexes of A1X groups, make sure they match there are corresponding group ranges (/XR2)"
-                        )
+            if (
+                len(ls_A1X) <= 0
+                and (len(ls_pub) > 0 and len(ls_T0X) > 0)
+                and len(np.setdiff1d(j_pub, j_T0X)) > 0
+            ):
+                raise ValueError(
+                    "Group index mismatch error. Check the indexes of T0X groups, make sure they match there are corresponding group ranges (XR1/XR2)"
+                )
+            if (
+                len(ls_T0X) <= 0
+                and (len(ls_pub) > 0 and len(ls_A1X) > 0)
+                and len(np.setdiff1d(j_pub, j_A1X)) > 0
+            ):
+                raise ValueError(
+                    "Group index mismatch error. Check the indexes of A1X groups, make sure they match there are corresponding group ranges (/XR2)"
+                )
             lb = [(getattr(self, tup[1])).value for tup in ls_plb]
             ub = [(getattr(self, tup[1])).value for tup in ls_pub]
 
             for i in range(len(lb)):
                 for j in range(len(lb)):
-                    if i != j:
-                        if max(lb[i], lb[j]) < min(ub[i], ub[j]):
-                            raise ValueError(
-                                f"Group boundary overlap detected. Make sure groups are not overlapping"
-                            )
+                    if i != j and max(lb[i], lb[j]) < min(ub[i], ub[j]):
+                        raise ValueError(
+                            "Group boundary overlap detected. Make sure groups are not overlapping"
+                        )
 
     def paramx_per_toa(self, param_name, toas):
         """Find the piecewise parameter value each toa will reference during calculations
@@ -481,16 +476,15 @@ class BinaryBTPiecewise(PulsarBinary):
         XR2_mapping = self.get_prefix_mapping_component("XR2_")
         if not hasattr(self, "toas_selector"):
             self.toas_selector = TOASelect(is_range=True)
-        if param_name[0:2] == "T0":
+        if param_name[:2] == "T0":
             paramX_mapping = self.get_prefix_mapping_component("T0X_")
             param_unit = u.d
-        elif param_name[0:2] == "A1":
+        elif param_name[:2] == "A1":
             paramX_mapping = self.get_prefix_mapping_component("A1X_")
             param_unit = ls
         else:
             raise AttributeError(
-                "param '%s' not found. Please choose another. Currently implemented: 'T0' or 'A1' "
-                % param_name
+                f"param '{param_name}' not found. Please choose another. Currently implemented: 'T0' or 'A1' "
             )
         for piece_index in paramX_mapping.keys():
             r1 = getattr(self, XR1_mapping[piece_index]).quantity
@@ -502,7 +496,7 @@ class BinaryBTPiecewise(PulsarBinary):
             paramx[v] += getattr(self, k).quantity
         for i in range(len(paramx)):
             if paramx[i] == 0:
-                paramx[i] = (getattr(self, param_name[0:2])).value * param_unit
+                paramx[i] = getattr(self, param_name[:2]).value * param_unit
 
         return paramx
 

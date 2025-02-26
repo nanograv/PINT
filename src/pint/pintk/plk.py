@@ -1,6 +1,7 @@
 """
 Interactive emulator of tempo2 plk
 """
+
 import copy
 import os
 import sys
@@ -13,6 +14,7 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from pint.models.dispersion_model import Dispersion
 
+from pint.models.parameter import funcParameter
 import pint.pintk.pulsar as pulsar
 import pint.pintk.colormodes as cm
 from pint.models.astrometry import Astrometry
@@ -45,19 +47,20 @@ plotlabels = {
         "Post-fit residual (phase)",
         "Post-fit residual (us)",
     ],
-    "mjd": r"MJD",
-    "orbital phase": "Orbital Phase",
-    "serial": "TOA number",
+    "WB DM res": "Wideband DM residual (pc/cm3)",
+    "white-res": "Whitened residuals",
+    "WB DM": "Wideband DM (pc/cm3)",
+    "model DM": "Model DM (pc/cm3)",
+    "mjd": "MJD",
     "day of year": "Day of the year",
     "year": "Year",
-    "frequency": r"Observing Frequency (MHz)",
-    "TOA error": r"TOA uncertainty ($\mu$s)",
-    "rounded MJD": r"MJD",
-    "model DM": "Model DM (pc/cm3)",
-    "WB DM": "Wideband DM (pc/cm3)",
-    "WB DM res": "Wideband DM residual (pc/cm3)",
+    "rounded MJD": "MJD",
+    "serial": "TOA number",
+    "orbital phase": "Orbital Phase",
+    "elongation": "Solar Elongation (deg)",
+    "frequency": "Observing Frequency (MHz)",
+    "TOA error": "TOA uncertainty ($\\mu$s)",
     "WB DM err": "Wideband DM error (pc/cm3)",
-    "elongation": r"Solar Elongation (deg)",
 }
 
 helpstring = """The following interactions are currently supported in the plotting pane in `pintk`:
@@ -215,9 +218,12 @@ class PlkFitBoxesWidget(tk.Frame):
             showpars = [
                 p
                 for p in model.components[comp].params
-                if p not in pulsar.nofitboxpars
-                and getattr(model, p).quantity is not None
-                and p in model.fittable_params
+                if (
+                    p not in pulsar.nofitboxpars
+                    and model[p].quantity is not None
+                    and p in model.fittable_params
+                    and not isinstance(model[p], funcParameter)
+                )
             ]
 
             # Don't bother showing components without any fittable parameters
@@ -1125,7 +1131,7 @@ class PlkWidget(tk.Frame):
                 self.plkAx2x.yaxis.set_major_locator(
                     mpl.ticker.FixedLocator(self.plkAxes.get_yticks() * f0)
                 )
-            except:
+            except Exception:
                 pass
             # If fitting orbital phase, plot the conjunction
             if self.xid == "orbital phase":
@@ -1183,7 +1189,7 @@ class PlkWidget(tk.Frame):
         elif diff > 0.2 * u.ms:
             maxy = maxy.to(u.ms)
             miny = miny.to(u.ms)
-        elif diff <= 0.2 * u.ms:
+        else:
             maxy = maxy.to(u.us)
             miny = miny.to(u.us)
         return miny, maxy
@@ -1238,17 +1244,17 @@ class PlkWidget(tk.Frame):
             if self.psr.fitted:
                 # TODO: may want to include option for prefit resids to include jumps
                 data = self.psr.prefit_resids_no_jumps.time_resids.to(u.us)
-                error = self.psr.all_toas.get_errors().to(u.us)
+                error = self.psr.prefit_resids_no_jumps.get_data_error().to(u.us)
                 return data, error
             data = self.psr.prefit_resids.time_resids.to(u.us)
-            error = self.psr.all_toas.get_errors().to(u.us)
+            error = self.psr.prefit_resids.get_data_error().to(u.us)
         elif label == "post-fit":
             if self.psr.fitted:
                 data = self.psr.postfit_resids.time_resids.to(u.us)
             else:
                 log.warning("Pulsar has not been fitted yet! Giving pre-fit residuals")
                 data = self.psr.prefit_resids.time_resids.to(u.us)
-            error = self.psr.all_toas.get_errors().to(u.us)
+            error = self.psr.postfit_resids.get_data_error().to(u.us)
         elif label == "mjd":
             data = self.psr.all_toas.get_mjds()
             error = self.psr.all_toas.get_errors()
@@ -1305,15 +1311,20 @@ class PlkWidget(tk.Frame):
         elif label == "WB DM err":
             if self.psr.all_toas.wideband:
                 data = self.psr.all_toas.get_dm_errors().to(pint.dmu)
-                error = None
             else:
                 log.warning("Cannot plot WB DM errors for NB TOAs.")
                 data = None
-                error = None
+            error = None
         elif label == "elongation":
             data = np.degrees(
                 self.psr.prefit_model.sun_angle(self.psr.all_toas, also_distance=False)
             )
+            error = None
+        elif label == "white-res":
+            if self.psr.fitter is not None:
+                data = self.psr.fitter.resids.calc_whitened_resids()
+            else:
+                data = self.prefit_resids.calc_whitened_resids()
             error = None
 
         return data, error
@@ -1411,10 +1422,11 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the figure/canvas is released
         """
-        if self.press and not self.move:
-            self.stationaryClick(event)
-        elif self.press and self.move:
-            self.clickAndDrag(event)
+        if self.press:
+            if self.move:
+                self.clickAndDrag(event)
+            else:
+                self.stationaryClick(event)
         self.press = False
         self.move = False
 

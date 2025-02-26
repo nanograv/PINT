@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 
 import mpmath as mp
 from spiceTest import *
-import astropy as ap
 import HPtimeCvrtLib as tc
 
 mp.mp.dps = 25

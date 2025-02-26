@@ -15,7 +15,6 @@ pint.logging.setup(level="INFO")
 import matplotlib.pyplot as plt
 import astropy.units as u
 from pint.residuals import Residuals as resids
-import os
 from astropy import log
 
 try:

@@ -73,6 +73,25 @@ class TestTOAReader:
         assert "barycenter" in ts.observatories
         assert ts.ntoas == 8
 
+    def test_read_princeton(self):
+        toaline = "6   11 1744-24 1666.0000 50852.5886574493316     25.6  8-FEB-98    0.0    1  1"
+        mjd, d = toa._parse_TOA_line(toaline)
+        assert np.isclose(mjd[0] + mjd[1], 50852.5886574493316)
+        assert d["format"] == "Princeton"
+        assert d["obs"] == "vla"
+        assert d["freq"] == 1666.0
+        assert d["error"] == 25.6
+
+    def test_read_princeton_offset1(self):
+        toaline = "6   26 1744-24 1667.0000 9064.9010416342947       6.2 26-OCT-90    0.1    1  1"
+        mjd, d = toa._parse_TOA_line(toaline)
+        assert np.isclose(mjd[0] + mjd[1], 48190.9010416342947)
+
+    def test_read_princeton_offset2(self):
+        toaline = "6   37 1744-24 1666.000010062.1379629521572       7.8 20-JUL-93   64.6    1  1"
+        mjd, d = toa._parse_TOA_line(toaline)
+        assert np.isclose(mjd[0] + mjd[1], 49188.1379629521572)
+
     def test_read_parkes_phaseoffset(self):
         # Fourth column contains non-zero phase offset
         toaline = " PUPPI_J2044+28_58852_652 432.3420  58852.7590686063892    1.00  120.75        @"
@@ -382,21 +401,6 @@ def test_toa_merge_different_bipm_ver():
     toas = [
         toa.get_TOAs(ff, include_bipm=True, bipm_version=bipm_ver)
         for ff, bipm_ver in zip(filenames, bipm_vers)
-    ]
-    with pytest.raises(TypeError):
-        nt = toa.merge_TOAs(toas)
-
-
-def test_toa_merge_different_gps():
-    filenames = [
-        datadir / "NGC6440E.tim",
-        datadir / "testtimes.tim",
-        datadir / "parkes.toa",
-    ]
-    inc_gpss = [True, True, False]
-    toas = [
-        toa.get_TOAs(ff, include_gps=inc_gps)
-        for ff, inc_gps in zip(filenames, inc_gpss)
     ]
     with pytest.raises(TypeError):
         nt = toa.merge_TOAs(toas)

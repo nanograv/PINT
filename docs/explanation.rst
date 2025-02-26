@@ -166,10 +166,10 @@ website from time to time.
 
 It is also conventional to record pulsar data with reference to an
 observatory clock, usually a maser, that may drift with respect to
-International Atomic Time (TAI_). Usually GPS is used to track the
-deviations of this observatory clock and record them in a file. PINT
-also needs up-to-date versions of these observatory clock correction files
-to produce accurate results.
+International Atomic Time (TAI_). Usually, GPS is used to track the
+deviations of this observatory clock and these deviations are recorded in a file
+known as a clock file. PINT also needs up-to-date versions of these observatory 
+clock correction files to produce accurate results.
 
 Even more detail about how PINT handles time scales is available on the github
 wiki_.
@@ -220,8 +220,8 @@ Offsets in pulsar timing
 Offsets arise in pulsar timing models for a variety of reasons. The different types of
 offsets are listed below:
 
-Overall phase offset
-''''''''''''''''''''
+Overall phase offset (PHOFF)
+''''''''''''''''''''''''''''
 The pulse phase corresponding to the TOAs are usually computed in reference to an arbitrary 
 fiducial TOA known as the TZR TOA (see :class:`pint.models.absolute_phase.AbsPhase`). Since the 
 choice of the TZR TOA is arbitrary, there can be an overall phase offset between the TZR TOA and 
@@ -235,8 +235,12 @@ corrections. The explicit phase offset (option 3) can be invoked by adding the `
 (implemented in :class:`pint.models.phase_offset.PhaseOffset`). If the explicit offset `PHOFF`
 is given, the implicit residual mean subtraction behavior will be disabled.
 
-System-dependent delays
-'''''''''''''''''''''''
+In the pulsar ephemeris (par) file, an example `PHOFF` parameter looks like this:
+
+    `PHOFF   0.1   1   0.001`
+
+System-dependent delays (`JUMP`s)
+'''''''''''''''''''''''''''''''''
 It is very common to have TOAs for the same pulsar obtained using different observatories, 
 telescope receivers, backend systems, and data processing pipelines, especially in long-running 
 campaigns. Delays can arise between the TOAs measured using such different systems due to, among
@@ -245,11 +249,48 @@ measurement etc., and the choice of different template profiles used for TOA mea
 offsets are usually modeled using phase jumps (the `JUMP` parameter, see :class:`pint.models.jump.PhaseJump`) 
 between TOAs generated from different systems.
 
-System-dependent DM offsets
-'''''''''''''''''''''''''''
+Here are some examples for `JUMP` parameters in a par file:
+    `JUMP   -f 430_PUPPI    0.01  1   1e-5`
+    `JUMP   tel ao          0.01  1   1e-5`
+    `JUMP   mjd 55000 55100 0.01  1   1e-5`
+    `JUMP   freq 1000 1400  0.01  1   1e-5`
+
+System-dependent DM offsets (`DMJUMP`s and `FDJUMPDM`s)
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
 Similar to system-dependent delays, offsets can arise between wideband DM values measured using 
 different systems due to the choice of template portraits with different fiducial DMs. This is 
 usually modeled using DM jumps (the `DMJUMP` parameter, see :class:`pint.models.dispersion_model.DispersionJump`).
+This type of offset only applies to the wideband DM values and not to the wideband TOAs. 
+
+Here are some examples for `DMJUMP` parameters in a par file:
+    `DMJUMP   -f 430_PUPPI    1e-4  1   1e-5`
+    `DMJUMP   tel ao          1e-4  1   1e-5`
+    `DMJUMP   mjd 55000 55100 1e-4  1   1e-5`
+    `DMJUMP   freq 1000 1400  1e-4  1   1e-5`
+
+Similar offsets also arise in the case of narrowband TOAs. Unlike the wideband case, these offsets 
+manifest as system-dependent corrections to the DM delay. They are modeled using the `FDJUMPDM` parameters
+(see see :class:`pint.models.dispersion_model.FDJumpDM`)
+
+Here are some examples for `FDJUMPDM` parameters in a par file:
+    `FDJUMPDM   -f 430_PUPPI       1e-4  1   1e-5`
+    `FDJUMPDM   -f L-wide_PUPPI    1e-4  1   1e-5`
+
+System- and frequency-dependent offsets (`FDJUMP`s)
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+In narrowband datasets, the template profiles often do not adequately model the frequency-dependent 
+evolution of pulse profiles, resulting in a frequency-dependent artefact in the timing residuals.
+This systematic effect is usually modeled phenomenologically as a log-polynomial function of frequency 
+whose coefficients are the so-called FD parameters (see :class:`pint.models.frequency_dependent.FD`). 
+Sometimes, this effect needs to be modeled separately for different systems since different template 
+profiles will be used for each system. This is achieved through system-dependent FD parameters or `FDJUMP`s 
+(see :class:`pint.models.fdjump.FDJump`). 
+
+Here are some examples for `FDJUMP` parameters in a par file:
+    `FD1JUMP   -f L-wide_PUPPI    1e-4  1   1e-5`
+    `FD2JUMP   -f L-wide_PUPPI    1e-4  1   1e-5`
+    `FD1JUMP   -f 430_PUPPI       1e-4  1   1e-5`
+    `FD2JUMP   -f 430_PUPPI       1e-4  1   1e-5`
 
 Observatories
 -------------
@@ -276,19 +317,27 @@ The observatory data are stored in JSON format.  A simple example is::
         "tempo_code": "1",
         "itoa_code": "GB",
         "clock_file": "time_gbt.dat",
+        "apply_gps2utc": true,
         "itrf_xyz": [
             882589.289,
             -4924872.368,
             3943729.418
         ],
-        "origin": "The Robert C. Byrd Green Bank Telescope.\nThis data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\n"
-    }
+        "fullname": "The Robert C. Byrd Green Bank Telescope",
+        "origin": "This data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\n"
+    },
 
 The observatory is defined by its name (``gbt``) and its position.  This can be given as 
 geocentric coordinates in the International_Terrestrial_Reference_System_ (ITRF) through 
 the ``itrf_xyz`` triple (units as ``m``), or geodetic coordinates (WGS84_ assumed) through 
 ``lat``, ``lon``, ``alt`` (units are ``deg`` and ``m``).  Conversion is done through 
 Astropy_EarthLocation_.
+
+The time corrections are specified by the ``clock_file`` parameter, which gives the time corrections to be 
+applied to site arrival times to get to UTC.  Usually this is done by reference to an observatory time
+standard that is tied to GPS, and so the times are in UTC(GPS).  The ``apply_gps2utc`` parameter
+is a boolean that selects whether to apply the correction from UTC(GPS) to UTC that is 
+derived from BIPM Circular T.
 
 Other attributes are optional.  Here we have also specified the ``tempo_code`` and 
 ``itoa_code``, and a human-readable ``origin`` string.
@@ -304,6 +353,7 @@ A more complex/complete example is::
             "jb2gps.clk"
         ],
         "clock_fmt": "tempo2",
+        "apply_gps2utc" : true,
         "aliases": [
             "jboroach"
         ],
@@ -361,6 +411,7 @@ This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``)
             "tempo_code": "1",
             "itoa_code": "GB",
             "clock_file": "",
+            "apply_gps2utc": false,
             "itrf_xyz": [
                 882589.289,
                 -4924872.368,
@@ -473,6 +524,20 @@ repository or specific versions for reproducibility, you have several options:
    overlap with any existing observatory, you should be able to create your
    custom observatory and point the clock correction files to the right place
    as above.
+
+Ephemerides
+'''''''''''
+
+JPL Solar System ephemerides (of the form ``DE*.bsp``) are typically downloaded automatically 
+and stored using ``astropy``'s data downloading and caching mechanism.  The list of URLs used for this 
+are given in :mod:`pint.solar_system_ephemerides`.  However, you can also specify a local file instead.  
+To do this, load the file explicitly with:
+::
+
+    out = pint.solar_system_ephemerides.load_kernel("de118", path=<path_to_file>)
+
+After this, you can specify the ephemeris normally when creating TOAs etc.  
+This will persist as long as the current session lasts.
 
 Structure of Pulsar Timing Data Formats
 ---------------------------------------

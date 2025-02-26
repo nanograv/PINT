@@ -1,9 +1,11 @@
 """Delays expressed as a sum of sinusoids."""
+
 import astropy.units as u
 import numpy as np
 
+from pint.exceptions import MissingParameter
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
-from pint.models.timing_model import PhaseComponent, MissingParameter
+from pint.models.timing_model import PhaseComponent
 
 
 class Wave(PhaseComponent):
@@ -13,9 +15,8 @@ class Wave(PhaseComponent):
     sine/cosine components.
 
     For consistency with the implementation in tempo2, this signal is treated
-    as a time series, but trivially converted into phase by multiplication by
-    F0, which could makes changes to PEPOCH fragile if there is strong spin
-    frequency evolution.
+    as a time series and trivially converted into phase by multiplication by
+    F0.
 
     Parameters supported:
 
@@ -33,13 +34,15 @@ class Wave(PhaseComponent):
                 name="WAVEEPOCH",
                 description="Reference epoch for wave solution",
                 time_scale="tdb",
+                convert_tcb2tdb=False,
             )
         )
         self.add_param(
             floatParameter(
                 name="WAVE_OM",
                 description="Base frequency of wave solution",
-                units="1/d",
+                units="rad/d",
+                convert_tcb2tdb=False,
             )
         )
         self.add_param(
@@ -50,6 +53,7 @@ class Wave(PhaseComponent):
                 type_match="pair",
                 long_double=True,
                 parameter_type="pair",
+                convert_tcb2tdb=False,
             )
         )
         self.phase_funcs_component += [self.wave_phase]
@@ -134,6 +138,7 @@ class Wave(PhaseComponent):
                 type_match="pair",
                 long_double=True,
                 parameter_type="pair",
+                convert_tcb2tdb=False,
             )
         )
         self.setup()

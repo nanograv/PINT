@@ -7,6 +7,7 @@ from pint.fitter import DownhillWLSFitter
 import pytest
 from io import StringIO
 import numpy as np
+from copy import deepcopy
 
 
 @pytest.fixture
@@ -17,6 +18,8 @@ def model_and_toas():
         "FD1JUMP -sys GM_GWB_1460_100_b1 0.02 1\n"
         "FD2JUMP -sys GM_GWB_500_100_b1 0.001 1\n"
         "FD2JUMP -sys GM_GWB_1460_100_b1 0.002 1\n"
+        "FDJUMPDM -sys GM_GWB_500_100_b1 0.00002 1\n"
+        "FDJUMPDM -sys GM_GWB_1460_100_b1 0.00001 1\n"
     )
     par = str(model_raw) + fdlines
 
@@ -34,7 +37,11 @@ def test_params(model_and_toas):
         and hasattr(model, "FD2JUMP1")
         and hasattr(model, "FD1JUMP2")
         and hasattr(model, "FD2JUMP2")
+        and hasattr(model, "FDJUMPDM1")
+        and hasattr(model, "FDJUMPDM2")
     )
+
+    assert model.FDJUMPLOG.value
 
 
 def test_residuals(model_and_toas):
@@ -56,6 +63,7 @@ def test_refitting(model_and_toas):
     model, toas = model_and_toas
     FD1JUMP1_value_original = model.FD1JUMP1.value
     model.FD1JUMP1.value = 0
+    model.FDJUMPDM1.value = 0
 
     ftr = DownhillWLSFitter(toas, model)
     ftr.fit_toas()
@@ -118,3 +126,19 @@ def test_residual_change(model_and_toas):
 
     assert not np.allclose(r_old[mask_FD1JUMP1], r_new[mask_FD1JUMP1])
     assert np.allclose(r_old[mask_FD1JUMP1_inv], r_new[mask_FD1JUMP1_inv])
+
+
+def test_fdjumpdm_offset(model_and_toas):
+    model, toas = model_and_toas
+
+    model2 = deepcopy(model)
+    model2.FDJUMPDM1.value = 0
+
+    mask = model.FDJUMPDM1.select_toa_mask(toas)
+    not_mask = np.setdiff1d(np.arange(len(toas)), mask)
+
+    dm1 = model.total_dm(toas)
+    dm2 = model2.total_dm(toas)
+
+    assert np.allclose((dm1 - dm2)[not_mask], 0)
+    assert np.allclose((dm1 - dm2)[mask], -model.FDJUMPDM1.quantity)

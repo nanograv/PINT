@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from astropy import units as u, constants as c
+from astropy import units as u
 
 from pint.models import get_model
 import pint.simulation

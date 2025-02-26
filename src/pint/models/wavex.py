@@ -1,18 +1,19 @@
 """Delays expressed as a sum of sinusoids."""
+
+from warnings import warn
+
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
-from warnings import warn
 
+from pint.exceptions import MissingParameter
 from pint.models.parameter import MJDParameter, prefixParameter
-from pint.models.timing_model import DelayComponent, MissingParameter
+from pint.models.timing_model import DelayComponent
 
 
 class WaveX(DelayComponent):
     """
-    Implementation of the wave model as a delay correction
-
-    Delays are expressed as a sum of sinusoids.
+    Implementation of the wave model as a delay correction, with delays are expressed as a sum of sinusoids.
 
     Used for decomposition of timing noise into a series of sine/cosine components with the amplitudes as fitted parameters.
 
@@ -21,25 +22,34 @@ class WaveX(DelayComponent):
     .. paramtable::
         :class: pint.models.wavex.WaveX
 
-    This is an extension of the L13 method described in Lentati et al., 2013 doi: 10.1103/PhysRevD.87.104021
-    This model is similar to the TEMPO2 WAVE model parameters and users can convert a `TimingModel` with a Wave model
-    to a WaveX model and produce the same results. The main differences are that the WaveX frequencies are explicitly stated,
+    This is an extension of the method described in Lentati et al. (2013).
+    This model is similar to the TEMPO2 WAVE model parameters and users can convert a :class:`~pint.models/timing_model.TimingModel`
+    with a :class:`~pint.models.wave.Wave` model to a ``WaveX`` model and produce the same results.
+    The main differences are that the ``WaveX`` frequencies are explicitly stated,
     they do not necessarily need to be harmonics of some base frequency, the wave amplitudes are fittable parameters, and the
-    sine and cosine amplutides are reported as separate `prefixParameter`s rather than as a single `pairParameter`.
+    sine and cosine amplutides are reported as separate :class:`~pint.models.parameter.prefixParameter` rather than as a
+    single :class:`pint.models.parameter.pairParameter`.
 
     Analogous parameters in both models have the same units:
-    WAVEEPOCH is the same as WXEPOCH
-    WAVEOM and WXFREQ_000N have units of 1/d
-    WAVEN and WXSIN_000N/WXCOS_000N have units of seconds
 
-    The `pint.utils` functions `translate_wave_to_wavex()` and `translate_wavex_to_wave()` can be used to go back and forth between
-    two model.
+        - ``WAVEEPOCH`` is the same as ``WXEPOCH``
+        - ``WAVEOM`` and ``WXFREQ_000N`` have units of 1/d
+        - ``WAVEN`` and ``WXSIN_000N/WXCOS_000N`` have units of seconds
 
-    WARNING: If the choice of WaveX frequencies in a `TimingModel` doesn't correspond to harmonics of some base
-    freqeuncy, it will not be possible to convert it to a Wave model.
+    The :mod:`pint.utils` functions :func:`~pint.utils.translate_wave_to_wavex` and :func:`~pint.utils.translate_wavex_to_wave`
+    can be used to go back and forth between two model.
 
-    To set up a WaveX model, users can use the `pint.utils` function `wavex_setup()` with either a list of frequencies or a choice
-    of harmonics of a base frequency determined by 2 * pi /Timespan
+    WARNING: If the choice of ``WaveX`` frequencies in a :class:`~pint.models/timing_model.TimingModel` doesn't correspond to harmonics of some base
+    freqeuncy, it will not be possible to convert it to a :class:`~pint.models.wave.Wave` model.
+
+    To set up a ``WaveX`` model, users can use the :mod:`pint.utils` function :func:`~pint.utils.wavex_setup` with either a list of frequencies or a choice
+    of harmonics of a base frequency determined by ``2 * pi /Timespan``
+
+    References
+    ----------
+    - Lentati et al. (2013), PRD, 87, 104021 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2013PhRvD..87j4021L/abstract
     """
 
     register = True
@@ -52,6 +62,7 @@ class WaveX(DelayComponent):
                 name="WXEPOCH",
                 description="Reference epoch for Fourier representation of red noise",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_wavex_component(0.1, index=1, wxsin=0, wxcos=0, frozen=False)
@@ -107,6 +118,7 @@ class WaveX(DelayComponent):
                 units="1/d",
                 value=wxfreq,
                 parameter_type="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -117,6 +129,7 @@ class WaveX(DelayComponent):
                 value=wxsin,
                 frozen=frozen,
                 parameter_type="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -127,6 +140,7 @@ class WaveX(DelayComponent):
                 value=wxcos,
                 frozen=frozen,
                 parameter_type="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.setup()
@@ -181,7 +195,7 @@ class WaveX(DelayComponent):
             frozens = np.repeat(frozens, len(wxfreqs))
         if len(frozens) != len(wxfreqs):
             raise ValueError(
-                f"Number of base frequencies must match number of frozen values"
+                "Number of base frequencies must match number of frozen values"
             )
         #### If indices is None, increment the current max WaveX index by 1. Increment using WXFREQ
         dct = self.get_prefix_mapping_component("WXFREQ_")
@@ -218,6 +232,7 @@ class WaveX(DelayComponent):
                     units="1/d",
                     value=wxfreq,
                     parameter_type="float",
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
             self.add_param(
@@ -228,6 +243,7 @@ class WaveX(DelayComponent):
                     value=wxsin,
                     parameter_type="float",
                     frozen=frozen,
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
             self.add_param(
@@ -238,6 +254,7 @@ class WaveX(DelayComponent):
                     value=wxcos,
                     parameter_type="float",
                     frozen=frozen,
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
         self.setup()
@@ -341,16 +358,15 @@ class WaveX(DelayComponent):
                 warn(f"Frequency WXFREQ_{index:04d} is negative")
             wfreqs[j] = getattr(self, f"WXFREQ_{index:04d}").value
         wfreqs.sort()
-        if np.any(np.diff(wfreqs) <= (1.0 / (2.0 * 364.25))):
-            warn("Frequency resolution is greater than 1/yr")
-        if self.WXEPOCH.value is None:
-            if self._parent is not None:
-                if self._parent.PEPOCH.value is None:
-                    raise MissingParameter(
-                        "WXEPOCH or PEPOCH are required if WaveX is being used"
-                    )
-                else:
-                    self.WXEPOCH.quantity = self._parent.PEPOCH.quantity
+        # if np.any(np.diff(wfreqs) <= (1.0 / (2.0 * 364.25))):
+        #     warn("Frequency resolution is greater than 1/yr")
+        if self.WXEPOCH.value is None and self._parent is not None:
+            if self._parent.PEPOCH.value is None:
+                raise MissingParameter(
+                    "WXEPOCH or PEPOCH are required if WaveX is being used"
+                )
+            else:
+                self.WXEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def validate_toas(self, toas):
         return super().validate_toas(toas)

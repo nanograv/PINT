@@ -2,7 +2,6 @@
 
 import astropy.units as u
 import numpy
-
 from loguru import logger as log
 
 from pint.models.parameter import maskParameter
@@ -28,7 +27,11 @@ class DelayJump(DelayComponent):
 
     def __init__(self):
         super().__init__()
-        self.add_param(maskParameter(name="JUMP", units="second"))
+        self.add_param(
+            maskParameter(
+                name="JUMP", units="second", tcb2tdb_scale_factor=u.Quantity(1)
+            )
+        )
         self.delay_funcs_component += [self.jump_delay]
 
     def setup(self):
@@ -94,6 +97,7 @@ class PhaseJump(PhaseComponent):
                 name="JUMP",
                 units="second",
                 description="Phase jump for selection.",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.phase_funcs_component += [self.jump_phase]
@@ -216,6 +220,7 @@ class PhaseJump(PhaseComponent):
                 value=0.0,
                 units="second",
                 frozen=False,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         # otherwise add on jump with next index
         else:
@@ -237,6 +242,7 @@ class PhaseJump(PhaseComponent):
                 value=0.0,
                 units="second",
                 frozen=False,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         self.add_param(param)
         ind = param.index

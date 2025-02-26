@@ -17,6 +17,7 @@ from pint.models.model_builder import ModelBuilder, ComponentConflict, get_model
 from pint.models.parameter import floatParameter
 from pint.utils import split_prefixed_name, PrefixError
 from pinttestdata import datadir
+from astropy import units as u
 
 
 class SimpleModel(PhaseComponent):
@@ -27,7 +28,14 @@ class SimpleModel(PhaseComponent):
 
     def __init__(self):
         super(SimpleModel, self).__init__()
-        self.add_param(floatParameter(name="TESTPARAM", value=0.0, unit="s"))
+        self.add_param(
+            floatParameter(
+                name="TESTPARAM",
+                value=0.0,
+                unit="s",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
 
 
 class SubsetModel(PhaseComponent):
@@ -38,7 +46,11 @@ class SubsetModel(PhaseComponent):
 
     def __init__(self):
         super(SubsetModel, self).__init__()
-        self.add_param(floatParameter(name="F0", value=0.0, unit="1/s"))
+        self.add_param(
+            floatParameter(
+                name="F0", value=0.0, unit="1/s", tcb2tdb_scale_factor=u.Quantity(1)
+            )
+        )
         # self.add_param(floatParameter(name="F1", value=0.0, unit="1/s^2"))
 
 
@@ -54,7 +66,15 @@ def simple_model():
 
 @pytest.fixture
 def simple_model_overlap(simple_model):
-    simple_model.add_param(floatParameter(name="F0", aliases=[], value=0.0, unit="1/s"))
+    simple_model.add_param(
+        floatParameter(
+            name="F0",
+            aliases=[],
+            value=0.0,
+            unit="1/s",
+            tcb2tdb_scale_factor=u.Quantity(1),
+        )
+    )
     return simple_model
 
 
@@ -62,10 +82,22 @@ def simple_model_overlap(simple_model):
 def simple_model_alias_overlap():
     simple_model = SimpleModel()
     simple_model.add_param(
-        floatParameter(name="TESTPARAM2", aliases=["F0"], value=0.0, unit="1/s")
+        floatParameter(
+            name="TESTPARAM2",
+            aliases=["F0"],
+            value=0.0,
+            unit="1/s",
+            tcb2tdb_scale_factor=u.Quantity(1),
+        )
     )
     simple_model.add_param(
-        floatParameter(name="TESTPARAM3", aliases=["LAMBDA"], value=0.0, unit="deg")
+        floatParameter(
+            name="TESTPARAM3",
+            aliases=["LAMBDA"],
+            value=0.0,
+            unit="deg",
+            tcb2tdb_scale_factor=u.Quantity(1),
+        )
     )
     return simple_model
 
@@ -108,7 +140,13 @@ def test_model_builder_class():
     assert "SimpleModel" in mb.components
     simple_comp = mb.components["SimpleModel"]
     simple_comp.add_param(
-        floatParameter(name="TESTPARAM2", aliases=["F0"], value=0.0, unit="s")
+        floatParameter(
+            name="TESTPARAM2",
+            aliases=["F0"],
+            value=0.0,
+            unit="s",
+            tcb2tdb_scale_factor=u.Quantity(1),
+        )
     )
 
 
@@ -173,7 +211,13 @@ def test_conflict_alias_in_component():
         def __init__(self):
             super(SimpleModel2, self).__init__()
             self.add_param(
-                floatParameter(name="TESTPARAMF0", aliases=["F0"], value=0.0, unit="s")
+                floatParameter(
+                    name="TESTPARAMF0",
+                    aliases=["F0"],
+                    value=0.0,
+                    unit="s",
+                    tcb2tdb_scale_factor=u.Quantity(1),
+                )
             )
 
     mb2 = AllComponents()
@@ -392,7 +436,11 @@ def test_model_from_par_hassubset():
 
         def __init__(self):
             super(SubsetModel2, self).__init__()
-            self.add_param(floatParameter(name="F0", value=0.0, unit="1/s"))
+            self.add_param(
+                floatParameter(
+                    name="F0", value=0.0, unit="1/s", tcb2tdb_scale_factor=u.Quantity(1)
+                )
+            )
 
     with pytest.raises(ComponentConflict):
         mb = ModelBuilder()
@@ -400,7 +448,10 @@ def test_model_from_par_hassubset():
     del Component.component_types["SubsetModel2"]
 
 
-bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par", "J1744-1134.basic.ecliptic.par"]
+bad_trouble = [
+    "J1923+2515_NANOGrav_9yv1.gls.par",
+    "J1744-1134.basic.ecliptic.par",
+]
 
 
 # Test all the parameters.
@@ -408,7 +459,7 @@ bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par", "J1744-1134.basic.ecliptic.pa
 def test_all_parfiles(parfile):
     if basename(parfile) in bad_trouble:
         pytest.skip("This parfile is unclear")
-    model = get_model(parfile)
+    model = get_model(parfile, allow_tcb=True)
 
 
 def test_include_solar_system_shapiro():

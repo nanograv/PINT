@@ -1,4 +1,5 @@
 """The DDGR model - Damour and Deruelle with GR assumed"""
+
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
@@ -504,9 +505,7 @@ class DDGRmodel(DDmodel):
     # other derivatives
     def d_E_d_MTOT(self):
         """Eccentric anomaly has MTOT dependence through PBDOT and Kepler's equation"""
-        d_M_d_MTOT = (
-            -2 * np.pi * self.tt0**2 / (2 * self.PB**2) * self.d_PBDOT_d_MTOT()
-        )
+        d_M_d_MTOT = -2 * np.pi * self.tt0**2 / (2 * self.PB**2) * self.d_PBDOT_d_MTOT()
         return d_M_d_MTOT / (1.0 - np.cos(self.E()) * self.ecc())
 
     def d_nu_d_MTOT(self):

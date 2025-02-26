@@ -1,4 +1,5 @@
 """Test chi^2 gridding routines"""
+
 import concurrent.futures
 import pytest
 
@@ -296,6 +297,7 @@ def test_grid_3param_prefix_singleprocessor():
         description=modelcomponent.F_description(2),
         longdouble=True,
         frozen=False,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     modelcomponent.add_param(p, setup=True)
     m.validate()
@@ -340,6 +342,7 @@ def test_grid_3param_prefix_multiprocessor():
         description=modelcomponent.F_description(2),
         longdouble=True,
         frozen=False,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     modelcomponent.add_param(p, setup=True)
     m.validate()

@@ -6,24 +6,21 @@ Potential issues:
 
 """
 
-import numpy as np
-from astropy import units as u, constants as c
-from astropy.time import Time
 import copy
-from uncertainties import ufloat, umath
-from loguru import logger as log
+from typing import List, Optional, Tuple, Union
 
+import numpy as np
+from astropy import units as u
+from astropy.time import Time
+from loguru import logger as log
+from uncertainties import ufloat, umath
+
+import pint.models
 from pint import Tsun
 from pint.models.binary_bt import BinaryBT
-from pint.models.binary_dd import BinaryDD, BinaryDDS, BinaryDDGR, BinaryDDH
+from pint.models.binary_dd import BinaryDD, BinaryDDH, BinaryDDS
 from pint.models.binary_ddk import BinaryDDK
 from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
-from pint.models.parameter import (
-    floatParameter,
-    MJDParameter,
-    intParameter,
-    funcParameter,
-)
 
 # output types
 # DDGR is not included as there is not a well-defined way to get a unique output
@@ -33,7 +30,7 @@ binary_types = ["DD", "DDK", "DDS", "DDH", "BT", "ELL1", "ELL1H", "ELL1k"]
 __all__ = ["convert_binary"]
 
 
-def _M2SINI_to_orthometric(model):
+def _M2SINI_to_orthometric(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
     """Convert from standard Shapiro delay (M2, SINI) to orthometric (H3, H4, STIGMA)
 
     Uses Eqns. 12, 20, 21 from Freire and Wex (2010)
@@ -82,7 +79,7 @@ def _M2SINI_to_orthometric(model):
     return stigma.n, h3.n * u.s, h4.n * u.s, stigma_unc, h3_unc, h4_unc
 
 
-def _orthometric_to_M2SINI(model):
+def _orthometric_to_M2SINI(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
     """Convert from orthometric (H3, H4, STIGMA) to standard Shapiro delay (M2, SINI)
 
     Inverts Eqns. 12, 20, 21 from Freire and Wex (2010)
@@ -142,7 +139,7 @@ def _orthometric_to_M2SINI(model):
     return m2.n * u.Msun, sini.n, m2_unc, sini_unc
 
 
-def _SINI_to_SHAPMAX(model):
+def _SINI_to_SHAPMAX(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
     """Convert from standard SINI to alternate SHAPMAX parameterization
 
     Also propagates uncertainties if present
@@ -164,7 +161,7 @@ def _SINI_to_SHAPMAX(model):
     return shapmax.n, shapmax.s if shapmax.s > 0 else None
 
 
-def _SHAPMAX_to_SINI(model):
+def _SHAPMAX_to_SINI(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
     """Convert from alternate SHAPMAX to SINI parameterization
 
     Also propagates uncertainties if present
@@ -186,7 +183,7 @@ def _SHAPMAX_to_SINI(model):
     return sini.n, sini.s if sini.s > 0 else None
 
 
-def _from_ELL1(model):
+def _from_ELL1(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
     """Convert from ELL1 parameterization to standard orbital parameterization
 
     Converts using Eqns. 1, 2, and 3 from Lange et al. (2001)
@@ -268,13 +265,15 @@ def _from_ELL1(model):
         (om.s * u.rad).to(u.deg) if om.s > 0 else None,
         t02.s * u.d if t02.s > 0 else None,
         edot.s * u.Hz if (edot is not None and edot.s > 0) else None,
-        (omdot.s * u.rad / u.s).to(u.deg / u.yr)
-        if (omdot is not None and omdot.s > 0)
-        else None,
+        (
+            (omdot.s * u.rad / u.s).to(u.deg / u.yr)
+            if (omdot is not None and omdot.s > 0)
+            else None
+        ),
     )
 
 
-def _to_ELL1(model):
+def _to_ELL1(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
     """Convert from standard orbital parameterization to ELL1 parameterization
 
     Converts using Eqns. 1, 2, and 3 from Lange et al. (2001)
@@ -357,7 +356,7 @@ def _to_ELL1(model):
     )
 
 
-def _ELL1_to_ELL1k(model):
+def _ELL1_to_ELL1k(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
     """Convert from ELL1 EPS1DOT/EPS2DOT to ELL1k LNEDOT/OMDOT
 
     Parameters
@@ -395,7 +394,7 @@ def _ELL1_to_ELL1k(model):
         return lnedot.n / u.s, (omdot.n / u.s).to(u.deg / u.yr), lnedot_unc, omdot_unc
 
 
-def _ELL1k_to_ELL1(model):
+def _ELL1k_to_ELL1(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
     """Convert from ELL1k LNEDOT/OMDOT to ELL1 EPS1DOT/EPS2DOT
 
     Parameters
@@ -432,7 +431,7 @@ def _ELL1k_to_ELL1(model):
     return eps1dot.n / u.s, eps2dot.n / u.s, eps1dot_unc, eps2dot_unc
 
 
-def _DDGR_to_PK(model):
+def _DDGR_to_PK(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
     """Convert DDGR model to equivalent PK parameters
 
     Uses ``uncertainties`` module to propagate uncertainties
@@ -482,9 +481,7 @@ def _DDGR_to_PK(model):
     )
     if model.XOMDOT.quantity is not None:
         omegadot += model.XOMDOT.as_ufloat(u.rad / u.s)
-    fe = (1 + (73.0 / 24) * ecc**2 + (37.0 / 96) * ecc**4) / (1 - ecc**2) ** (
-        7.0 / 2
-    )
+    fe = (1 + (73.0 / 24) * ecc**2 + (37.0 / 96) * ecc**4) / (1 - ecc**2) ** (7.0 / 2)
     # units as s/s
     pbdot = (
         (-192 * np.pi / 5)
@@ -513,7 +510,11 @@ def _DDGR_to_PK(model):
     return pbdot, gamma, omegadot, s, r, Dr, Dth
 
 
-def _transfer_params(inmodel, outmodel, badlist=[]):
+def _transfer_params(
+    inmodel: pint.models.TimingModel,
+    outmodel: pint.models.TimingModel,
+    badlist: list = [],
+) -> None:
     """Transfer parameters between an input and output model, excluding certain parameters
 
     Parameters (input or output) that are :class:`~pint.models.parameter.funcParameter` are not copied
@@ -541,7 +542,13 @@ def _transfer_params(inmodel, outmodel, badlist=[]):
             )
 
 
-def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
+def convert_binary(
+    model: pint.models.TimingModel,
+    output: str,
+    NHARMS: int = 3,
+    useSTIGMA: bool = False,
+    KOM: u.Quantity = 0 * u.deg,
+) -> pint.models.TimingModel:
     """
     Convert between binary models
 

@@ -56,15 +56,9 @@ class TestModelBuilding:
         assert len(tm.DelayComponent_list) == 4
         assert len(tm.PhaseComponent_list) == 2
 
-        # Check delay component order
-        order = []
-        for dcp in tm.DelayComponent_list:
-            order.append(DEFAULT_ORDER.index(dcp.category))
+        order = [DEFAULT_ORDER.index(dcp.category) for dcp in tm.DelayComponent_list]
         assert all(np.diff(np.array(order)) > 0)
-        # Check phase component order
-        order = []
-        for dcp in tm.PhaseComponent_list:
-            order.append(DEFAULT_ORDER.index(dcp.category))
+        order = [DEFAULT_ORDER.index(dcp.category) for dcp in tm.PhaseComponent_list]
         assert all(np.diff(np.array(order)) > 0)
 
     def test_component_input(self):
@@ -77,16 +71,10 @@ class TestModelBuilding:
             # test the link to timing model
             assert v._parent == tm
 
-        # Test Delay order
-        order = []
-        for dcp in tm.DelayComponent_list:
-            order.append(DEFAULT_ORDER.index(dcp.category))
+        order = [DEFAULT_ORDER.index(dcp.category) for dcp in tm.DelayComponent_list]
         assert all(np.diff(np.array(order)) > 0)
 
-        # Test Phase order
-        order = []
-        for dcp in tm.PhaseComponent_list:
-            order.append(DEFAULT_ORDER.index(dcp.category))
+        order = [DEFAULT_ORDER.index(dcp.category) for dcp in tm.PhaseComponent_list]
         assert all(np.diff(np.array(order)) > 0)
 
     def test_add_component(self):
@@ -123,6 +111,7 @@ class TestModelBuilding:
                 value=p_vals["value"],
                 key_value=p_vals["key_value"],
                 units=u.s,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
             print("test", par.name)
             cp.add_param(par, setup=True)
@@ -268,7 +257,7 @@ def test_items(model_0437):
 
 
 def test_iterator(model_0437):
-    assert [k for k in model_0437] == model_0437.params
+    assert list(model_0437) == model_0437.params
 
 
 par_base = """

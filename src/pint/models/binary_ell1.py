@@ -1,24 +1,23 @@
 """Approximate binary model for small eccentricity."""
+
 import astropy.units as u
 import numpy as np
 from astropy.time import Time
-
 from loguru import logger as log
 
+from pint.exceptions import MissingParameter
 from pint.models.parameter import (
     MJDParameter,
     floatParameter,
-    intParameter,
     funcParameter,
+    intParameter,
 )
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
 from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
 from pint.models.stand_alone_psr_binaries.ELL1k_model import ELL1kmodel
-from pint.models.timing_model import MissingParameter
 from pint.utils import taylor_horner_deriv
-from pint import Tsun
 
 
 def _eps_to_e(eps1, eps2):
@@ -109,7 +108,10 @@ class BinaryELL1(PulsarBinary):
 
         self.add_param(
             MJDParameter(
-                name="TASC", description="Epoch of ascending node", time_scale="tdb"
+                name="TASC",
+                description="Epoch of ascending node",
+                time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -119,6 +121,7 @@ class BinaryELL1(PulsarBinary):
                 units="",
                 description="First Laplace-Lagrange parameter, ECC*sin(OM)",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -128,6 +131,7 @@ class BinaryELL1(PulsarBinary):
                 units="",
                 description="Second Laplace-Lagrange parameter, ECC*cos(OM)",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -137,6 +141,7 @@ class BinaryELL1(PulsarBinary):
                 units="1e-12/s",
                 description="First derivative of first Laplace-Lagrange parameter",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -146,6 +151,7 @@ class BinaryELL1(PulsarBinary):
                 units="1e-12/s",
                 description="Second derivative of first Laplace-Lagrange parameter",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.remove_param("ECC")
@@ -314,9 +320,12 @@ class BinaryELL1H(BinaryELL1):
 
     Notes
     -----
-    Only the Medium-inclination case model is implemented.
+    When `H3` only is supplied, `NHARMS` is ignored, and the approximate version is used (Eqn. 19) appropriate for medium inclinations.
 
-    Default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
+    When `H3` and `H4` are supplied, `NHARMS` is taken to be `max(7,NHARMS)`, and the approximate version is used (Eqn. 19) appropriate for medium inclinations.
+    Note that the default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
+
+    When `H3` and `STIGMA` are supplied, `NHARMS` is ignored since the exact version is used (Eqn. 29) appropriate for very high inclinations.
 
     References
     ----------
@@ -338,6 +347,7 @@ class BinaryELL1H(BinaryELL1):
                 units="second",
                 description="Shapiro delay parameter H3 as in Freire and Wex 2010 Eq(20)",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -347,6 +357,7 @@ class BinaryELL1H(BinaryELL1):
                 units="second",
                 description="Shapiro delay parameter H4 as in Freire and Wex 2010 Eq(21)",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -357,13 +368,14 @@ class BinaryELL1H(BinaryELL1):
                 description="Shapiro delay parameter STIGMA as in Freire and Wex 2010 Eq(12)",
                 long_double=True,
                 aliases=["VARSIGMA", "STIG"],
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
             intParameter(
                 name="NHARMS",
                 units="",
-                value=3,
+                # value=7,
                 description="Number of harmonics for ELL1H shapiro delay.",
             )
         )
@@ -380,12 +392,22 @@ class BinaryELL1H(BinaryELL1):
         if self.H4.quantity is not None:
             self.binary_instance.fit_params = ["H3", "H4"]
             # If have H4 or STIGMA, choose 7th order harmonics
-            self.NHARMS.value = max(self.NHARMS.value, 7)
+            if (self.NHARMS.value is not None) and (self.NHARMS.value < 7):
+                log.warning(
+                    f"Requested NHARMS={self.NHARMS.value}, but setting it to 7 since H4 is also specified"
+                )
+            self.NHARMS.value = (
+                max(self.NHARMS.value, 7) if self.NHARMS.value is not None else 7
+            )
             if self.STIGMA.quantity is not None:
                 raise ValueError("ELL1H can use H4 or STIGMA but not both")
 
         if self.STIGMA.quantity is not None:
             self.binary_instance.fit_params = ["H3", "STIGMA"]
+            if self.NHARMS.value is not None:
+                log.warning(
+                    f"Requested NHARMS={self.NHARMS.value} will be ignored, since will use exact parameterization with STIGMA specified"
+                )
             self.binary_instance.ds_func = self.binary_instance.delayS_H3_STIGMA_exact
             if self.STIGMA.quantity <= 0:
                 raise ValueError("STIGMA must be greater than zero.")
@@ -444,6 +466,7 @@ class BinaryELL1k(BinaryELL1):
                 units="deg/year",
                 description="Rate of advance of periastron",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -453,6 +476,7 @@ class BinaryELL1k(BinaryELL1):
                 units="1/year",
                 description="Log-derivative of the eccentricity EDOT/ECC",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 

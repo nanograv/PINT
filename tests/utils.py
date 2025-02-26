@@ -1,4 +1,5 @@
 """Utility functions for the tests"""
+
 import warnings
 from pint.models.parameter import funcParameter
 

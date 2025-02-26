@@ -58,7 +58,6 @@ tsim = make_fake_toas_uniform(
     obs="gbt",
     error=1 * u.us,
     include_bipm=True,
-    include_gps=True,
 )
 
 # %%
@@ -91,7 +90,6 @@ tsim = make_fake_toas_uniform(
     obs="gbt",
     error=1 * u.us,
     include_bipm=True,
-    include_gps=True,
     add_noise=True,
 )
 
@@ -132,7 +130,6 @@ tsim = make_fake_toas_uniform(
     obs="gbt",
     error=1 * u.us,
     include_bipm=True,
-    include_gps=True,
     add_noise=True,
 )
 
@@ -179,7 +176,6 @@ tsim = make_fake_toas_uniform(
     obs="gbt",
     error=1 * u.us,
     include_bipm=True,
-    include_gps=True,
     add_noise=True,
     multi_freqs_in_epoch=True,
 )
@@ -256,7 +252,6 @@ tsim = make_fake_toas_uniform(
     obs="gbt",
     error=1 * u.us,
     include_bipm=True,
-    include_gps=True,
     add_noise=True,
     add_correlated_noise=True,
 )
@@ -323,7 +318,6 @@ tsim = make_fake_toas_uniform(
     obs="gbt",
     error=1 * u.us,
     include_bipm=True,
-    include_gps=True,
     wideband=True,
     wideband_dm_error=1e-5 * dmu,
     add_noise=True,

@@ -26,7 +26,7 @@ def test_phase_offset():
     m = get_model(io.StringIO(simplepar))
 
     assert hasattr(m, "PHOFF") and m.PHOFF.value == 0.2
-
+    np.random.seed(1929)
     t = make_fake_toas_uniform(
         startMJD=50000,
         endMJD=50500,

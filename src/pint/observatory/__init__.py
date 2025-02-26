@@ -36,6 +36,11 @@ from loguru import logger as log
 from pint.config import runtimefile
 from pint.pulsar_mjd import Time
 from pint.utils import interesting_lines
+from pint.exceptions import (
+    ClockCorrectionError,
+    NoClockCorrections,
+    ClockCorrectionOutOfRange,
+)
 
 # Include any files that define observatories here.  This will start
 # with the standard distribution files, then will read any system- or
@@ -57,28 +62,39 @@ __all__ = [
 ]
 
 # The default BIPM to use if not explicitly specified
-# FIXME: this should be auto-detected by checking the index file to see what's available
-bipm_default = "BIPM2021"
+# Should set this to the most recent available version
+# Automated ways of doing this are possible (see find_latest_bipm below), but require network access.
+# They are also fragile since URLs can chaange. So this should just be done manually every year or so.
+bipm_default = "BIPM2023"
+
+# Current URL for BIPM correction files is: https://webtai.bipm.org/ftp/pub/tai/ttbipm/
+ttbipmxy_url = "https://webtai.bipm.org/ftp/pub/tai/ttbipm/TTBIPM.{}"
+
+
+def find_latest_bipm():
+    "Check BIPM servers for the most recent version of TT(BIPMYYYY)"
+    year = int(bipm_default[4:])
+    while True:
+        try:
+            f = astropy.utils.data.download_file(ttbipmxy_url.format(year), cache=True)
+            # latestyear is the last successfully loaded BIPM file
+            latestyear = year
+        except IOError:
+            if first:
+                log.error(f"Default BIPM {year} not found!")
+            break
+        except:
+            log.error("Unknown exception in find_latest_bipm")
+            raise
+        else:
+            first = False
+            year += 1
+
+    log.info(f"Most recent BIPM year is {latestyear}")
+    return latestyear
+
 
 pint_clock_env_var = "PINT_CLOCK_OVERRIDE"
-
-
-class ClockCorrectionError(RuntimeError):
-    """Unspecified error doing clock correction."""
-
-    pass
-
-
-class NoClockCorrections(ClockCorrectionError):
-    """Clock corrections are expected but none are available."""
-
-    pass
-
-
-class ClockCorrectionOutOfRange(ClockCorrectionError):
-    """Clock corrections are available but the requested time is not covered."""
-
-    pass
 
 
 # Global clock files shared by all observatories
@@ -89,7 +105,7 @@ _bipm_clock_versions = {}
 def _load_gps_clock():
     global _gps_clock
     if _gps_clock is None:
-        log.info("Loading global GPS clock file")
+        log.debug("Loading global GPS clock file")
         _gps_clock = find_clock_file(
             "gps2utc.clk",
             format="tempo2",
@@ -102,9 +118,13 @@ def _load_bipm_clock(bipm_version):
         try:
             log.info(f"Loading BIPM clock version {bipm_version}")
             # FIXME: error handling?
+            # FIXME: BIPM2019 and earlier come fromm the TEMPO2 repository and have a bogus last correction
+            # later ones are generated and don't; how to manage this?
+            bogus_last_correction = bipm_version.lower() <= "bipm2019"
             _bipm_clock_versions[bipm_version] = find_clock_file(
                 f"tai2tt_{bipm_version}.clk",
                 format="tempo2",
+                bogus_last_correction=bogus_last_correction,
             )
         except Exception as e:
             raise ValueError(
@@ -130,6 +150,12 @@ class Observatory:
     case of satellite observatories) and may have associated clock corrections
     to relate times observed at the observatory clock to global time scales.
 
+    An Observatory has a boolean flag called apply_gps2utc.
+    If this is True then the observatory clock (after applying any local clock corrections)
+    is assumed to be in UTC(USNO)_GPS, meaning the value of UTC(USNO) distributed via GPS.
+    To get this to UTC, one needs to apply the corrections (C_0' = [UTC-UTC(USNO)_GPS]) from BIPM Circular T
+    https://webtai.bipm.org/ftp/pub/tai/other-products/notes/explanatory_supplement_v0.6.pdf
+
     Terrestrial observatories are generally instances of the
     :class:`pint.observatory.topo_obs.TopoObs` class, which has a fixed
     position.
@@ -143,40 +169,32 @@ class Observatory:
     # standard name.
     _alias_map = {}
 
-    def __new__(cls, name, *args, **kwargs):
-        # Generates a new Observatory object instance, and adds it
-        # it the registry, using name as the key.  Name must be unique,
-        # a new instance with a given name will over-write the existing
-        # one only if overwrite=True
-        obs = super().__new__(cls)
-        if name.lower() in cls._registry:
-            if "overwrite" not in kwargs or not kwargs["overwrite"]:
-                raise ValueError(
-                    f"Observatory {name.lower()} already present and overwrite=False"
-                )
-            log.warning(f"Observatory '{name.lower()}' already present; overwriting...")
-
-            cls._register(obs, name)
-            return obs
-        cls._register(obs, name)
-        return obs
-
     def __init__(
         self,
         name,
         fullname=None,
         aliases=None,
-        include_gps=True,
-        include_bipm=True,
-        bipm_version=bipm_default,
+        apply_gps2utc=None,
         overwrite=False,
     ):
+        self._name = name.lower()
+        self._aliases = (
+            list(set(map(str.lower, aliases))) if aliases is not None else []
+        )
         if aliases is not None:
             Observatory._add_aliases(self, aliases)
         self.fullname = fullname if fullname is not None else name
-        self.include_gps = include_gps
-        self.include_bipm = include_bipm
-        self.bipm_version = bipm_version
+        # If not specified elsewhere, assume UTC(GPS)->UTC correction should be applied
+        # Observatory specific settings are in observatories.json
+        self.apply_gps2utc = True if apply_gps2utc is None else apply_gps2utc
+        if name.lower() in Observatory._registry:
+            if not overwrite:
+                raise ValueError(
+                    f"Observatory {name.lower()} already present and overwrite=False"
+                )
+            log.warning(f"Observatory '{name.lower()}' already present; overwriting...")
+
+        Observatory._register(self, name)
 
     @classmethod
     def _register(cls, obs, name):
@@ -186,7 +204,6 @@ class Observatory:
         The Observatory instance's name attribute will be updated for
         consistency."""
         cls._registry[name.lower()] = obs
-        obs._name = name.lower()
 
     @classmethod
     def _add_aliases(cls, obs, aliases):
@@ -199,21 +216,32 @@ class Observatory:
         to ensure consistency."""
         for a in aliases:
             cls._alias_map[a.lower()] = obs.name
-        for o in cls._registry.values():
-            o._aliases = [
-                alias for alias, name in cls._alias_map.items() if name == o.name
-            ]
 
     @staticmethod
     def gps_correction(t, limits="warn"):
-        """Compute the GPS clock corrections for times t."""
+        """Compute the GPS clock corrections for times t.
+
+        Parameters
+        ----------
+        t : astropy.time.Time
+            An array-valued Time object specifying the times at which to evaluate the
+            GPS clock correction.
+        """
         log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
         _load_gps_clock()
         return _gps_clock.evaluate(t, limits=limits)
 
     @staticmethod
     def bipm_correction(t, bipm_version=bipm_default, limits="warn"):
-        """Compute the GPS clock corrections for times t."""
+        """Compute the GPS clock corrections for times t.
+
+        Parameters
+        ----------
+        t : astropy.time.Time
+            An array-valued Time object specifying the times at which to evaluate the
+            GPS clock correction.
+
+        """
         log.info(f"Applying TT(TAI) to TT({bipm_version}) clock correction (~27 us)")
         tt2tai = 32.184 * 1e6 * u.us
         _load_bipm_clock(bipm_version)
@@ -258,7 +286,7 @@ class Observatory:
         return self._aliases
 
     @classmethod
-    def get(cls, name):
+    def get(cls, name, apply_gps2utc=None, overwrite=False):
         """Returns the Observatory instance for the specified name/alias.
 
         If the name has not been defined, an error will be raised.  Aside
@@ -277,12 +305,22 @@ class Observatory:
 
         # Be case-insensitive
         name = name.lower()
-        # First see if name matches
+
+        # First see if name matches an already-registered observatory (or an alias)
         if name in cls._registry:
-            return cls._registry[name]
-        # Then look for aliases
-        if name in cls._alias_map:
-            return cls._registry[cls._alias_map[name]]
+            site = cls._registry[name]
+        elif name in cls._alias_map:
+            site = cls._registry[cls._alias_map[name]]
+        else:
+            site = None
+        if site is not None:
+            if overwrite and apply_gps2utc is not None:
+                # This will modify the Observatory object in the registry, so it will "stick" until overwritten
+                log.warning(
+                    f"Observatory {name}: Overwriting apply_gps2utc={apply_gps2utc} in registry."
+                )
+                site.apply_gps2utc = apply_gps2utc
+            return site
         # Then look in astropy
         log.warning(
             f"Observatory name {name} is not present in PINT observatory list; searching astropy..."
@@ -299,13 +337,14 @@ class Observatory:
         from pint.observatory.topo_obs import TopoObs
 
         # add in metadata from astropy
+        log.debug(f"TopoObs(apply_gps2utc={apply_gps2utc},overwrite={overwrite})")
         obs = TopoObs(
             name,
             location=site_astropy,
+            apply_gps2utc=apply_gps2utc,
+            overwrite=overwrite,
             origin=f"""astropy: '{site_astropy.info.meta["source"]}'""",
         )
-        # add to registry
-        cls._register(obs, name)
         return cls._registry[name]
 
     # The following methods define the basic API for the Observatory class.
@@ -345,8 +384,26 @@ class Observatory:
         astropy.time.Time()."""
         raise NotImplementedError
 
-    def clock_corrections(self, t, limits="warn"):
+    def clock_corrections(
+        self,
+        t,
+        include_bipm=True,
+        bipm_version=bipm_default,
+        limits="warn",
+    ):
         """Compute clock corrections for a Time array.
+
+        Parameters
+        ----------
+        t: astropy.time.Time object
+            Array-valued Time to compute corrections for
+        include_bipm: bool
+            Whether to apply TT(TAI)->TT(BIPM) correction
+        bipm_version: str, optional
+            Which version of BIPM to apply (e.g. "BIPM2021")
+        limits: str, optional
+            Either "warn" or "error" to control behavior when times are outside
+            limits of known corrections.
 
         Given an array-valued Time, return the clock corrections
         as a numpy array, with units.  These values are to be added to the
@@ -357,29 +414,29 @@ class Observatory:
         # TOA metadata which may be necessary in some cases.
         corr = np.zeros_like(t) * u.us
 
-        if self.include_gps:
+        if self.apply_gps2utc:
             corr += self.gps_correction(t, limits=limits)
 
-        if self.include_bipm:
-            corr += self.bipm_correction(t, self.bipm_version, limits=limits)
+        if include_bipm and self.timescale.lower() != "tdb":
+            corr += self.bipm_correction(t, bipm_version, limits=limits)
 
         return corr
 
-    def last_clock_correction_mjd(self):
+    def last_clock_correction_mjd(self, include_bipm=True, bipm_version=bipm_default):
         """Return the MJD of the last available clock correction.
 
         Returns ``np.inf`` if no clock corrections are relevant.
         """
         t = np.inf
 
-        if self.include_gps:
+        if self.apply_gps2utc:
             _load_gps_clock()
             t = min(t, _gps_clock.last_correction_mjd())
-        if self.include_bipm:
-            _load_bipm_clock(self.bipm_version)
+        if include_bipm:
+            _load_bipm_clock(bipm_version)
             t = min(
                 t,
-                _bipm_clock_versions[self.bipm_version.lower()].last_correction_mjd(),
+                _bipm_clock_versions[bipm_version.lower()].last_correction_mjd(),
             )
         return t
 
@@ -459,13 +516,11 @@ class Observatory:
         raise NotImplementedError
 
 
-def get_observatory(
-    name, include_gps=True, include_bipm=True, bipm_version=bipm_default
-):
+def get_observatory(name, apply_gps2utc=None):
     """Convenience function to get observatory object with options.
 
     This function will simply call the ``Observatory.get`` method but
-    will manually modify the global observatory object after the method is called.
+    will overwrite the apply_gps2utc setting, if requested.
     Name-matching is case-insensitive.
 
     If the observatory is not present in the PINT list, will fallback to astropy.
@@ -474,22 +529,21 @@ def get_observatory(
     ----------
     name : str
         The name of the observatory
-    include_gps : bool, optional
-        Set False to disable UTC(GPS)->UTC clock correction.
-    include_bipm : bool, optional
-        Set False to disable TAI TT(BIPM) clock correction.
-    bipm_version : str, optional
-        Set the version of TT BIPM clock correction files.
+    apply_gps2utc : bool or None
+        Whether to apply BIPM Circular T to convert UTC(USNO)_GPS to UTC.
+        Default is None, which will use the the value set in observatories.json or True if not set there.
+        Specifying True or False here will override.
 
     .. note:: This function can and should be expanded if more clock
         file switches/options are added at a public API level.
 
     """
-    site = Observatory.get(name)
-    site.include_gps = include_gps
-    site.include_bipm = include_bipm
-    site.bipm_version = bipm_version
-    return site
+    if apply_gps2utc is None:
+        return Observatory.get(name)
+    # If we are overriding the gps2utc setting then  site and update apply_gps2utc
+    # Otherwise, will just use default setting for this site.
+    log.debug(f"Observatory.get(apply_gps2utc={apply_gps2utc})")
+    return Observatory.get(name, apply_gps2utc=apply_gps2utc, overwrite=True)
 
 
 def earth_location_distance(loc1, loc2):
@@ -533,8 +587,8 @@ def compare_t2_observatories_dat(t2dir=None):
         for line in interesting_lines(f, comments="#"):
             try:
                 x, y, z, full_name, short_name = line.split()
-            except ValueError:
-                raise ValueError(f"unrecognized line '{line}'")
+            except ValueError as e:
+                raise ValueError(f"unrecognized line '{line}'") from e
             x, y, z = float(x), float(y), float(z)
             full_name, short_name = full_name.lower(), short_name.lower()
             topo_obs_entry = textwrap.dedent(
@@ -574,9 +628,9 @@ def compare_t2_observatories_dat(t2dir=None):
                         pint=oloc.to_geodetic(),
                         topo_obs_entry=topo_obs_entry,
                         pint_name=obs.name,
-                        pint_tempo_code=obs.tempo_code
-                        if hasattr(obs, "tempo_code")
-                        else "",
+                        pint_tempo_code=(
+                            obs.tempo_code if hasattr(obs, "tempo_code") else ""
+                        ),
                         pint_aliases=obs.aliases,
                         position_difference=d,
                         pint_origin=obs.origin,
@@ -694,9 +748,9 @@ def compare_tempo_obsys_dat(tempodir=None):
                     dict(
                         name=obsnam,
                         pint_name=obs.name,
-                        pint_tempo_code=obs.tempo_code
-                        if hasattr(obs, "tempo_code")
-                        else "",
+                        pint_tempo_code=(
+                            obs.tempo_code if hasattr(obs, "tempo_code") else ""
+                        ),
                         pint_aliases=obs.aliases,
                         itoa_code=itoa_code,
                         tempo_code=tempo_code,
@@ -765,12 +819,14 @@ def update_clock_files(bipm_versions=None):
         "BIPM2019".
     """
     # FIXME: allow forced downloads for non-expired files
-    # FIXME: what to do about GPS and BIPM files?
 
     if bipm_versions is not None:
-        o = get_observatory("arecibo")
+        o = get_observatory("AXIS")
+        # Load requested BIPM files
         for v in bipm_versions:
             o._load_bipm_clock(v)
+        # Load gps2utc.clk
+        o._load_gps_clock()
 
     t = Time.now()
     for n in Observatory.names():
@@ -778,7 +834,8 @@ def update_clock_files(bipm_versions=None):
         if not hasattr(o, "clock_file"):
             continue
         try:
-            o.clock_corrections(t, limits="error")
+            # For this purpose (pre-loading observatory clock files) no need for BIPM or GPS corrections
+            o.clock_corrections(t, use_bipm=False, limits="error")
         except ClockCorrectionOutOfRange:
             pass
         except NoClockCorrections:
@@ -831,10 +888,7 @@ def find_clock_file(
     """
     # Avoid import loop
     from pint.observatory.clock_file import ClockFile, GlobalClockFile
-    from pint.observatory.global_clock_corrections import (
-        Index,
-        get_clock_correction_file,
-    )
+    from pint.observatory.global_clock_corrections import Index
 
     if name == "":
         raise ValueError("No filename supplied to find_clock_file")

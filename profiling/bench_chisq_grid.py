@@ -17,7 +17,6 @@ thanktoas = pint.toa.get_TOAs(
     ephem="DE436",
     planets=True,
     usepickle=False,
-    include_gps=False,
     bipm_version="BIPM2015",
     include_bipm=False,
 )

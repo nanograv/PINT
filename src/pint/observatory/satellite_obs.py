@@ -1,6 +1,5 @@
 """Observatories at special (non-Earth) locations."""
 
-
 import astropy.constants as const
 import astropy.io.fits as pyfits
 import astropy.units as u
@@ -11,7 +10,6 @@ from loguru import logger as log
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 from pint.fits_utils import read_fits_event_mjds
-from pint.observatory import bipm_default
 from pint.observatory.special_locations import SpecialLocation
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.utils import PosVel
@@ -64,7 +62,7 @@ def load_Fermi_FT2(ft2_filename):
         Vx = SC_VEL[:, 0] * u.m / u.s
         Vy = SC_VEL[:, 1] * u.m / u.s
         Vz = SC_VEL[:, 2] * u.m / u.s
-    except:
+    except Exception:
         # Otherwise, compute velocities by differentiation because FT2 does not have velocities
         # This is not the best way. Should fit an orbit and determine velocity from that.
         dt = mjds_TT[1] - mjds_TT[0]
@@ -296,6 +294,8 @@ class SatelliteObs(SpecialLocation):
         File name to read spacecraft position information from
     maxextrap: float
         Maximum minutes between a time and the closest S/C measurement.
+    apply_gps2utc: bool
+        Whether to apply UTC(GPS)->UTC correction (e.g. if satellite clock is from a GPS receiver)
     overwrite: bool
         Replace the entry in the observatory table.
     """
@@ -305,17 +305,12 @@ class SatelliteObs(SpecialLocation):
         name,
         ft2name,
         maxextrap=2,
-        include_gps=True,
-        include_bipm=True,
-        bipm_version=bipm_default,
+        apply_gps2utc=True,
         overwrite=False,
     ):
         super().__init__(
-            self,
             name,
-            include_gps=include_gps,
-            include_bipm=include_bipm,
-            bipm_version=bipm_version,
+            apply_gps2utc=apply_gps2utc,
             overwrite=overwrite,
         )
         self.FT2 = load_orbit(name, ft2name)
@@ -444,4 +439,5 @@ def get_satellite_observatory(name, ft2name, **kwargs):
     # values as new observatories are added.
     if "maxextrap" not in kwargs:
         kwargs["maxextrap"] = 2
+
     return SatelliteObs(name, ft2name, **kwargs)

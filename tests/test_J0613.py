@@ -1,4 +1,5 @@
 """Various tests to assess the performance of the J0623-0200."""
+
 import logging
 import os
 import pytest

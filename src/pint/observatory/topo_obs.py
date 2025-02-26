@@ -17,6 +17,7 @@ See Also
 --------
 :mod:`pint.observatory.special_locations`
 """
+
 import json
 import os
 from pathlib import Path
@@ -120,20 +121,8 @@ class TopoObs(Observatory):
         PINT's usual seach approach; "TEMPO" or "TEMPO2" mean to look in those
         programs' usual location (pointed to by their environment variables),
         while a path means to look in that specific directory.
-    include_gps : bool, optional
-        Set False to disable UTC(GPS)->UTC clock correction.
-    include_bipm : bool, optional
-        Set False to disable TAI-> TT BIPM clock
-        correction. If False, it only apply TAI->TT correction
-        TT = TAI+32.184s, the same as TEMPO2 TT(TAI) in the
-        parfile. If True, it will apply the correction from
-        BIPM TT=TT(BIPMYYYY). See the link:
-        http://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
-    bipm_version : str, optional
-        Set the version of TT BIPM clock correction file to
-        use, the default is the most recent available.
-        It should be a string like 'BIPM2015' to select the file
-        'tai2tt_bipm2015.clk'.
+    apply_gps2utc : bool, optional
+        Whether to apply UTC(GPS)->UTC clock corrections
     origin : str, optional
         Documentation of the origin/author/date for the information
     overwrite : bool, optional
@@ -163,9 +152,7 @@ class TopoObs(Observatory):
         clock_file="",
         clock_fmt="tempo",
         clock_dir=None,
-        include_gps=True,
-        include_bipm=True,
-        bipm_version=bipm_default,
+        apply_gps2utc=None,
         origin=None,
         overwrite=False,
         bogus_last_correction=False,
@@ -220,13 +207,6 @@ class TopoObs(Observatory):
         if clock_fmt == "tempo" and clock_file == "time.dat" and tempo_code is None:
             raise ValueError(f"No tempo_code set for observatory '{name}'")
 
-        # GPS corrections
-        self.include_gps = include_gps
-
-        # BIPM corrections
-        # WARNING: `get_observatory` changes these after construction
-        self.include_bipm = include_bipm
-        self.bipm_version = bipm_version
         self.bogus_last_correction = bogus_last_correction
 
         self.tempo_code = tempo_code
@@ -242,9 +222,7 @@ class TopoObs(Observatory):
             name,
             fullname=fullname,
             aliases=aliases,
-            include_gps=include_gps,
-            include_bipm=include_bipm,
-            bipm_version=bipm_version,
+            apply_gps2utc=apply_gps2utc,
             overwrite=overwrite,
         )
 
@@ -335,7 +313,13 @@ class TopoObs(Observatory):
                 )
             )
 
-    def clock_corrections(self, t, limits="warn"):
+    def clock_corrections(
+        self,
+        t,
+        include_bipm=True,
+        bipm_version=bipm_default,
+        limits="warn",
+    ):
         """Compute the total clock corrections,
 
         Parameters
@@ -344,7 +328,12 @@ class TopoObs(Observatory):
             The time when the clock correcions are applied.
         """
 
-        corr = super().clock_corrections(t, limits=limits)
+        corr = super().clock_corrections(
+            t,
+            include_bipm=include_bipm,
+            bipm_version=bipm_version,
+            limits=limits,
+        )
         # Read clock file if necessary
         self._load_clock_corrections()
         if self._clock:
@@ -358,7 +347,7 @@ class TopoObs(Observatory):
             msg = f"No clock corrections found for observatory {self.name} taken from file {self.clock_files}"
             if limits == "warn":
                 log.warning(msg)
-                corr = np.zeros_like(t) * u.us
+                corr += np.zeros_like(t) * u.us
             elif limits == "error":
                 raise NoClockCorrections(msg)
         else:
@@ -502,7 +491,8 @@ def load_observatories(filename=observatories_json, overwrite=False):
 def load_observatories_from_usual_locations(clear=False):
     """Load observatories from the default JSON file as well as ``$PINT_OBS_OVERRIDE``, optionally clearing the registry
 
-    Running with ``clear=True`` will return PINT to the state it is on import.  Running with ``clear=False`` may result in conflicting definitions if observatories have already been imported.
+    Running with ``clear=True`` will return PINT to the state it is on import.
+    Running with ``clear=False`` may result in conflicting definitions if observatories have already been imported.
 
     Parameters
     ----------

@@ -6,10 +6,6 @@ import astropy.units as u
 from pint import ls
 from copy import deepcopy
 import pint.residuals
-from astropy.time import Time
-import pint.models.stand_alone_psr_binaries.BT_piecewise as BTpiecewise
-import matplotlib.pyplot as plt
-import unittest
 from io import StringIO
 from pylab import *
 import pytest

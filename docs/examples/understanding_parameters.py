@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -84,24 +84,44 @@ print("Printing gives : ", model.DMX_0016)
 
 # %% {"jupyter": {"outputs_hidden": false}}
 # You can specify the vaue as a number
-t = pp.floatParameter(name="TEST", value=100, units="Hz", uncertainty=0.03)
+t = pp.floatParameter(
+    name="TEST",
+    value=100,
+    units="Hz",
+    uncertainty=0.03,
+    tcb2tdb_scale_factor=u.Quantity(1),
+)
 print(t)
 
 # %% {"jupyter": {"outputs_hidden": false}}
 # Or as a string that will be parsed
-t2 = pp.floatParameter(name="TEST", value="200", units="Hz", uncertainty=".04")
+t2 = pp.floatParameter(
+    name="TEST",
+    value="200",
+    units="Hz",
+    uncertainty=".04",
+    tcb2tdb_scale_factor=u.Quantity(1),
+)
 print(t2)
 
 # %% {"jupyter": {"outputs_hidden": false}}
 # Or as an astropy Quantity with units (this is the preferred method!)
 t3 = pp.floatParameter(
-    name="TEST", value=0.3 * u.kHz, units="Hz", uncertainty=4e-5 * u.kHz
+    name="TEST",
+    value=0.3 * u.kHz,
+    units="Hz",
+    uncertainty=4e-5 * u.kHz,
+    tcb2tdb_scale_factor=u.Quantity(1),
 )
 print(t3)
 print(t3.quantity)
 print(t3.value)
 print(t3.uncertainty)
 print(t3.uncertainty_value)
+
+# `tcb2tdb_scale_factor` is a quantity that controls how the parameter transforms
+# under the TCB <-> TDB conversion. Please see the Explanation about Timescales and
+# the How-To about TCB <-> TDB conversion for more details.
 
 # %% [markdown]
 # ## Setting Parameters

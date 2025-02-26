@@ -73,6 +73,16 @@ def main(argv=None):
     parser.add_argument(
         "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
     )
+    parser.add_argument(
+        "--allow_tcb",
+        action="store_true",
+        help="Convert TCB par files to TDB automatically",
+    )
+    parser.add_argument(
+        "--allow_T2",
+        action="store_true",
+        help="Guess the underlying binary model when T2 is given",
+    )
 
     args = parser.parse_args(argv)
     pint.logging.setup(
@@ -83,7 +93,9 @@ def main(argv=None):
         return
 
     log.info(f"Reading '{args.input}'")
-    model = get_model(args.input)
+
+    model = get_model(args.input, allow_T2=args.allow_T2, allow_tcb=args.allow_tcb)
+
     if hasattr(model, "BINARY") and args.binary is not None:
         log.info(f"Converting from {model.BINARY.value} to {args.binary}")
         if args.binary == "ELL1H":

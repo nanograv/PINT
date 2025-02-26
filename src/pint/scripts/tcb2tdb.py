@@ -17,36 +17,29 @@ def main(argv=None):
         description="""`tcb2tdb` converts TCB par files to TDB.
         Please note that this conversion is not exact and the timing model 
         should be re-fit to the TOAs. 
-
-        The following parameters are converted to TDB:
-            1. Spin frequency, its derivatives and spin epoch
-            2. Sky coordinates, proper motion and the position epoch
-            3. DM, DM derivatives and DM epoch
-            4. Keplerian binary parameters and FB1
-        
+       
         The following parameters are NOT converted although they are 
         in fact affected by the TCB to TDB conversion:
-            1. Parallax
-            2. TZRMJD and TZRFRQ
-            3. DMX parameters
-            4. Solar wind parameters
-            5. Binary post-Keplerian parameters including Shapiro delay 
-               parameters (except FB1)
-            6. Jumps and DM Jumps
-            7. FD parameters
-            8. EQUADs
-            9. Red noise parameters including FITWAVES, powerlaw red noise and 
-            powerlaw DM noise parameters
+            1. TZRMJD and TZRFRQ
+            2. DM Jumps (the wideband kind)
+            3. FD parameters and FD jumps
+            4. EQUADs and ECORRs
+            5. GP Red noise parameters and GP DM noise parameters
         """,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("input_par", help="Input par file name (TCB)")
     parser.add_argument("output_par", help="Output par file name (TDB)")
+    parser.add_argument(
+        "--allow_T2",
+        action="store_true",
+        help="Guess the underlying binary model when T2 is given",
+    )
 
     args = parser.parse_args(argv)
 
     mb = ModelBuilder()
-    model = mb(args.input_par, allow_tcb=True)
+    model = mb(args.input_par, allow_tcb=True, allow_T2=args.allow_T2)
     model.write_parfile(args.output_par)
 
     log.info(f"Output written to {args.output_par}.")

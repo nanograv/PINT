@@ -1,10 +1,10 @@
 """Work with Fermi TOAs."""
 
-from astropy.coordinates import SkyCoord, EarthLocation
-from astropy.time import Time
-from astropy.io import fits
 import astropy.units as u
 import numpy as np
+from astropy.coordinates import EarthLocation, SkyCoord
+from astropy.io import fits
+from astropy.time import Time
 from loguru import logger as log
 
 import pint.toa as toa
@@ -55,9 +55,7 @@ def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
     logE = np.log10(energies)
 
     sigma = (
-        np.sqrt(
-            (psfpar0**2 * np.power(100.0 / energies, 2.0 * psfpar1) + psfpar2**2)
-        )
+        np.sqrt((psfpar0**2 * np.power(100.0 / energies, 2.0 * psfpar1) + psfpar2**2))
         / scalepsf
     )
 
@@ -81,8 +79,9 @@ def load_Fermi_TOAs(
     errors=_default_uncertainty,
 ):
     """
-    Read photon event times out of a Fermi FT1 file and return a list of PINT :class:`~pint.toa.TOA` objects.
+    DEPRECATED: Read photon event times out of a Fermi FT1 file and return a list of PINT :class:`~pint.toa.TOA` objects.
 
+    Deprecated in favor of get_Fermi_TOAs(), which returns a TOAs object instead of a list of TOAs
     Correctly handles raw FT1 files, or ones processed with gtbary
     to have barycentered or geocentered TOAs.
 
@@ -139,7 +138,7 @@ def load_Fermi_TOAs(
         fermiobs=fermiobs,
         errors=errors,
     )
-    return t.to_TOA_list()
+    return t.to_TOA_list(undo_clkcorr=False)  # Leave clock corrections included
 
 
 def get_Fermi_TOAs(
@@ -155,7 +154,6 @@ def get_Fermi_TOAs(
     ephem=None,
     planets=False,
     include_bipm=False,
-    include_gps=False,
     errors=_default_uncertainty,
 ):
     """
@@ -193,8 +191,6 @@ def get_Fermi_TOAs(
         Defaults to False.
     include_bipm : bool, optional
         Use TT(BIPM) instead of TT(TAI)
-    include_gps : bool, optional
-        Apply GPS to UTC clock corrections
     errors : astropy.units.Quantity or float, optional
         The uncertainty on the TOA; if it's a float it is assumed to be
         in microseconds
@@ -316,7 +312,6 @@ def get_Fermi_TOAs(
             t,
             obs,
             errors=errors,
-            include_gps=include_gps,
             include_bipm=include_bipm,
             planets=planets,
             ephem=ephem,
@@ -327,7 +322,6 @@ def get_Fermi_TOAs(
             t,
             obs,
             errors=errors,
-            include_gps=False,
             include_bipm=False,
             planets=planets,
             ephem=ephem,

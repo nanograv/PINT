@@ -11,19 +11,19 @@ These docstrings contain reference documentation; for tutorials, explanations,
 or how-to documentation, please see other sections of the online documentation.
 """
 
+from pathlib import Path
+
 import astropy
 import astropy.constants as c
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-import pkg_resources
 from astropy.units import si
 
 from pint import logging
 from pint.extern._version import get_versions
 from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import PulsarMJD, time_to_longdouble  # ensure always loaded
-
 from pint.utils import info_string
 
 __all__ = [
@@ -103,6 +103,9 @@ pint_units = {
     "pulse phase": u.dimensionless_unscaled,
     "hourangle_second": hourangle_second,
 }
+
+# define a units equivalency for gauss in cgs
+gauss_equiv = [u.Gauss, u.Hz * (u.g / u.cm) ** (1 / 2), lambda x: x, lambda x: x]
 
 import astropy.version
 

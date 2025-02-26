@@ -63,6 +63,7 @@ are not included in the default build because they take too long, but you can do
    examples/How_to_build_a_timing_model_component.ipynb
    examples/understanding_fitters.ipynb
    examples/noise-fitting-example.ipynb
+   examples/rednoise-fit-example.ipynb
    examples/WorkingWithFlags.ipynb
    examples/Wideband_TOA_walkthrough.ipynb
    examples/Simulate_and_make_MassMass.ipynb

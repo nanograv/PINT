@@ -20,7 +20,9 @@ def toas():
 
 
 def test_mjd_mask(toas):
-    mp = maskParameter("test1", key="mjd", key_value=[54000, 54100])
+    mp = maskParameter(
+        "test1", key="mjd", key_value=[54000, 54100], tcb2tdb_scale_factor=u.Quantity(1)
+    )
     assert mp.key == "mjd"
     assert mp.key_value == [54000, 54100]
     assert mp.value is None
@@ -32,16 +34,27 @@ def test_mjd_mask(toas):
     assert np.all(select_toas == raw_selection[0])
     assert np.all(toas.table["mjd_float"][select_toas] <= 54100)
     assert np.all(toas.table["mjd_float"][select_toas] >= 54000)
-    mp_str_keyval = maskParameter("test2", key="mjd", key_value=["54000", "54100"])
+    mp_str_keyval = maskParameter(
+        "test2",
+        key="mjd",
+        key_value=["54000", "54100"],
+        tcb2tdb_scale_factor=u.Quantity(1),
+    )
     assert mp_str_keyval.key_value == [54000, 54100]
-    mp_value_switch = maskParameter("test1", key="mjd", key_value=[54100, 54000])
+    mp_value_switch = maskParameter(
+        "test1", key="mjd", key_value=[54100, 54000], tcb2tdb_scale_factor=u.Quantity(1)
+    )
     assert mp_value_switch.key_value == [54000, 54100]
     with pytest.raises(ValueError):
-        mp_str_keyval = maskParameter("test2", key="mjd", key_value=["54000"])
+        mp_str_keyval = maskParameter(
+            "test2", key="mjd", key_value=["54000"], tcb2tdb_scale_factor=u.Quantity(1)
+        )
 
 
 def test_freq_mask(toas):
-    mp = maskParameter("test2", key="freq", key_value=[1400, 1430])
+    mp = maskParameter(
+        "test2", key="freq", key_value=[1400, 1430], tcb2tdb_scale_factor=u.Quantity(1)
+    )
     assert mp.key_value == [1400 * u.MHz, 1430 * u.MHz]
     select_toas = mp.select_toa_mask(toas)
     assert len(select_toas) > 0
@@ -49,41 +62,69 @@ def test_freq_mask(toas):
         (toas.table["freq"] <= 1430 * u.MHz) * (toas.table["freq"] >= 1400 * u.MHz)
     )
     assert np.all(select_toas == raw_selection[0])
-    mp_str = maskParameter("test2", key="freq", key_value=["1400", "2000"])
+    mp_str = maskParameter(
+        "test2",
+        key="freq",
+        key_value=["1400", "2000"],
+        tcb2tdb_scale_factor=u.Quantity(1),
+    )
     assert mp_str.key_value == [1400 * u.MHz, 2000 * u.MHz]
-    mp_switch = maskParameter("test2", key="freq", key_value=[2000, 1400])
+    mp_switch = maskParameter(
+        "test2", key="freq", key_value=[2000, 1400], tcb2tdb_scale_factor=u.Quantity(1)
+    )
     assert mp_switch.key_value == [1400 * u.MHz, 2000 * u.MHz]
     mp_quantity = maskParameter(
-        "test2", key="freq", key_value=[2000 * u.MHz, 1400 * u.MHz]
+        "test2",
+        key="freq",
+        key_value=[2000 * u.MHz, 1400 * u.MHz],
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     assert mp_quantity.key_value == [1400 * u.MHz, 2000 * u.MHz]
     with pytest.raises(ValueError):
-        mp_wrong_keyvalue = maskParameter("test2", key="freq", key_value=[1400])
+        mp_wrong_keyvalue = maskParameter(
+            "test2", key="freq", key_value=[1400], tcb2tdb_scale_factor=u.Quantity(1)
+        )
 
 
 def test_tel_mask(toas):
-    mp_ao = maskParameter("test2", key="tel", key_value="ao")
+    mp_ao = maskParameter(
+        "test2", key="tel", key_value="ao", tcb2tdb_scale_factor=u.Quantity(1)
+    )
     assert mp_ao.key_value == ["arecibo"]
     select_toas = mp_ao.select_toa_mask(toas)
     assert len(select_toas) > 0
     raw_selection = np.where(toas.table["obs"] == "arecibo")
     assert np.all(select_toas == raw_selection[0])
-    mp_gbt = maskParameter("test2", key="tel", key_value=["gbt"])
+    mp_gbt = maskParameter(
+        "test2", key="tel", key_value=["gbt"], tcb2tdb_scale_factor=u.Quantity(1)
+    )
     assert mp_gbt.key_value == ["gbt"]
     select_toas = mp_gbt.select_toa_mask(toas)
     assert np.all(toas.table["obs"][select_toas] == "gbt")
-    mp_special_obs1 = maskParameter("test2", key="tel", key_value="@")
+    mp_special_obs1 = maskParameter(
+        "test2", key="tel", key_value="@", tcb2tdb_scale_factor=u.Quantity(1)
+    )
     assert mp_special_obs1.key_value == ["barycenter"]
-    mp_special_obs2 = maskParameter("test2", key="tel", key_value=0)
+    mp_special_obs2 = maskParameter(
+        "test2", key="tel", key_value=0, tcb2tdb_scale_factor=u.Quantity(1)
+    )
     assert mp_special_obs2.key_value == ["geocenter"]
     with pytest.raises(ValueError):
-        mp_wrong_keyvalue = maskParameter("test2", key="tel", key_value=["gbt", "ao"])
+        mp_wrong_keyvalue = maskParameter(
+            "test2",
+            key="tel",
+            key_value=["gbt", "ao"],
+            tcb2tdb_scale_factor=u.Quantity(1),
+        )
 
 
 def test_name_mask(toas):
     # Not sure about the use case for name mask
     mp_name = maskParameter(
-        "test2", key="name", key_value="53393.000009.3.000.000.9y.x.ff"
+        "test2",
+        key="name",
+        key_value="53393.000009.3.000.000.9y.x.ff",
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     assert mp_name.key_value == ["53393.000009.3.000.000.9y.x.ff"]
     select_toas = mp_name.select_toa_mask(toas)
@@ -92,18 +133,29 @@ def test_name_mask(toas):
     assert np.all(select_toas == raw_selection[0])
     with pytest.raises(ValueError):
         mp_wrong_keyvalue = maskParameter(
-            "test2", key="name", key_value=["name1", "name2"]
+            "test2",
+            key="name",
+            key_value=["name1", "name2"],
+            tcb2tdb_scale_factor=u.Quantity(1),
         )
 
 
 def test_flag_mask(toas):
-    mp_flag = maskParameter("test2", key="-fe", key_value=430)
+    mp_flag = maskParameter(
+        "test2", key="-fe", key_value=430, tcb2tdb_scale_factor=u.Quantity(1)
+    )
     assert mp_flag.key_value == ["430"]
-    mp_flag2 = maskParameter("test2", key="-fe", key_value="430")
+    mp_flag2 = maskParameter(
+        "test2", key="-fe", key_value="430", tcb2tdb_scale_factor=u.Quantity(1)
+    )
     assert mp_flag2.key_value == ["430"]
     with pytest.raises(ValueError):
-        mp_wrong_key = maskParameter("test2", key="fe", key_value="430")
-    mp_flag3 = maskParameter("test2", key="-fe", key_value="L-wide")
+        mp_wrong_key = maskParameter(
+            "test2", key="fe", key_value="430", tcb2tdb_scale_factor=u.Quantity(1)
+        )
+    mp_flag3 = maskParameter(
+        "test2", key="-fe", key_value="L-wide", tcb2tdb_scale_factor=u.Quantity(1)
+    )
     assert mp_flag3.key_value == ["L-wide"]
     select_toas = mp_flag3.select_toa_mask(toas)
     assert len(select_toas) > 0

@@ -1,10 +1,11 @@
 """Damour and Deruelle binary model."""
+
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
-from loguru import logger as log
 
 from pint import Tsun
+from pint.models.parameter import InvalidModelParameters
 
 from .binary_generic import PSR_BINARY
 
@@ -708,6 +709,9 @@ class DDmodel(PSR_BINARY):
         cOmega = np.cos(self.omega())
         TM2 = self.M2.value * Tsun
 
+        if np.any(self.SINI < 0) or np.any(self.SINI > 1):
+            raise InvalidModelParameters("SINI parameter must be between 0 and 1")
+
         return (
             -2
             * TM2
@@ -756,10 +760,7 @@ class DDmodel(PSR_BINARY):
                 -2
                 * TM2
                 / logNum
-                * (
-                    e * sE
-                    - self.SINI * (np.sqrt(1 - e**2) * cE * cOmega - sE * sOmega)
-                )
+                * (e * sE - self.SINI * (np.sqrt(1 - e**2) * cE * cOmega - sE * sOmega))
             )
             domega_dpar = self.prtl_der("omega", par)
             dsDelay_domega = (

@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -35,6 +35,8 @@ pint.logging.setup(level="INFO")
 par = "B1855+09_NANOGrav_dfg+12_TAI.par"
 m = get_model(pint.config.examplefile(par))
 
+
+# %%
 
 # %% [markdown]
 # Each of the parameters in the model can be accessed as an attribute of the `TimingModel` object.
