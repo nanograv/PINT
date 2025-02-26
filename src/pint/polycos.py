@@ -33,6 +33,7 @@ References
 http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
 """
 
+from __future__ import annotations
 import astropy.table as table
 import astropy.units as u
 import numpy as np
@@ -655,7 +656,7 @@ class Polycos:
 
     def read_polyco_file(
         self, filename: str | pathlib.Path, format: str = "tempo"
-    ) -> Polcos:
+    ) -> Polycos:
         """Read polyco file to a table.
 
         Included for backward compatibility.  It is better to use :meth:`pint.polycos.Polycos.read`.
@@ -935,7 +936,7 @@ class Polycos:
             t = np.array([t])
         return self.eval_abs_phase(t).frac
 
-    def eval_abs_phase(self, t: float | np.ndarray) -> pint.phase.Phase:
+    def eval_abs_phase(self, t: float | np.ndarray) -> Phase:
         """
         Polyco evaluate absolute phase for a time array.
 
