@@ -766,7 +766,7 @@ class PLRedNoise(NoiseComponent):
         )
         self.add_param(
             floatParameter(
-                name="TNREDLOGC",
+                name="TNREDFLOG",
                 units="",
                 description="Number of logarithmic red noise frequencies in the basis.",
                 convert_tcb2tdb=False,
@@ -774,9 +774,9 @@ class PLRedNoise(NoiseComponent):
         )
         self.add_param(
             floatParameter(
-                name="TNREDFMIN",
+                name="TNREDFLOG_FACTOR",
                 units="",
-                description="Lowest frequency (relative to 1/T_eff) to include in the model.",
+                description="Factor of the log-spaced frequencies (2 -> [1/8,1/4,1/2,...])",
                 convert_tcb2tdb=False,
             )
         )
@@ -792,7 +792,8 @@ class PLRedNoise(NoiseComponent):
         from the model, substituting defaults if unspecified.
         """
         n_lin = int(self.TNREDC.value) if self.TNREDC.value is not None else 30
-        n_log = int(self.TNREDLOGC.value) if (self.TNREDLOGC.value is not None) else 30
+        n_log = int(self.TNREDFLOG.value) if (self.TNREDFLOG.value is not None) else 10
+        red_log_factor = self.TNREDFLOG_FACTOR if (self.TNREDFLOG_FACTOR is not None) else 2
 
         if self.TNREDAMP.value is not None and self.TNREDGAM.value is not None:
             amp, gam = 10**self.TNREDAMP.value, self.TNREDGAM.value
@@ -800,11 +801,9 @@ class PLRedNoise(NoiseComponent):
             fac = (86400.0 * 365.24 * 1e6) / (2.0 * np.pi * np.sqrt(3.0))
             amp, gam = self.RNAMP.value / fac, -1 * self.RNIDX.value
 
-        f_low_cut = self.PLCFL.value if (self.PLCFL.value is not None) else 1e-11  # 1e-11 Hz
+        f_min_ratio = 1 / (red_log_factor ** n_log)
 
-        f_min_ratio = self.PLCFMIN.value if (self.PLCFMIN.value is not None) else 0.01
-
-        return amp, gam, f_low_cut, n_lin, n_log, f_min_ratio
+        return amp, gam, n_lin, n_log, f_min_ratio
 
 
     def get_noise_basis(self, toas):
@@ -822,15 +821,11 @@ class PLRedNoise(NoiseComponent):
         (
             amp,
             gam,
-            f_low_cut,
             n_lin,
             n_log,
             f_min_ratio,
         ) = self.get_plc_vals()
 
-
-        # RvH: Would be better to use df = 1/Teff instead of df = 1/T
-        #f_min = f_min_ratio / Teff
         f_min = f_min_ratio / T
 
         f = get_rednoise_freqs(t, n_lin, Tspan=T, logmode=0, f_min=f_min, nlog=n_log)
@@ -849,7 +844,6 @@ class PLRedNoise(NoiseComponent):
         (
             amp,
             gam,
-            f_low_cut,
             n_lin,
             n_log,
             f_min_ratio,
@@ -861,7 +855,7 @@ class PLRedNoise(NoiseComponent):
         Ffreqs = get_rednoise_freqs(t, n_lin, Tspan=T, logmode=0, f_min=f_min, nlog=n_log)
         df = np.diff(np.concatenate([[0], Ffreqs]))
 
-        return powerlaw(Ffreqs.repeat(2), amp, gam, f_low_cut) * df.repeat(2)
+        return powerlaw(Ffreqs.repeat(2), amp, gam) * df.repeat(2)
 
 
     def pl_rn_basis_weight_pair(self, toas):
@@ -983,7 +977,7 @@ def get_rednoise_freqs(t,
     def _get_loglin_freqs(logmode_, f_min_, n_log, n_lin, T):
         """
         Return an array of n_log log-spaced frequencies from f_min_ up to
-        (logmode_+0.5)/T, then append n_lin linearly spaced frequencies
+        (1+logmode_)/T, then append n_lin linearly spaced frequencies
         from (1+logmode_)/T onward.
         """
         if logmode_ < 0:
@@ -997,12 +991,7 @@ def get_rednoise_freqs(t,
                             n_lin)
 
         # Log portion
-        f_min_log = np.log(f_min_)
-        f_max_log = np.log((logmode_ + 0.5) / T)
-        df_log = (f_max_log - f_min_log) / n_log
-        f_log = np.exp(np.linspace(f_min_log + 0.5 * df_log,
-                                   f_max_log - 0.5 * df_log,
-                                   n_log))
+        f_log = np.logspace(np.log10(f_min_), np.log10((1+logmode_)/T), n_log, endpoint=False)
 
         # Combine log + linear
         return np.concatenate((f_log, f_lin))
