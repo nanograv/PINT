@@ -3,23 +3,21 @@
 import astropy.units as u
 import numpy as np
 from astropy.time import Time
-
 from loguru import logger as log
 
+from pint.exceptions import MissingParameter
 from pint.models.parameter import (
     MJDParameter,
     floatParameter,
-    intParameter,
     funcParameter,
+    intParameter,
 )
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
 from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
 from pint.models.stand_alone_psr_binaries.ELL1k_model import ELL1kmodel
-from pint.exceptions import MissingParameter
 from pint.utils import taylor_horner_deriv
-from pint import Tsun
 
 
 def _eps_to_e(eps1, eps2):

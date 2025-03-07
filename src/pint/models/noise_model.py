@@ -1,18 +1,23 @@
 """Pulsar timing noise models."""
 
 import copy
+from typing import Callable, List, Optional, Tuple
 import warnings
 
 import astropy.units as u
+from astropy.table import Table
 import numpy as np
-
 from loguru import logger as log
 
-from pint.models.parameter import floatParameter, maskParameter
+from pint.models.parameter import Parameter, floatParameter, maskParameter
 from pint.models.timing_model import Component
+from pint.toa import TOAs
 
 
 class NoiseComponent(Component):
+
+    introduces_dm_errors = False
+
     def __init__(
         self,
     ):
@@ -140,7 +145,7 @@ class ScaleToaError(NoiseComponent):
         for eq in self.EQUADs:
             self.register_toasigma_deriv_funcs(self.d_toasigma_d_EQUAD, eq)
 
-    def register_toasigma_deriv_funcs(self, func, param):
+    def register_toasigma_deriv_funcs(self, func: Callable, param: str):
         pn = self.match_param_aliases(param)
         if pn not in list(self.toasigma_deriv_funcs.keys()):
             self.toasigma_deriv_funcs[pn] = [func]
@@ -157,7 +162,7 @@ class ScaleToaError(NoiseComponent):
             if [x for x in l if l.count(x) > 1] != []:
                 raise ValueError(f"'{el}' have duplicated keys and key values.")
 
-    def scale_toa_sigma(self, toas, warn=True):
+    def scale_toa_sigma(self, toas: TOAs, warn: bool = True) -> u.Quantity:
         sigma_scaled = toas.table["error"].quantity.copy()
         for equad_name in self.EQUADs:
             equad = getattr(self, equad_name)
@@ -177,11 +182,11 @@ class ScaleToaError(NoiseComponent):
                 warnings.warn(f"EFAC {efac} has no TOAs")
         return sigma_scaled
 
-    def sigma_scaled_cov_matrix(self, toas):
+    def sigma_scaled_cov_matrix(self, toas: TOAs) -> np.ndarray:
         scaled_sigma = self.scale_toa_sigma(toas).to(u.s).value ** 2
         return np.diag(scaled_sigma)
 
-    def d_toasigma_d_EFAC(self, toas, param):
+    def d_toasigma_d_EFAC(self, toas: TOAs, param: str) -> u.Quantity:
         par = getattr(self, param)
         mask = par.select_toa_mask(toas)
         result = np.zeros(len(toas)) << u.s
@@ -190,7 +195,7 @@ class ScaleToaError(NoiseComponent):
         ) / par.quantity.to(u.dimensionless_unscaled)
         return result
 
-    def d_toasigma_d_EQUAD(self, toas, param):
+    def d_toasigma_d_EQUAD(self, toas: TOAs, param: str) -> u.Quantity:
         par = getattr(self, param)
         mask = par.select_toa_mask(toas)
         toas_mask = toas[mask]
@@ -232,6 +237,7 @@ class ScaleDmError(NoiseComponent):
     category = "scale_dm_error"
 
     introduces_correlated_errors = False
+    introduces_dm_errors = True
 
     def __init__(
         self,
@@ -289,7 +295,7 @@ class ScaleDmError(NoiseComponent):
             if [x for x in l if l.count(x) > 1] != []:
                 raise ValueError(f"'{el}' have duplicated keys and key values.")
 
-    def scale_dm_sigma(self, toas):
+    def scale_dm_sigma(self, toas: TOAs) -> u.Quantity:
         """
         Scale the DM uncertainty.
 
@@ -313,7 +319,7 @@ class ScaleDmError(NoiseComponent):
             sigma_scaled[dmefac.select_toa_mask(toas)] *= dmefac.quantity
         return sigma_scaled
 
-    def dm_sigma_scaled_cov_matrix(self, toas):
+    def dm_sigma_scaled_cov_matrix(self, toas: TOAs) -> np.ndarray:
         scaled_sigma = self.scale_dm_sigma(toas).to_value(u.pc / u.cm**3) ** 2
         return np.diag(scaled_sigma)
 
@@ -380,10 +386,10 @@ class EcorrNoise(NoiseComponent):
             if [x for x in l if l.count(x) > 1] != []:
                 raise ValueError(f"'{el}' have duplicated keys and key values.")
 
-    def get_ecorrs(self):
-        return [getattr(self, ecorr) for ecorr, ecorr_key in list(self.ECORRs.items())]
+    def get_ecorrs(self) -> List[Parameter]:
+        return [getattr(self, ecorr) for ecorr in self.ECORRs.keys()]
 
-    def get_noise_basis(self, toas):
+    def get_noise_basis(self, toas: TOAs) -> np.ndarray:
         """Return the quantization matrix for ECORR.
 
         A quantization matrix maps TOAs to observing epochs.
@@ -409,7 +415,7 @@ class EcorrNoise(NoiseComponent):
             nctot += nn
         return umat
 
-    def get_noise_weights(self, toas, nweights=None):
+    def get_noise_weights(self, toas: TOAs, nweights: int = None) -> np.ndarray:
         """Return the ECORR weights
         The weights used are the square of the ECORR values.
         """
@@ -427,7 +433,7 @@ class EcorrNoise(NoiseComponent):
             nctot += nn
         return weights
 
-    def ecorr_basis_weight_pair(self, toas):
+    def ecorr_basis_weight_pair(self, toas: TOAs) -> Tuple[np.ndarray, np.ndarray]:
         """Return a quantization matrix and ECORR weights.
 
         A quantization matrix maps TOAs to observing epochs.
@@ -435,7 +441,7 @@ class EcorrNoise(NoiseComponent):
         """
         return (self.get_noise_basis(toas), self.get_noise_weights(toas))
 
-    def ecorr_cov_matrix(self, toas):
+    def ecorr_cov_matrix(self, toas: TOAs) -> np.ndarray:
         """Full ECORR covariance matrix."""
         U, Jvec = self.ecorr_basis_weight_pair(toas)
         return np.dot(U * Jvec[None, :], U.T)
@@ -470,6 +476,7 @@ class PLDMNoise(NoiseComponent):
     category = "pl_DM_noise"
 
     introduces_correlated_errors = True
+    introduces_dm_errors = True
     is_time_correlated = True
 
     def __init__(
@@ -508,12 +515,12 @@ class PLDMNoise(NoiseComponent):
         self.covariance_matrix_funcs += [self.pl_dm_cov_matrix]
         self.basis_funcs += [self.pl_dm_basis_weight_pair]
 
-    def get_pl_vals(self):
+    def get_pl_vals(self) -> Tuple[float, float, int]:
         nf = int(self.TNDMC.value) if self.TNDMC.value is not None else 30
         amp, gam = 10**self.TNDMAMP.value, self.TNDMGAM.value
         return (amp, gam, nf)
 
-    def get_noise_basis(self, toas):
+    def get_noise_basis(self, toas: TOAs) -> np.ndarray:
         """Return a Fourier design matrix for DM noise.
 
         See the documentation for pl_dm_basis_weight_pair function for details."""
@@ -528,7 +535,7 @@ class PLDMNoise(NoiseComponent):
         Fmat = create_fourier_design_matrix(t, f)
         return Fmat * D[:, None]
 
-    def get_noise_weights(self, toas):
+    def get_noise_weights(self, toas: TOAs) -> np.ndarray:
         """Return power law DM noise weights.
 
         See the documentation for pl_dm_basis_weight_pair for details."""
@@ -540,7 +547,7 @@ class PLDMNoise(NoiseComponent):
         df = np.diff(np.concatenate([[0], Ffreqs]))
         return powerlaw(Ffreqs.repeat(2), amp, gam) * df.repeat(2)
 
-    def pl_dm_basis_weight_pair(self, toas):
+    def pl_dm_basis_weight_pair(self, toas: TOAs) -> Tuple[np.ndarray, np.ndarray]:
         """Return a Fourier design matrix and power law DM noise weights.
 
         A Fourier design matrix contains the sine and cosine basis_functions
@@ -555,7 +562,7 @@ class PLDMNoise(NoiseComponent):
         """
         return (self.get_noise_basis(toas), self.get_noise_weights(toas))
 
-    def pl_dm_cov_matrix(self, toas):
+    def pl_dm_cov_matrix(self, toas: TOAs) -> np.ndarray:
         Fmat, phi = self.pl_dm_basis_weight_pair(toas)
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
@@ -630,12 +637,12 @@ class PLChromNoise(NoiseComponent):
         self.covariance_matrix_funcs += [self.pl_chrom_cov_matrix]
         self.basis_funcs += [self.pl_chrom_basis_weight_pair]
 
-    def get_pl_vals(self):
+    def get_pl_vals(self) -> Tuple[float, float, int]:
         nf = int(self.TNCHROMC.value) if self.TNCHROMC.value is not None else 30
         amp, gam = 10**self.TNCHROMAMP.value, self.TNCHROMGAM.value
         return (amp, gam, nf)
 
-    def get_noise_basis(self, toas):
+    def get_noise_basis(self, toas: TOAs) -> np.ndarray:
         """Return a Fourier design matrix for chromatic noise.
 
         See the documentation for pl_chrom_basis_weight_pair function for details."""
@@ -651,7 +658,7 @@ class PLChromNoise(NoiseComponent):
         Fmat = create_fourier_design_matrix(t, f)
         return Fmat * D[:, None]
 
-    def get_noise_weights(self, toas):
+    def get_noise_weights(self, toas: TOAs) -> np.ndarray:
         """Return power law chromatic noise weights.
 
         See the documentation for pl_chrom_basis_weight_pair for details."""
@@ -663,7 +670,7 @@ class PLChromNoise(NoiseComponent):
         df = np.diff(np.concatenate([[0], Ffreqs]))
         return powerlaw(Ffreqs.repeat(2), amp, gam) * df.repeat(2)
 
-    def pl_chrom_basis_weight_pair(self, toas):
+    def pl_chrom_basis_weight_pair(self, toas: TOAs) -> np.ndarray:
         """Return a Fourier design matrix and power law chromatic noise weights.
 
         A Fourier design matrix contains the sine and cosine basis_functions
@@ -678,7 +685,7 @@ class PLChromNoise(NoiseComponent):
         """
         return (self.get_noise_basis(toas), self.get_noise_weights(toas))
 
-    def pl_chrom_cov_matrix(self, toas):
+    def pl_chrom_cov_matrix(self, toas: TOAs) -> np.ndarray:
         Fmat, phi = self.pl_chrom_basis_weight_pair(toas)
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
@@ -806,11 +813,11 @@ class PLRedNoise(NoiseComponent):
         return amp, gam, n_lin, n_log, f_min_ratio
 
 
-    def get_noise_basis(self, toas):
-        """
-        Construct a log-linear basis matrix for red noise using the new
-        get_binning() / create_weighted_fourier_design_matrix() approach.
-        """
+    def get_noise_basis(self, toas: TOAs) -> np.ndarray:
+        """Return a Fourier design matrix for red noise.
+
+        See the documentation for pl_rn_basis_weight_pair function for details."""
+
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
 
@@ -834,7 +841,7 @@ class PLRedNoise(NoiseComponent):
         return Fmat
 
 
-    def get_noise_weights(self, toas):
+    def get_noise_weights(self, toas: TOAs) -> np.ndarray:
         """Return power law red noise weights.
 
         See the documentation for pl_rn_basis_weight_pair for details."""
@@ -858,7 +865,7 @@ class PLRedNoise(NoiseComponent):
         return powerlaw(Ffreqs.repeat(2), amp, gam) * df.repeat(2)
 
 
-    def pl_rn_basis_weight_pair(self, toas):
+    def pl_rn_basis_weight_pair(self, toas: TOAs) -> Tuple[np.ndarray, np.ndarray]:
         """Return a Fourier design matrix and power law red noise weights.
 
         A Fourier design matrix contains the sine and cosine basis_functions
@@ -870,12 +877,12 @@ class PLRedNoise(NoiseComponent):
         """
         return (self.get_noise_basis(toas), self.get_noise_weights(toas))
 
-    def pl_rn_cov_matrix(self, toas):
+    def pl_rn_cov_matrix(self, toas: TOAs) -> np.ndarray:
         Fmat, phi = self.pl_rn_basis_weight_pair(toas)
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
-def get_ecorr_epochs(toas_table, dt=1, nmin=2):
+def get_ecorr_epochs(toas_table: np.ndarray, dt: float = 1, nmin: int = 2) -> List[int]:
     """Find only epochs with more than 1 TOA for applying ECORR."""
     if len(toas_table) == 0:
         return []
@@ -895,13 +902,15 @@ def get_ecorr_epochs(toas_table, dt=1, nmin=2):
     return [ind for ind in bucket_ind if len(ind) >= nmin]
 
 
-def get_ecorr_nweights(toas_table, dt=1, nmin=2):
+def get_ecorr_nweights(toas_table: np.ndarray, dt: float = 1, nmin: int = 2) -> int:
     """Get the number of epochs associated with each ECORR.
     This is equal to the number of weights of that ECORR."""
     return len(get_ecorr_epochs(toas_table, dt=dt, nmin=nmin))
 
 
-def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
+def create_ecorr_quantization_matrix(
+    toas_table: np.ndarray, dt: float = 1, nmin: int = 2
+) -> np.ndarray:
     """Create quantization matrix mapping TOAs to observing epochs.
     Only epochs with more than 1 TOA are included."""
 
@@ -915,11 +924,11 @@ def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
 
 
 def get_rednoise_freqs(t,
-                       nmodes,
-                       Tspan=None,
-                       logmode=None,
-                       f_min=None,
-                       nlog=None):
+                       nmodes: int,
+                       Tspan: Optional[u.Quantity] = None,
+                       logmode: Optional[int] = None,
+                       f_min: Optional[float] = None,
+                       nlog: Optional[int] = None):
     """
     Compute an array of red-noise frequencies, optionally mixing log- and
     linearly spaced frequencies.
@@ -1054,7 +1063,7 @@ def create_fourier_design_matrix(t, f):
     return F, f
 
 
-def powerlaw(f, A=1e-16, gamma=5, f_low_cut=None):
+def powerlaw(f, A: float = 1e-16, gamma: float = 5.0, f_low_cut: Optional[float] = None):
     """Power-law PSD.
 
     :param f: Sampling frequencies

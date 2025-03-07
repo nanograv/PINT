@@ -3,11 +3,12 @@
 from warnings import warn
 
 import astropy.constants as const
-import astropy.units as u
 import astropy.time
+import astropy.units as u
 import numpy as np
 import scipy.special
 
+import pint.utils
 from pint import DMconst
 from pint.models.dispersion_model import Dispersion
 from pint.models.parameter import (
@@ -16,7 +17,6 @@ from pint.models.parameter import (
     intParameter,
     prefixParameter,
 )
-import pint.utils
 from pint.models.timing_model import MissingTOAs
 from pint.toa_select import TOASelect
 

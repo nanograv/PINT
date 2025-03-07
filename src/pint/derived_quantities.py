@@ -1,10 +1,11 @@
 """Functions to compute various derived quantities from pulsar spin parameters, masses, etc.
 """
 
+from typing import Optional, Union
+
 import astropy.constants as const
 import astropy.units as u
 import numpy as np
-from typing import Optional, Union
 
 import pint
 

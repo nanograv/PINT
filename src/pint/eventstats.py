@@ -4,7 +4,7 @@ author: M. Kerr <matthew.kerr@gmail.com>
 """
 
 import numpy as np
-from numpy import exp, arange, log
+from numpy import arange, exp, log
 from scipy.special import erfc, gamma
 from scipy.stats import chi2, norm
 

@@ -3,18 +3,19 @@
 
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Optional, List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import astropy.units as u
 import numpy as np
-from loguru import logger as log
 from astropy import time
+from loguru import logger as log
 
-from pint.types import time_like, file_like
+import pint.fitter
 import pint.residuals
 import pint.toa
-import pint.fitter
+from pint.models.noise_model import NoiseComponent
 from pint.observatory import bipm_default, get_observatory
+from pint.types import file_like, time_like
 
 __all__ = [
     "zero_residuals",
@@ -185,6 +186,7 @@ def update_fake_dms(
     ts: pint.toa.TOAs,
     dm_error: u.Quantity,
     add_noise: bool,
+    add_correlated_noise: bool,
 ) -> pint.toa.TOAs:
     """Update simulated wideband DM information in TOAs.
 
@@ -208,6 +210,20 @@ def update_fake_dms(
     dms = model.total_dm(toas)
     if add_noise:
         dms += scaled_dm_errors.to(pint.dmu) * np.random.randn(len(scaled_dm_errors))
+
+    if add_correlated_noise:
+        dm_noise = np.zeros(len(toas)) * pint.dmu
+        for noise_comp in model.NoiseComponent_list:
+            if (
+                noise_comp.introduces_correlated_errors
+                and noise_comp.introduces_dm_errors
+            ):
+                U = noise_comp.get_noise_basis(toas)
+                b = noise_comp.get_noise_weights(toas)
+                delay = (U @ (b**0.5 * np.random.normal(size=len(b)))) << u.s
+                freqs = model.barycentric_radio_freq(toas)
+                dm_noise += (delay / pint.DMconst * freqs**2).to(pint.dmu)
+        dms += dm_noise
 
     for f, dm in zip(toas.table["flags"], dms):
         f["pp_dm"] = str(dm.to_value(pint.dmu))
@@ -338,7 +354,9 @@ def make_fake_toas_uniform(
     )
 
     if wideband:
-        ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
+        ts = update_fake_dms(
+            model, ts, wideband_dm_error, add_noise, add_correlated_noise
+        )
 
     return make_fake_toas(
         ts,
@@ -466,7 +484,9 @@ def make_fake_toas_fromMJDs(
     )
 
     if wideband:
-        ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
+        ts = update_fake_dms(
+            model, ts, wideband_dm_error, add_noise, add_correlated_noise
+        )
 
     return make_fake_toas(
         ts,
@@ -517,7 +537,7 @@ def make_fake_toas_fromtim(
 
     if ts.is_wideband():
         dm_errors = ts.get_dm_errors()
-        ts = update_fake_dms(model, ts, dm_errors, add_noise)
+        ts = update_fake_dms(model, ts, dm_errors, add_noise, add_correlated_noise)
 
     return make_fake_toas(
         ts,

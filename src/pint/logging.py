@@ -53,8 +53,10 @@ import os
 import re
 import sys
 import warnings
+from typing import Dict, List, Optional, Union
+
 from loguru import logger as log
-from typing import Union, Optional, Dict, List
+
 import pint.types
 
 __all__ = ["LogFilter", "setup", "format", "levels", "get_level"]

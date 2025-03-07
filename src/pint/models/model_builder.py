@@ -1,41 +1,36 @@
 """Building a timing model from a par file."""
 
 import copy
-from typing import Tuple
+import re
 import warnings
-from io import StringIO
 from collections import Counter, defaultdict
+from io import StringIO
 from pathlib import Path
+from typing import Tuple
+
 from astropy import units as u
 from loguru import logger as log
-import re
 
+from pint.exceptions import (
+    ComponentConflict,
+    MissingBinaryError,
+    PrefixError,
+    TimingModelError,
+    UnknownBinaryModel,
+    UnknownParameter,
+)
 from pint.models.astrometry import Astrometry
+from pint.models.binary_ddk import _convert_kin, _convert_kom
+from pint.models.tcb_conversion import convert_tcb_tdb
 from pint.models.timing_model import (
     AllComponents,
     TimingModel,
-    ignore_prefix,
     ignore_params,
     ignore_prefix,
 )
 from pint.toa import TOAs, get_TOAs
-from pint.utils import (
-    interesting_lines,
-    lines_of,
-    split_prefixed_name,
-    get_unit,
-)
-from pint.models.tcb_conversion import convert_tcb_tdb
-from pint.models.binary_ddk import _convert_kin, _convert_kom
-from pint.types import file_like, quantity_like
-from pint.exceptions import (
-    PrefixError,
-    ComponentConflict,
-    UnknownParameter,
-    UnknownBinaryModel,
-    TimingModelError,
-    MissingBinaryError,
-)
+from pint.types import file_like
+from pint.utils import get_unit, interesting_lines, lines_of, split_prefixed_name
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
 

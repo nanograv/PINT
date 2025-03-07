@@ -1,9 +1,10 @@
 """Explicit phase offset"""
 
-from pint.models.timing_model import PhaseComponent
-from pint.models.parameter import floatParameter
-from astropy import units as u
 import numpy as np
+from astropy import units as u
+
+from pint.models.parameter import floatParameter
+from pint.models.timing_model import PhaseComponent
 
 
 class PhaseOffset(PhaseComponent):

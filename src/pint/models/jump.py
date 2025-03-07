@@ -2,7 +2,6 @@
 
 import astropy.units as u
 import numpy
-
 from loguru import logger as log
 
 from pint.models.parameter import maskParameter

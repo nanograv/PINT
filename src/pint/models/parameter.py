@@ -29,18 +29,18 @@ import astropy.time as time
 import astropy.units as u
 import numpy as np
 from astropy.coordinates.angles import Angle
+from loguru import logger as log
 from uncertainties import ufloat
 
-from loguru import logger as log
-
 from pint import pint_units
+from pint.exceptions import InvalidModelParameters
 from pint.models import priors
 from pint.observatory import get_observatory
 from pint.pulsar_mjd import (
     Time,
     data2longdouble,
-    quantity2longdouble_withunit,
     fortran_float,
+    quantity2longdouble_withunit,
     str2longdouble,
     time_from_longdouble,
     time_to_longdouble,
@@ -48,7 +48,6 @@ from pint.pulsar_mjd import (
 )
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name
-from pint.exceptions import InvalidModelParameters
 
 # potential parfile formats
 # in one place for consistency

@@ -61,6 +61,7 @@ To automatically select a fitter based on the properties of the data and model::
 import contextlib
 import copy
 from warnings import warn
+from functools import cached_property
 
 import astropy.units as u
 import numpy as np
@@ -70,13 +71,20 @@ from loguru import logger as log
 from numdifftools import Hessian
 
 import pint
-import pint.utils
 import pint.derived_quantities
+import pint.utils
+from pint.exceptions import (
+    ConvergenceFailure,
+    CorrelatedErrors,
+    DegeneracyWarning,
+    MaxiterReached,
+    StepProblem,
+)
 from pint.models.parameter import (
     AngleParameter,
+    InvalidModelParameters,
     boolParameter,
     strParameter,
-    InvalidModelParameters,
 )
 from pint.pint_matrix import (
     CorrelationMatrix,
@@ -90,14 +98,6 @@ from pint.pint_matrix import (
 from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import TOAs
 from pint.utils import FTest, normalize_designmatrix
-from pint.exceptions import (
-    DegeneracyWarning,
-    ConvergenceFailure,
-    MaxiterReached,
-    StepProblem,
-    CorrelatedErrors,
-)
-
 
 __all__ = [
     "Fitter",
@@ -114,64 +114,6 @@ __all__ = [
     "StepProblem",
     "MaxiterReached",
 ]
-
-try:
-    from functools import cached_property
-except ImportError:
-    # not supported in python 3.7
-    # This is just the code from python 3.8
-    from _thread import RLock
-
-    _NOT_FOUND = object()
-
-    class cached_property:
-        def __init__(self, func):
-            self.func = func
-            self.attrname = None
-            self.__doc__ = func.__doc__
-            self.lock = RLock()
-
-        def __set_name__(self, owner, name):
-            if self.attrname is None:
-                self.attrname = name
-            elif name != self.attrname:
-                raise TypeError(
-                    "Cannot assign the same cached_property to two different names "
-                    f"({self.attrname!r} and {name!r})."
-                )
-
-        def __get__(self, instance, owner=None):
-            if instance is None:
-                return self
-            if self.attrname is None:
-                raise TypeError(
-                    "Cannot use cached_property instance without calling __set_name__ on it."
-                )
-            try:
-                cache = instance.__dict__
-            except AttributeError:
-                # not all objects have __dict__ (e.g. class defines slots)
-                msg = (
-                    f"No '__dict__' attribute on {type(instance).__name__!r} "
-                    f"instance to cache {self.attrname!r} property."
-                )
-                raise TypeError(msg) from None
-            val = cache.get(self.attrname, _NOT_FOUND)
-            if val is _NOT_FOUND:
-                with self.lock:
-                    # check if another thread filled cache while we awaited lock
-                    val = cache.get(self.attrname, _NOT_FOUND)
-                    if val is _NOT_FOUND:
-                        val = self.func(instance)
-                        try:
-                            cache[self.attrname] = val
-                        except TypeError:
-                            msg = (
-                                f"The '__dict__' attribute on {type(instance).__name__!r} instance "
-                                f"does not support item assignment for caching {self.attrname!r} property."
-                            )
-                            raise TypeError(msg) from None
-            return val
 
 
 class Fitter:
@@ -1553,19 +1495,16 @@ class DownhillGLSFitter(DownhillFitter):
         # Compute the noise realizations if possible
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
-            noise_resids = {}
+            noise_ampls = {}
             ntmpar = len(self.model.free_params)
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
                 p0 = noise_dims[comp][0] + ntmpar + 1
                 p1 = p0 + noise_dims[comp][1]
-                noise_resids[comp] = (
-                    np.dot(
-                        self.current_state.M[:, p0:p1], self.current_state.xhat[p0:p1]
-                    )
-                    * u.s
-                )
+                noise_ampls[comp] = (self.current_state.xhat / self.current_state.norm)[
+                    p0:p1
+                ] * u.s
                 if debug:
                     setattr(
                         self.resids,
@@ -1576,7 +1515,7 @@ class DownhillGLSFitter(DownhillFitter):
                         ),
                     )
                     setattr(self.resids, f"{comp}_M_index", (p0, p1))
-            self.resids.noise_resids = noise_resids
+            self.resids.noise_ampls = noise_ampls
             if debug:
                 setattr(self.resids, "norm", self.current_state.norm)
 
@@ -1844,19 +1783,16 @@ class WidebandDownhillFitter(DownhillFitter):
         # Compute the noise realizations if possibl
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
-            noise_resids = {}
+            noise_ampls = {}
             ntmpar = len(self.model.free_params)
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
                 p0 = noise_dims[comp][0] + ntmpar + 1
                 p1 = p0 + noise_dims[comp][1]
-                noise_resids[comp] = (
-                    np.dot(
-                        self.current_state.M[:, p0:p1], self.current_state.xhat[p0:p1]
-                    )
-                    * u.s
-                )
+                noise_ampls[comp] = (self.current_state.xhat / self.current_state.norm)[
+                    p0:p1
+                ] * u.s
                 if debug:
                     setattr(
                         self.resids,
@@ -1867,7 +1803,7 @@ class WidebandDownhillFitter(DownhillFitter):
                         ),
                     )
                     setattr(self.resids, f"{comp}_M_index", (p0, p1))
-            self.resids.noise_resids = noise_resids
+            self.resids.noise_ampls = noise_ampls
             if debug:
                 setattr(self.resids, "norm", self.current_state.norm)
         return r
@@ -2243,17 +2179,17 @@ class GLSFitter(Fitter):
             # Compute the noise realizations if possible
             if not full_cov:
                 noise_dims = self.model.noise_model_dimensions(self.toas)
-                noise_resids = {}
+                noise_ampls = {}
                 for comp in noise_dims:
                     # The first column of designmatrix is "offset", add 1 to match
                     # the indices of noise designmatrix
                     p0 = noise_dims[comp][0] + ntmpar + 1
                     p1 = p0 + noise_dims[comp][1]
-                    noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
+                    noise_ampls[comp] = (xhat / norm)[p0:p1] * u.s
                     if debug:
                         setattr(self.resids, f"{comp}_M", (M[:, p0:p1], xhat[p0:p1]))
                         setattr(self.resids, f"{comp}_M_index", (p0, p1))
-                self.resids.noise_resids = noise_resids
+                self.resids.noise_ampls = noise_ampls
                 if debug:
                     setattr(self.resids, "norm", norm)
 
@@ -2594,17 +2530,17 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             # Compute the noise realizations if possible
             if not full_cov:
                 noise_dims = self.model.noise_model_dimensions(self.toas)
-                noise_resids = {}
+                noise_ampls = {}
                 for comp in noise_dims:
                     # The first column of designmatrix is "offset", add 1 to match
                     # the indices of noise designmatrix
                     p0 = noise_dims[comp][0] + ntmpar + 1
                     p1 = p0 + noise_dims[comp][1]
-                    noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
+                    noise_ampls[comp] = (xhat / norm)[p0:p1] * u.s
                     if debug:
                         setattr(self.resids, f"{comp}_M", (M[:, p0:p1], xhat[p0:p1]))
                         setattr(self.resids, f"{comp}_M_index", (p0, p1))
-                self.resids.noise_resids = noise_resids
+                self.resids.noise_ampls = noise_ampls
                 if debug:
                     setattr(self.resids, "norm", norm)
 
@@ -2801,19 +2737,19 @@ class WidebandLMFitter(LMFitter):
         # Compute the noise realizations if possible
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
-            noise_resids = {}
+            noise_ampls = {}
             ntmpar = len(self.model.free_params)
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
                 p0 = noise_dims[comp][0] + ntmpar + 1
                 p1 = p0 + noise_dims[comp][1]
-                noise_resids[comp] = np.dot(state.M[:, p0:p1], state.xhat[p0:p1]) * u.s
+                noise_ampls[comp] = (state.xhat / state.norm)[p0:p1] * u.s
                 if debug:
                     setattr(
                         self.resids, f"{comp}_M", (state.M[:, p0:p1], state.xhat[p0:p1])
                     )
                     setattr(self.resids, f"{comp}_M_index", (p0, p1))
-            self.resids.noise_resids = noise_resids
+            self.resids.noise_ampls = noise_ampls
             if debug:
                 setattr(self.resids, "norm", state.norm)

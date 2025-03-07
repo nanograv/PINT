@@ -1,8 +1,8 @@
 """TCB to TDB conversion of a timing model."""
 
 import numpy as np
+from loguru import logger as log
 
-from pint.models.timing_model import TimingModel
 from pint.models.parameter import (
     AngleParameter,
     MJDParameter,
@@ -10,7 +10,7 @@ from pint.models.parameter import (
     maskParameter,
     prefixParameter,
 )
-from loguru import logger as log
+from pint.models.timing_model import TimingModel
 
 __all__ = [
     "IFTE_K",

@@ -5,11 +5,9 @@ import copy
 import multiprocessing
 import subprocess
 import sys
-
-from typing import List, Tuple, Optional, Dict
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-
 from loguru import logger as log
 
 try:
@@ -17,8 +15,8 @@ try:
 except ModuleNotFoundError:
     tqdm = None
 
-from astropy.utils.console import ProgressBar
 from astropy import units as u
+from astropy.utils.console import ProgressBar
 
 from pint import fitter
 
