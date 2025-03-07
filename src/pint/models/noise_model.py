@@ -800,7 +800,7 @@ class PLRedNoise(NoiseComponent):
         """
         n_lin = int(self.TNREDC.value) if self.TNREDC.value is not None else 30
         n_log = int(self.TNREDFLOG.value) if (self.TNREDFLOG.value is not None) else 10
-        red_log_factor = self.TNREDFLOG_FACTOR if (self.TNREDFLOG_FACTOR is not None) else 2
+        red_log_factor = self.TNREDFLOG_FACTOR.value if (self.TNREDFLOG_FACTOR.value is not None) else 2
 
         if self.TNREDAMP.value is not None and self.TNREDGAM.value is not None:
             amp, gam = 10**self.TNREDAMP.value, self.TNREDGAM.value
@@ -1060,7 +1060,7 @@ def create_fourier_design_matrix(t, f):
     F[:, 0::2] = np.sin(2.0 * np.pi * t[:, None] * f)
     F[:, 1::2] = np.cos(2.0 * np.pi * t[:, None] * f)
 
-    return F, f
+    return F
 
 
 def powerlaw(f, A: float = 1e-16, gamma: float = 5.0, f_low_cut: Optional[float] = None):
@@ -1074,7 +1074,7 @@ def powerlaw(f, A: float = 1e-16, gamma: float = 5.0, f_low_cut: Optional[float]
     """
 
     f_low_cut = f_low_cut if f_low_cut is not None else np.min(f)
-    above_fl = np.array(f >= f_low_cut, dtype=np.float)
+    above_fl = np.array(f >= f_low_cut, dtype=float)
 
     fyr = 1 / 3.16e7
     return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma) * above_fl
