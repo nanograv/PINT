@@ -12,6 +12,7 @@ the released changes.
 ### Added
 - Simulate correlated DM noise for wideband TOAs
 - Type hints in `pint.models.timing_model`
+- Added checkbox for optional subtraction of mean in `pintk`
 ### Fixed
 - Made `TimingModel.is_binary()` more robust. 
 ### Removed
