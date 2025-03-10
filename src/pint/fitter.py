@@ -1496,11 +1496,13 @@ class DownhillGLSFitter(DownhillFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_ampls = {}
-            ntmpar = len(self.model.free_params)
+            ntmpar = len(self.model.free_params) + int(
+                "PHOFF" not in self.model.free_params
+            )
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
-                p0 = noise_dims[comp][0] + ntmpar + 1
+                p0 = noise_dims[comp][0] + ntmpar
                 p1 = p0 + noise_dims[comp][1]
                 noise_ampls[comp] = (self.current_state.xhat / self.current_state.norm)[
                     p0:p1
@@ -1784,11 +1786,13 @@ class WidebandDownhillFitter(DownhillFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_ampls = {}
-            ntmpar = len(self.model.free_params)
+            ntmpar = len(self.model.free_params) + int(
+                "PHOFF" not in self.model.free_params
+            )
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
-                p0 = noise_dims[comp][0] + ntmpar + 1
+                p0 = noise_dims[comp][0] + ntmpar
                 p1 = p0 + noise_dims[comp][1]
                 noise_ampls[comp] = (self.current_state.xhat / self.current_state.norm)[
                     p0:p1
@@ -2427,7 +2431,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                         new_d_matrix.param_units,
                     )
 
-            ntmpar = len(params)
+            ntmpar = len(self.model.free_params) + int(
+                "PHOFF" not in self.model.free_params
+            )
 
             # normalize the design matrix
             M, norm = normalize_designmatrix(M, params)
@@ -2736,11 +2742,13 @@ class WidebandLMFitter(LMFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_ampls = {}
-            ntmpar = len(self.model.free_params)
+            ntmpar = len(self.model.free_params) + int(
+                "PHOFF" not in self.model.free_params
+            )
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
-                p0 = noise_dims[comp][0] + ntmpar + 1
+                p0 = noise_dims[comp][0] + ntmpar
                 p1 = p0 + noise_dims[comp][1]
                 noise_ampls[comp] = (state.xhat / state.norm)[p0:p1] * u.s
                 if debug:
