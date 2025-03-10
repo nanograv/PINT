@@ -1,3 +1,4 @@
+from copy import deepcopy
 import json
 import os
 import pytest
@@ -7,7 +8,7 @@ import numpy as np
 
 import pint.models.model_builder as mb
 from pint import toa
-from pint.fitter import GLSFitter
+from pint.fitter import Fitter, GLSFitter
 from pinttestdata import datadir
 
 
@@ -91,3 +92,20 @@ class TestGLS:
 
     def test_has_correlated_errors(self):
         assert self.f.resids.model.has_correlated_errors
+
+    @pytest.mark.parametrize("downhill", [True, False])
+    def test_noise_ampl_length(self, downhill):
+        ftr = Fitter.auto(self.t, self.m, downhill=downhill)
+
+        noise_ampls_before = deepcopy(ftr.resids.noise_ampls)
+
+        ftr.fit_toas()
+
+        noise_ampls_after = ftr.resids.noise_ampls
+
+        assert set(noise_ampls_before.keys()) == set(noise_ampls_after.keys())
+
+        assert all(
+            len(noise_ampls_before[comp]) == len(noise_ampls_after[comp])
+            for comp in noise_ampls_before.keys()
+        )
