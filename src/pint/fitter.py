@@ -1496,11 +1496,13 @@ class DownhillGLSFitter(DownhillFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_ampls = {}
-            ntmpar = len(self.model.free_params)
+            ntmpar = len(self.model.free_params) + int(
+                "PHOFF" not in self.model.free_params
+            )
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
-                p0 = noise_dims[comp][0] + ntmpar + 1
+                p0 = noise_dims[comp][0] + ntmpar
                 p1 = p0 + noise_dims[comp][1]
                 noise_ampls[comp] = (self.current_state.xhat / self.current_state.norm)[
                     p0:p1
@@ -1784,11 +1786,13 @@ class WidebandDownhillFitter(DownhillFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_ampls = {}
-            ntmpar = len(self.model.free_params)
+            ntmpar = len(self.model.free_params) + int(
+                "PHOFF" not in self.model.free_params
+            )
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
-                p0 = noise_dims[comp][0] + ntmpar + 1
+                p0 = noise_dims[comp][0] + ntmpar
                 p1 = p0 + noise_dims[comp][1]
                 noise_ampls[comp] = (self.current_state.xhat / self.current_state.norm)[
                     p0:p1
@@ -2062,8 +2066,6 @@ class GLSFitter(Fitter):
             M, params, units = self.get_designmatrix()
             # M /= norm
 
-            ntmpar = len(fitp)
-
             # Get residuals and TOA uncertainties in seconds
             if i == 0:
                 # Why is this here?
@@ -2079,7 +2081,7 @@ class GLSFitter(Fitter):
                     phiinv = np.concatenate((phiinv, 1 / phi))
                     M = np.hstack((M, Mn))
 
-            ntmpar = len(fitp)
+            ntmpar = len(params)
 
             # normalize the design matrix
             M, norm = normalize_designmatrix(M, params)
@@ -2183,7 +2185,7 @@ class GLSFitter(Fitter):
                 for comp in noise_dims:
                     # The first column of designmatrix is "offset", add 1 to match
                     # the indices of noise designmatrix
-                    p0 = noise_dims[comp][0] + ntmpar + 1
+                    p0 = noise_dims[comp][0] + ntmpar
                     p1 = p0 + noise_dims[comp][1]
                     noise_ampls[comp] = (xhat / norm)[p0:p1] * u.s
                     if debug:
@@ -2429,7 +2431,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                         new_d_matrix.param_units,
                     )
 
-            ntmpar = len(fitp)
+            ntmpar = len(self.model.free_params) + int(
+                "PHOFF" not in self.model.free_params
+            )
 
             # normalize the design matrix
             M, norm = normalize_designmatrix(M, params)
@@ -2534,7 +2538,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 for comp in noise_dims:
                     # The first column of designmatrix is "offset", add 1 to match
                     # the indices of noise designmatrix
-                    p0 = noise_dims[comp][0] + ntmpar + 1
+                    p0 = noise_dims[comp][0] + ntmpar
                     p1 = p0 + noise_dims[comp][1]
                     noise_ampls[comp] = (xhat / norm)[p0:p1] * u.s
                     if debug:
@@ -2738,11 +2742,13 @@ class WidebandLMFitter(LMFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_ampls = {}
-            ntmpar = len(self.model.free_params)
+            ntmpar = len(self.model.free_params) + int(
+                "PHOFF" not in self.model.free_params
+            )
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
-                p0 = noise_dims[comp][0] + ntmpar + 1
+                p0 = noise_dims[comp][0] + ntmpar
                 p1 = p0 + noise_dims[comp][1]
                 noise_ampls[comp] = (state.xhat / state.norm)[p0:p1] * u.s
                 if debug:

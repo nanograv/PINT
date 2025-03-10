@@ -15,6 +15,7 @@ the released changes.
 - Type hints in `pint.models.timing_model`
 ### Fixed
 - Made `TimingModel.is_binary()` more robust. 
+- Shape of `Fitter.resids.noise_ampls` (it was wrong before due to bad indexing)
 ### Removed
 - Definition of `@cached_property` to support Python<=3.7
 - The broken `data.nanograv.org` URL from the list of solar system ephemeris mirrors
