@@ -238,7 +238,7 @@ class TestParameters:
         """Try to set the numerical value of a parameter to various things"""
         with pytest.raises(ValueError):
             self.set_num_to_unit()
-        with pytest.raises(u.UnitTypeError):
+        with pytest.raises((u.UnitTypeError, u.UnitConversionError)):
             self.set_num_to_quantity()
 
     def test_t0(self):

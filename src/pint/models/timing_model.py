@@ -1646,16 +1646,24 @@ class TimingModel:
         If there is no noise model component provided, a diagonal matrix with
         TOAs error as diagonal element will be returned.
         """
-        result = np.zeros((len(toas), len(toas)))
-        if "ScaleToaError" not in self.components:
-            result += np.diag(toas.table["error"].quantity.to(u.s).value ** 2)
+        N = np.diag(self.scaled_toa_uncertainty(toas).to_value(u.s) ** 2)
+        U = self.noise_model_designmatrix(toas)
+        Phi = self.noise_model_basis_weight(toas)
+        return N + np.dot(U * Phi[None, :], U.T) if U is not None else N
 
-        for nf in self.covariance_matrix_funcs:
-            result += nf(toas)
-        return result
+    def wideband_covariance_matrix(self, toas: TOAs) -> np.ndarray:
+        """Get the (2*Ntoa x 2*Ntoa) wideband covariance matrix for noise models.
+        The top-left (Ntoa x Ntoa) block has units of s^2. The top-right and bottom-
+        left  (Ntoa x Ntoa) blocks have units of s dmu. The bottom-right block has
+        units of dmu^2.
+        """
+        N = np.diag(self.scaled_wideband_uncertainty(toas) ** 2)
+        U = self.noise_model_wideband_designmatrix(toas)
+        Phi = self.noise_model_basis_weight(toas)
+        return N + np.dot(U * Phi[None, :], U.T) if U is not None else N
 
     def dm_covariance_matrix(self, toas: TOAs) -> np.ndarray:
-        """Get the DM covariance matrix for noise models. The matrix elements have
+        """Get the DM covariance matrix for noise . The matrix elements have
         units of dmu^2.
 
         If there is no noise model component provided, a diagonal matrix with
@@ -1724,12 +1732,74 @@ class TimingModel:
             result += nf(toas)
         return result
 
+    def scaled_wideband_uncertainty(self, toas: TOAs) -> np.ndarray:
+        """Returns the combined scaled TOA and DM uncertainty values as a single
+        vector for wideband TOAs. The TOA uncertainties are in s and the DM uncertainties
+        are in dmu. The output is an `ndarray` rather than a `Quantity`.
+        Raises an exception if the input TOAs are narrowband.
+        Parameters
+        ----------
+        toas: pint.toa.TOAs
+            The input TOAs object for unscaled TOA and DM uncertainties.
+        """
+        terr = self.scaled_toa_uncertainty(toas).to_value(u.s)
+        derr = self.scaled_dm_uncertainty(toas).to_value(pint.dmu)
+        return np.hstack((terr, derr))
+
     def noise_model_designmatrix(self, toas: TOAs) -> np.ndarray:
         """Returns the joint design/basis matrix for all noise components."""
         if len(self.basis_funcs) == 0:
             return None
         result = [nf(toas)[0] for nf in self.basis_funcs]
-        return np.hstack(list(result))
+        return np.hstack(result)
+
+    def noise_model_wideband_designmatrix(self, toas: TOAs) -> Optional[np.ndarray]:
+        """Returns the design/basis matrix for all noise components for wideband TOAs.
+        Includes both TOA and DM partial derivatives. Returns None if no correlated noise
+        component is present."""
+        return (
+            np.hstack(
+                [
+                    nc.get_wideband_noise_basis(toas)
+                    for nc in self.NoiseComponent_list
+                    if nc.introduces_correlated_errors
+                ]
+            )
+            if self.has_correlated_errors
+            else None
+        )
+
+    def full_designmatrix(
+        self, toas: TOAs
+    ) -> Tuple[np.ndarray, List[str], List[u.Unit]]:
+        """Returns the full design matrix containing both the timing model design
+        matrix and the noise basis matrix. If the TOAs are wideband, the DM partial
+        derivatives are also included. The units are not returned."""
+
+        M_tm, par, M_units = self.designmatrix(toas)
+        M_nm = self.noise_model_designmatrix(toas)
+
+        M = np.hstack((M_tm, M_nm)) if M_nm is not None else M_tm
+
+        # if M_nm is not None:
+        #     par.extend([f"_NOISE_{ii}" for ii in range(M_nm.shape[1])])
+        #     M_units.extend(np.repeat(u.dimensionless_unscaled, M_nm.shape[1]))
+
+        return (M, par, M_units)
+
+    def full_wideband_designmatrix(
+        self, toas: TOAs
+    ) -> Tuple[np.ndarray, List[str], List[u.Unit], List[u.Unit]]:
+        """Returns the full design matrix containing both the timing model design
+        matrix and the noise basis matrix. If the TOAs are wideband, the DM partial
+        derivatives are also included. The units are not returned."""
+
+        M_tm, par, M_units, Md_units = self.wideband_designmatrix(toas)
+        M_nm = self.noise_model_wideband_designmatrix(toas)
+
+        M = np.hstack((M_tm, M_nm)) if M_nm is not None else M_tm
+
+        return (M, par, M_units, Md_units)
 
     def noise_model_basis_weight(self, toas: TOAs) -> np.ndarray:
         """Returns the joint weight vector for all noise components."""
@@ -1737,6 +1807,18 @@ class TimingModel:
             return None
         result = [nf(toas)[1] for nf in self.basis_funcs]
         return np.hstack(list(result))
+
+    def full_basis_weight(self, toas: TOAs) -> np.ndarray:
+        """Returns the joint weight vector for all timing and noise components.
+        The weights of the timing model parameters are set to be a large constant,
+        representing an uninformative prior."""
+        noise_params = self.get_params_of_component_type("NoiseComponent")
+        npar_tm = len(
+            [pname for pname in self.free_params if pname not in noise_params]
+        ) + int("PhaseOffset" not in self.components)
+        phi_tm = np.ones(npar_tm) * 1e40
+        phi_nm = self.noise_model_basis_weight(toas)
+        return np.hstack((phi_tm, phi_nm)) if phi_nm is not None else phi_tm
 
     def noise_model_dimensions(self, toas: TOAs) -> Dict[str, Tuple[int, int]]:
         """Number of basis functions for each noise model component.
@@ -2230,6 +2312,82 @@ class TimingModel:
 
         return M, params, units
 
+    def dm_designmatrix(
+        self, toas: TOAs, incoffset=True
+    ) -> Tuple[np.ndarray, List[str], List[u.Unit]]:
+        """Returns the DM part of the wideband designmatrix. This contains the partial
+        derivatives of the model DM w.r.t. the timing model parameters."""
+        noise_params = self.get_params_of_component_type("NoiseComponent")
+
+        if (
+            not set(self.free_params)
+            .difference(noise_params)
+            .issubset(self.fittable_params)
+        ):
+            free_unfittable_params = (
+                set(self.free_params)
+                .difference(noise_params)
+                .difference(self.fittable_params)
+            )
+            raise ValueError(
+                f"Cannot compute the design matrix because the following unfittable parameters "
+                f"were found unfrozen in the model: {free_unfittable_params}. "
+                f"Freeze these parameters before computing the design matrix."
+            )
+
+        # unfrozen_noise_params = [
+        #     param for param in noise_params if not getattr(self, param).frozen
+        # ]
+
+        # The entries for any unfrozen noise parameters will not be
+        # included in the design matrix as they are not well-defined.
+
+        incoffset = incoffset and "PhaseOffset" not in self.components
+
+        params = ["Offset"] if incoffset else []
+        params += [
+            par
+            for par in self.params
+            if (not getattr(self, par).frozen) and par not in noise_params
+        ]
+
+        ntoas = len(toas)
+        nparams = len(params)
+        units = []
+        # Apply all delays ?
+        # tt = toas['tdbld']
+        # for df in self.delay_funcs:
+        #    tt -= df(toas)
+
+        M = np.zeros((ntoas, nparams))
+        for ii, param in enumerate(params):
+            if param == "Offset":
+                M[:, ii] = 0.0
+                units.append(pint.dmu / u.s)
+            else:
+                q = self.d_dm_d_param(toas, param)
+                the_unit = pint.dmu / getattr(self, param).units
+                M[:, ii] = q.to_value(the_unit)
+                units.append(the_unit)
+
+        return M, params, units
+
+    def wideband_designmatrix(self, toas: TOAs, incoffset=True):
+        """The wideband design matrix including the partial derivatives of the
+        TOA and DM residuals w.r.t. the model parameters."""
+
+        assert toas.is_wideband()
+
+        M_t, par_t, units_t = self.designmatrix(toas, incoffset=incoffset)
+        M_d, par_d, units_d = self.dm_designmatrix(toas, incoffset=incoffset)
+
+        assert all(pt == pd for pt, pd in zip(par_t, par_d))
+
+        M = np.vstack((M_t, M_d))
+        assert M.shape == (2 * len(toas), len(par_t))
+
+        return M, par_t, units_t, units_d
+
     def compare(
         self,
         othermodel: "TimingModel",
@@ -2464,8 +2622,7 @@ class TimingModel:
                         value2[pn] = str(otherpar.quantity)
                         if otherpar.quantity != par.quantity:
                             log.info(
-                                "Parameter %s not fit, but has changed between these models"
-                                % par.name
+                                f"Parameter {par.name} not fit, but has changed between these models"
                             )
                     else:
                         value2[pn] = "Missing"
@@ -2485,22 +2642,22 @@ class TimingModel:
                         par.uncertainty.to_value(uncertainty_unit),
                     )
 
-                    if otherpar is not None:
-                        if otherpar.uncertainty is not None:
-                            value2[pn] = "{:>16s} +/- {:7.2g}".format(
-                                str(otherpar.quantity),
-                                otherpar.uncertainty.to_value(uncertainty_unit),
-                            )
-                        else:
-                            # otherpar must have no uncertainty
-                            if otherpar.quantity is not None:
-                                value2[pn] = "{:>s}".format(str(otherpar.quantity))
-                            else:
-                                value2[pn] = "Missing"
-                    else:
+                    if otherpar is None:
                         value2[pn] = "Missing"
                         diff1[pn] = ""
                         diff2[pn] = ""
+                    elif otherpar.uncertainty is not None:
+                        value2[pn] = "{:>16s} +/- {:7.2g}".format(
+                            str(otherpar.quantity),
+                            otherpar.uncertainty.to_value(uncertainty_unit),
+                        )
+                    else:
+                        # otherpar must have no uncertainty
+                        value2[pn] = (
+                            "{:>s}".format(str(otherpar.quantity))
+                            if otherpar.quantity is not None
+                            else "Missing"
+                        )
                     if otherpar is not None and otherpar.quantity is not None:
                         diff = otherpar.quantity - par.quantity
                         if par.uncertainty is not None:
@@ -2566,8 +2723,7 @@ class TimingModel:
                                 )
                             else:
                                 log.warning(
-                                    "Parameter %s not fit, but has changed between these models"
-                                    % par.name
+                                    f"Parameter {par.name} not fit, but has changed between these models"
                                 )
                                 modifier[pn].append("change")
                         if (
