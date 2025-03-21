@@ -9,11 +9,15 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- In `Residuals`, store correlated noise amplitudes instead of noise residuals. `Residuals.noise_resids` is now a `@property`.
 ### Added
 - Simulate correlated DM noise for wideband TOAs
 - Type hints in `pint.models.timing_model`
 - Added checkbox for optional subtraction of mean in `pintk`
 ### Fixed
-- Made `TimingModel.is_binary()` more robust. 
+- Made `TimingModel.is_binary()` more robust.
+- Correct value of (1/year) in `powerlaw()` function
 ### Removed
 - Definition of `@cached_property` to support Python<=3.7
+- The broken `data.nanograv.org` URL from the list of solar system ephemeris mirrors
+- Broken fitter class `CompositeMCMCFitter` (this fitter was added seemingly to deal with combined radio and high-energy datasets, but has since been broken for a while.)
