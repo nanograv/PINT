@@ -14,7 +14,8 @@ the released changes.
 - Simulate correlated DM noise for wideband TOAs
 - Type hints in `pint.models.timing_model`
 ### Fixed
-- Made `TimingModel.is_binary()` more robust. 
+- Made `TimingModel.is_binary()` more robust.
+- Correct value of (1/year) in `powerlaw()` function
 ### Removed
 - Definition of `@cached_property` to support Python<=3.7
 - The broken `data.nanograv.org` URL from the list of solar system ephemeris mirrors
