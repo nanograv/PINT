@@ -16,6 +16,7 @@ the released changes.
 ### Fixed
 - Made `TimingModel.is_binary()` more robust. 
 - Bug in `Fitter.plot()`
+- Correct value of (1/year) in `powerlaw()` function
 ### Removed
 - Definition of `@cached_property` to support Python<=3.7
 - The broken `data.nanograv.org` URL from the list of solar system ephemeris mirrors
