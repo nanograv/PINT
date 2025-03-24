@@ -17,6 +17,7 @@ the released changes.
 - `full_designmatrix()` and `full_basis_weights()` methods in `TimingModel`
 ### Fixed
 - Made `TimingModel.is_binary()` more robust.
+- Correct value of (1/year) in `powerlaw()` function
 - Fixed `TestPintk`
 - Fixed the noise realization indexing in `Fitter`s
 ### Removed
