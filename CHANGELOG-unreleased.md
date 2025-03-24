@@ -15,6 +15,7 @@ the released changes.
 - Type hints in `pint.models.timing_model`
 ### Fixed
 - Made `TimingModel.is_binary()` more robust
+- Correct value of (1/year) in `powerlaw()` function
 - Added missing newline in `tempo_polyco_table_writer()`
 - Proper warning in `read_polyco_file()`
 ### Removed
