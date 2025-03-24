@@ -937,5 +937,5 @@ def powerlaw(f, A: float = 1e-16, gamma: float = 5.0):
     :param gamma: Spectral index of red noise process
     """
 
-    fyr = 1 / 3.16e7
+    fyr = (1 / u.year).to_value(u.Hz)
     return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma)

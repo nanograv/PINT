@@ -24,6 +24,7 @@ the released changes.
     - New method in `WidebandTOAResiduals` -- `calc_wideband_resids()`
 ### Fixed
 - Made `TimingModel.is_binary()` more robust.
+- Correct value of (1/year) in `powerlaw()` function
 - Fixed `TestPintk`
 - Fixed the noise realization indexing in `Fitter`s
 ### Removed
