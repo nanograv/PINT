@@ -11,11 +11,16 @@ the released changes.
 ### Changed
 - In `Residuals`, store correlated noise amplitudes instead of noise residuals. `Residuals.noise_resids` is now a `@property`.
 - Reorder `TimingModel.scaled_toa_uncertainty()` and `TimingModel.scaled_dm_uncertainty()` to improve performance.
+- Refactor `pint.fitter` to reduce code duplication
 ### Added
 - Simulate correlated DM noise for wideband TOAs
 - Type hints in `pint.models.timing_model`
+- `full_designmatrix()` and `full_basis_weights()` methods in `TimingModel`
 ### Fixed
-- Made `TimingModel.is_binary()` more robust. 
+- Made `TimingModel.is_binary()` more robust.
+- Correct value of (1/year) in `powerlaw()` function
+- Fixed `TestPintk`
+- Fixed the noise realization indexing in `Fitter`s
 ### Removed
 - Definition of `@cached_property` to support Python<=3.7
 - The broken `data.nanograv.org` URL from the list of solar system ephemeris mirrors

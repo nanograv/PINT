@@ -1760,12 +1760,45 @@ class TimingModel:
         result = [nf(toas)[0] for nf in self.basis_funcs]
         return np.hstack(list(result))
 
+    def full_designmatrix(
+        self, toas: TOAs
+    ) -> Tuple[np.ndarray, List[str], List[u.Unit]]:
+        """Returns the full design matrix containing both the timing model design
+        matrix and the noise basis matrix. If the TOAs are wideband, the DM partial
+        derivatives are also included. The units are not returned."""
+
+        M_tm, par, M_units = self.designmatrix(toas)
+        M_nm = self.noise_model_designmatrix(toas)
+
+        M = np.hstack((M_tm, M_nm)) if M_nm is not None else M_tm
+
+        # if M_nm is not None:
+        #     par.extend([f"_NOISE_{ii}" for ii in range(M_nm.shape[1])])
+        #     M_units.extend(np.repeat(u.dimensionless_unscaled, M_nm.shape[1]))
+
+        return (M, par, M_units)
+
     def noise_model_basis_weight(self, toas: TOAs) -> np.ndarray:
         """Returns the joint weight vector for all noise components."""
         if len(self.basis_funcs) == 0:
             return None
         result = [nf(toas)[1] for nf in self.basis_funcs]
         return np.hstack(list(result))
+
+    def full_basis_weight(self, toas: TOAs) -> np.ndarray:
+        """Returns the joint weight vector for all timing and noise components.
+        The weights of the timing model parameters are set to be a large constant,
+        representing an uninformative prior."""
+        noise_params = self.get_params_of_component_type("NoiseComponent")
+        npar_tm = len(
+            [pname for pname in self.free_params if pname not in noise_params]
+        ) + int("PhaseOffset" not in self.components)
+
+        # The number 1e40 is chosen to be consistent with ENTERPRISE.
+        phi_tm = np.ones(npar_tm) * 1e40
+        phi_nm = self.noise_model_basis_weight(toas)
+
+        return np.hstack((phi_tm, phi_nm)) if phi_nm is not None else phi_tm
 
     def noise_model_dimensions(self, toas: TOAs) -> Dict[str, Tuple[int, int]]:
         """Number of basis functions for each noise model component.
