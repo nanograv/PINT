@@ -94,6 +94,7 @@ class Pulsar:
             model=self.prefit_model,
             usepickle=True,
         )
+        self.subtract_mean = False
         self.all_toas.table.sort("index")
         self.all_toas.get_clusters(add_column=True)
         # Make sure that if we used a model, that any phase jumps from
@@ -218,13 +219,16 @@ class Pulsar:
         # update the pre and post fit residuals using all_toas
         track_mode = "use_pulse_numbers" if self.use_pulse_numbers else None
         self.prefit_resids = Residuals(
-            self.all_toas, self.prefit_model, subtract_mean=False, track_mode=track_mode
+            self.all_toas,
+            self.prefit_model,
+            subtract_mean=self.subtract_mean,
+            track_mode=track_mode,
         )
         if self.selected_toas.ntoas and self.selected_toas.ntoas != self.all_toas.ntoas:
             self.selected_prefit_resids = Residuals(
                 self.selected_toas,
                 self.prefit_model,
-                subtract_mean=False,
+                subtract_mean=self.subtract_mean,
                 track_mode=track_mode,
             )
         else:
@@ -233,7 +237,7 @@ class Pulsar:
             self.postfit_resids = Residuals(
                 self.all_toas,
                 self.postfit_model,
-                subtract_mean=False,
+                subtract_mean=self.subtract_mean,
                 track_mode=track_mode,
             )
             if (
@@ -243,7 +247,7 @@ class Pulsar:
                 self.selected_postfit_resids = Residuals(
                     self.selected_toas,
                     self.postfit_model,
-                    subtract_mean=False,
+                    subtract_mean=self.subtract_mean,
                     track_mode=track_mode,
                 )
             else:

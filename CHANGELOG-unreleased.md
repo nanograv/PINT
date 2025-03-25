@@ -15,6 +15,7 @@ the released changes.
 - Simulate correlated DM noise for wideband TOAs
 - Type hints in `pint.models.timing_model`
 - `full_designmatrix()` and `full_basis_weights()` methods in `TimingModel`
+- Added checkbox for optional subtraction of mean in `pintk`
 ### Fixed
 - Made `TimingModel.is_binary()` more robust
 - Correct value of (1/year) in `powerlaw()` function
