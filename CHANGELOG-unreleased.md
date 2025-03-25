@@ -22,6 +22,7 @@ the released changes.
     - `get_dm_noise_basis()` and `get_wideband_noise_basis()` methods in `CorrelatedNoiseComponent` 
     - New methods in `TimingModel` -- `wideband_covariance_matrix()`, `scaled_wideband_uncertainty()`, `noise_model_wideband_designmatrix()`, `full_designmatrix()`, `full_wideband_designmatrix()`, `full_basis_weight()`, `dm_designmatrix()`, `wideband_designmatrix()`
     - New method in `WidebandTOAResiduals` -- `calc_wideband_resids()`
+- Added checkbox for optional subtraction of mean in `pintk`
 ### Fixed
 - Made `TimingModel.is_binary()` more robust.
 - Correct value of (1/year) in `powerlaw()` function
