@@ -548,7 +548,7 @@ class PLDMNoise(NoiseComponent):
 
         return amp, gam, n_lin, n_log, f_min_ratio
 
-    def get_time_frequencies(self, toas: TOAs) -> np.ndarray:
+    def get_time_frequencies(self, toas: TOAs) -> Tuple[np.ndarray, np.ndarray]:
         """Return the frequencies of the noise model"""
 
         tbl = toas.table
@@ -1000,7 +1000,7 @@ def get_rednoise_freqs(
     logmode: Optional[int] = None,
     f_min: Optional[float] = None,
     nlog: Optional[int] = None,
-):
+) -> np.ndarray:
     """
     Compute an array of red-noise frequencies, optionally mixing log- and
     linearly spaced frequencies.
@@ -1091,7 +1091,7 @@ def get_rednoise_freqs(
     return freqs
 
 
-def create_fourier_design_matrix(t, f):
+def create_fourier_design_matrix(t, f) -> np.ndarray:
     """
     Construct a Fourier design matrix from a given set of frequencies.
     The matrix alternates sine and cosine columns.
