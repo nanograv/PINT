@@ -1137,5 +1137,5 @@ def powerlaw(
     f_low_cut = f_low_cut if f_low_cut is not None else np.min(f)
     above_fl = np.array(f >= f_low_cut, dtype=float)
 
-    fyr = 1 / 3.16e7
+    fyr = (1 / u.year).to_value(u.Hz)
     return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma) * above_fl
