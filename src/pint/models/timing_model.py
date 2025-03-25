@@ -2263,6 +2263,13 @@ class TimingModel:
 
         return M, params, units
 
+    @property
+    def ntmpar(self):
+        noise_params = self.get_params_of_component_type("NoiseComponent")
+        return len(set(self.free_params).difference(noise_params)) + int(
+            "PHOFF" not in self.params
+        )
+
     def compare(
         self,
         othermodel: "TimingModel",
