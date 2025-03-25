@@ -352,6 +352,50 @@ class PlkRandomModelSelect(tk.Frame):
             self.modeLabel.config(text="Mode: Select", fg=foreground, bg=background)
 
 
+class PlkSubtractMeanSelect(tk.Frame):
+    """
+    Allows one to select whether to subtract the mean or not while fitting
+    """
+
+    def __init__(self, master=None, **kwargs):
+        tk.Frame.__init__(self, master)
+        self.configure(bg=background)
+        self.boxChecked = None
+        self.var = tk.IntVar()
+
+    def addSubtractMeanCheckbox(self, master):
+        self.clear_grid()
+        checkbox = tk.Checkbutton(
+            master,
+            text="Subtract Mean",
+            variable=self.var,
+            command=self.changedSMCheckBox,
+            fg=foreground,
+            bg=background,
+        )
+        checkbox.grid(row=1, column=2, sticky="N")
+        checkbox_ttp = CreateToolTip(checkbox, "Subtract mean while fitting TOAs")
+
+    def setCallbacks(self, boxChecked):
+        """
+        Set the callback functions
+        """
+        self.boxChecked = boxChecked
+
+    def clear_grid(self):
+        for widget in self.winfo_children():
+            widget.grid_forget()
+
+    def changedSMCheckBox(self):
+        if self.var.get() == 1:
+            log.debug("Subtract mean turned on.")
+        else:
+            log.debug("Subtract mean turned off.")
+
+    def getSubtractMean(self):
+        return self.var.get()
+
+
 class PlkLogLevelSelect(tk.Frame):
     """
     Allows one to select the log output level in the terminal
@@ -740,6 +784,7 @@ class PlkWidget(tk.Frame):
         self.xyChoiceWidget = PlkXYChoiceWidget(master=self)
         self.actionsWidget = PlkActionsWidget(master=self)
         self.randomboxWidget = PlkRandomModelSelect(master=self)
+        self.meanboxWidget = PlkSubtractMeanSelect(master=self)
         self.logLevelWidget = PlkLogLevelSelect(master=self)
         self.fitterWidget = PlkFitterSelect(master=self)
         self.colorModeWidget = PlkColorModeBoxes(master=self)
@@ -798,6 +843,7 @@ class PlkWidget(tk.Frame):
             self.actionsWidget.setFitButtonText("Fit")
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
+            self.meanboxWidget.addSubtractMeanCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.fitterWidget.updateFitterChoices(self.psr.all_toas.wideband)
             self.xyChoiceWidget.wideband = self.psr.all_toas.wideband
@@ -834,6 +880,7 @@ class PlkWidget(tk.Frame):
         self.fitboxesWidget.grid(row=0, column=0, columnspan=2, sticky="W")
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
         self.randomboxWidget.addRandomCheckbox(self)
+        self.meanboxWidget.addSubtractMeanCheckbox(self)
         self.colorModeWidget.grid(row=2, column=0, columnspan=1, sticky="S")
         self.colorModeWidget.addColorModeCheckbox(self.color_modes)
         self.xyChoiceWidget.setChoice()
@@ -895,6 +942,7 @@ class PlkWidget(tk.Frame):
                 self.current_state.selected = self.selected
                 self.state_stack.append(copy.deepcopy(self.current_state))
             self.psr.fit_method = self.fitterWidget.fitter
+            self.psr.subtract_mean = bool(self.meanboxWidget.getSubtractMean())
             self.psr.fit(self.selected)
             if self.randomboxWidget.getRandomModel():
                 self.psr.random_models(self.selected)
@@ -902,6 +950,7 @@ class PlkWidget(tk.Frame):
             self.actionsWidget.setFitButtonText("Re-fit")
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
+            self.meanboxWidget.addSubtractMeanCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             xid, yid = self.xyChoiceWidget.plotIDs()
             self.xyChoiceWidget.setChoice(xid=xid, yid="post-fit")
@@ -918,12 +967,14 @@ class PlkWidget(tk.Frame):
         self.psr.reset_TOAs()
         self.psr.fitted = False
         self.psr = copy.deepcopy(self.base_state.psr)
+        self.psr.subtract_mean = bool(self.meanboxWidget.getSubtractMean())
         self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
         self.jumped = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
         self.updateAllJumped()
         self.actionsWidget.setFitButtonText("Fit")
         self.fitboxesWidget.addFitCheckBoxes(self.base_state.psr.prefit_model)
         self.randomboxWidget.addRandomCheckbox(self)
+        self.meanboxWidget.addSubtractMeanCheckbox(self)
         self.colorModeWidget.addColorModeCheckbox(self.color_modes)
         self.xyChoiceWidget.setChoice()
         self.updatePlot(keepAxes=False)
@@ -985,6 +1036,7 @@ class PlkWidget(tk.Frame):
             self.updateAllJumped()
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
+            self.meanboxWidget.addSubtractMeanCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             if len(self.state_stack) == 0:
                 self.state_stack.append(self.base_state)
@@ -1585,6 +1637,7 @@ class PlkWidget(tk.Frame):
             self.selected = np.zeros(self.psr.selected_toas.ntoas, dtype=bool)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
+            self.meanboxWidget.addSubtractMeanCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.updatePlot(keepAxes=True)
             self.call_updates()
@@ -1611,6 +1664,7 @@ class PlkWidget(tk.Frame):
                 self.psr.selected_toas = self.all_toas[self.selected]
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
+            self.meanboxWidget.addSubtractMeanCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.updatePlot(keepAxes=True)
             self.call_updates()
