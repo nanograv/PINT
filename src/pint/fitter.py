@@ -1914,11 +1914,6 @@ class GLSFitter(Fitter):
             fitpv = self.model.get_params_dict("free", "num")
             fitperrs = self.model.get_params_dict("free", "uncertainty")
 
-            # Define the linear system
-            # normalize the design matrix
-            M, params, units = self.get_designmatrix()
-            # M /= norm
-
             residuals = self.resids.time_resids.to(u.s).value
 
             # compute covariance matrices
