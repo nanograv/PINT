@@ -17,8 +17,10 @@ the released changes.
 - Type hints in `pint.models.timing_model`
 - `full_designmatrix()` and `full_basis_weights()` methods in `TimingModel`
 - Added checkbox for optional subtraction of mean in `pintk`
+- `TimingModel.ntmpar` property
 ### Fixed
-- Made `TimingModel.is_binary()` more robust
+- Shape of `Fitter.resids.noise_ampls` (it was wrong before due to bad indexing)
+- Made `TimingModel.is_binary()` more robust.
 - Correct value of (1/year) in `powerlaw()` function
 - Fixed `TestPintk`
 - Fixed the noise realization indexing in `Fitter`s
