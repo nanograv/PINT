@@ -515,7 +515,7 @@ class PLDMNoise(NoiseComponent):
             floatParameter(
                 name="TNDMFLOG",
                 units="",
-                description="Number of logarithmic DM noise frequencies in the basis.",
+                description="Number of logarithmically spaced DM noise frequencies in the basis.",
                 convert_tcb2tdb=False,
             )
         )
@@ -678,7 +678,7 @@ class PLChromNoise(NoiseComponent):
             floatParameter(
                 name="TNCHROMFLOG",
                 units="",
-                description="Number of logarithmic chromatic noise frequencies in the basis.",
+                description="Number of logarithmically spaced chromatic noise frequencies in the basis.",
                 convert_tcb2tdb=False,
             )
         )
@@ -859,7 +859,7 @@ class PLRedNoise(NoiseComponent):
             floatParameter(
                 name="TNREDFLOG",
                 units="",
-                description="Number of logarithmic red noise frequencies in the basis.",
+                description="Number of logarithmically spaced red noise frequencies in the basis.",
                 convert_tcb2tdb=False,
             )
         )
