@@ -2391,6 +2391,15 @@ class TimingModel:
 
         return M, par_t, units_t, units_d
 
+    @property
+    def ntmpar(self) -> int:
+        """Number of free timing model parameters including the implicit or explicit offset.
+        This is equal to the number of columns in the timing model design matrix."""
+        noise_params = self.get_params_of_component_type("NoiseComponent")
+        return len(set(self.free_params).difference(noise_params)) + int(
+            "PHOFF" not in self.params
+        )
+
     def compare(
         self,
         othermodel: "TimingModel",

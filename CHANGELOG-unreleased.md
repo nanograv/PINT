@@ -23,8 +23,10 @@ the released changes.
     - New methods in `TimingModel` -- `wideband_covariance_matrix()`, `scaled_wideband_uncertainty()`, `noise_model_wideband_designmatrix()`, `full_designmatrix()`, `full_wideband_designmatrix()`, `full_basis_weight()`, `dm_designmatrix()`, `wideband_designmatrix()`
     - New method in `WidebandTOAResiduals` -- `calc_wideband_resids()`
 - Added checkbox for optional subtraction of mean in `pintk`
+- `TimingModel.ntmpar` property
 ### Fixed
-- Made `TimingModel.is_binary()` more robust
+- Shape of `Fitter.resids.noise_ampls` (it was wrong before due to bad indexing)
+- Made `TimingModel.is_binary()` more robust.
 - Correct value of (1/year) in `powerlaw()` function
 - Fixed `TestPintk`
 - Fixed the noise realization indexing in `Fitter`s
