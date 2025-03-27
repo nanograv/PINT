@@ -19,8 +19,9 @@ the released changes.
 - Added Log-Linear Powerlaw noise parameters to `PLRedNoise`, `PLDMNoise`, `PLChromNoise`
 - `TimingModel.ntmpar` property
 ### Fixed
+- Made `TimingModel.is_binary()` more robust. 
+- Bug in `Fitter.plot()`
 - Shape of `Fitter.resids.noise_ampls` (it was wrong before due to bad indexing)
-- Made `TimingModel.is_binary()` more robust.
 - Correct value of (1/year) in `powerlaw()` function
 - Fixed `TestPintk`
 - Fixed the noise realization indexing in `Fitter`s
