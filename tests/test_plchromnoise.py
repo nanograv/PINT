@@ -51,6 +51,8 @@ parfile_contents = """
     TNChromAMP -14.2
     TNChromGAM 0.624
     TNChromC 70
+    TNChromFlog 4
+    TNChromFlog_Factor 2
     TNChromIdx 4
     CM0 0 1
     CM1 0 1
@@ -74,7 +76,14 @@ def test_read_PLChromNoise_component_type(modelJ0023p0923):
 
 
 def test_read_PLChromNoise_params(modelJ0023p0923):
-    params = ["TNCHROMAMP", "TNCHROMGAM", "TNCHROMC", "TNCHROMIDX"]
+    params = [
+        "TNCHROMAMP",
+        "TNCHROMGAM",
+        "TNCHROMC",
+        "TNCHROMIDX",
+        "TNCHROMFLOG",
+        "TNCHROMFLOG_FACTOR",
+    ]
     for param in params:
         assert (
             hasattr(modelJ0023p0923, param)
@@ -102,6 +111,8 @@ def test_PLRedNoise_recovery():
         TNRedAmp -11
         TNRedGam 3
         TNRedC 30
+        TNRedFlog 4
+        TNRedFlog_Factor 2
         """
         )
     )
@@ -125,6 +136,8 @@ def test_PLRedNoise_recovery():
     A = model["TNREDAMP"].value
     gam = model["TNREDGAM"].value
     c = model["TNREDC"].value
+    flog = model["TNREDFLOG"].value
+    flog_factor = model["TNREDFLOG_FACTOR"].value
     model.remove_component("PLRedNoise")
 
     # create and add PLChromNoise component
@@ -137,6 +150,8 @@ def test_PLRedNoise_recovery():
     model["TNCHROMAMP"].quantity = A
     model["TNCHROMGAM"].quantity = gam
     model["TNCHROMC"].value = c
+    model["TNCHROMFLOG"].value = flog
+    model["TNCHROMFLOG_FACTOR"].value = flog_factor
     model.validate()
 
     # get chromatic noise basis and weights
