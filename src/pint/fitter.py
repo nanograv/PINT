@@ -60,7 +60,7 @@ To automatically select a fitter based on the properties of the data and model::
 
 import contextlib
 import copy
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Tuple
 from warnings import warn
 from functools import cached_property
 
@@ -1653,11 +1653,11 @@ class WidebandDownhillFitter(DownhillFitter):
 
     def __init__(
         self,
-        toas,
-        model,
+        toas: TOAs,
+        model: TimingModel,
         track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
-        residuals=None,
-        add_args=None,
+        residuals: Optional[WidebandTOAResiduals] = None,
+        add_args: Optional[dict] = None,
     ):
         self.method = "downhill_wideband"
         self.full_cov = False
@@ -1749,10 +1749,10 @@ class PowellFitter(Fitter):
 
     def __init__(
         self,
-        toas,
-        model,
+        toas: TOAs,
+        model: TimingModel,
         track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
-        residuals=None,
+        residuals: Optional[Residuals] = None,
     ):
         super().__init__(toas, model, residuals=residuals, track_mode=track_mode)
         self.method = "Powell"
@@ -1801,10 +1801,10 @@ class WLSFitter(Fitter):
 
     def __init__(
         self,
-        toas,
-        model,
+        toas: TOAs,
+        model: TimingModel,
         track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
-        residuals=None,
+        residuals: Optional[Residuals] = None,
     ):
         super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
@@ -1906,10 +1906,10 @@ class GLSFitter(Fitter):
 
     def __init__(
         self,
-        toas=None,
-        model=None,
+        toas: TOAs,
+        model: TimingModel,
         track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
-        residuals=None,
+        residuals: Optional[Residuals] = None,
     ):
         super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
@@ -2068,11 +2068,11 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
 
     def __init__(
         self,
-        fit_data,
-        model,
-        fit_data_names=["toa", "dm"],
+        fit_data: TOAs,
+        model: TimingModel,
+        fit_data_names: List[str] = ["toa", "dm"],
         track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
-        additional_args={},
+        additional_args: dict = {},
     ):
         self.model_init = model
         # Check input data and data_type
@@ -2374,15 +2374,15 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
 class LMFitter(Fitter):
     def fit_toas(
         self,
-        maxiter=50,
+        maxiter: int = 50,
         *,
-        min_chi2_decrease=1e-3,
-        lambda_factor_decrease=2,
-        lambda_factor_increase=3,
-        lambda_factor_invalid=10,
-        threshold=1e-14,
-        min_lambda=0.5,
-        debug=False,
+        min_chi2_decrease: float = 1e-3,
+        lambda_factor_decrease: float = 2.0,
+        lambda_factor_increase: float = 3.0,
+        lambda_factor_invalid: float = 10.0,
+        threshold: float = 1e-14,
+        min_lambda: float = 0.5,
+        debug: bool = False,
     ):
         current_state = self.create_state()
         try:
@@ -2489,7 +2489,7 @@ class WidebandLMFitter(LMFitter):
         model: TimingModel,
         track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
         residuals: Optional[Residuals] = None,
-        add_args=None,
+        add_args: bool = None,
     ):
         self.method = "downhill_wideband"
         self.full_cov = False
@@ -2564,7 +2564,9 @@ class WidebandLMFitter(LMFitter):
                 setattr(self.resids, "norm", state.norm)
 
 
-def apply_Sdiag_threshold(Sdiag, VT, threshold, params):
+def apply_Sdiag_threshold(
+    Sdiag: np.ndarray, VT: np.ndarray, threshold: float, params: List[str]
+) -> np.ndarray:
     bad = np.where(Sdiag <= threshold * Sdiag[0])[0]
     Sdiag[bad] = np.inf
     for c in bad:
@@ -2586,7 +2588,11 @@ def apply_Sdiag_threshold(Sdiag, VT, threshold, params):
     return Sdiag
 
 
-def fit_wls_svd(r, sigma, M, params, threshold):
+def fit_wls_svd(
+    r: np.ndarray, sigma: np.ndarray, M: np.ndarray, params: List[str], threshold: float
+) -> Tuple[
+    np.ndarray, np.ndarray, np.ndarray, Tuple[np.ndarray, np.ndarray, np.ndarray]
+]:
     """A utility function used by the WLS fitters.
 
     Perform a linear WLS fit given timing residuals (r),
@@ -2633,7 +2639,9 @@ def fit_wls_svd(r, sigma, M, params, threshold):
     return dpars, Sigma, Adiag, (U, Sdiag, VT)
 
 
-def get_gls_mtcm_mtcy_fullcov(cov, M, residuals):
+def get_gls_mtcm_mtcy_fullcov(
+    cov: np.ndarray, M: np.ndarray, residuals: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
     """A utility function used by the GLS fitters.
 
     Computes the matrix products `mtcm = M^T C^-1 M` and `mtcy = M^T C^-1 y`
@@ -2647,7 +2655,9 @@ def get_gls_mtcm_mtcy_fullcov(cov, M, residuals):
     return mtcm, mtcy
 
 
-def get_gls_mtcm_mtcy(phiinv, Nvec, M, residuals):
+def get_gls_mtcm_mtcy(
+    phiinv: np.ndarray, Nvec: np.ndarray, M: np.ndarray, residuals: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
     """A utility function used by the GLS fitters.
 
     Computes the matrix products `mtcm = M^T N^-1 M` and `mtcy = M^T N^-1 y`
@@ -2662,7 +2672,9 @@ def get_gls_mtcm_mtcy(phiinv, Nvec, M, residuals):
     return mtcm, mtcy
 
 
-def _solve_svd(mtcm, mtcy, threshold, params):
+def _solve_svd(
+    mtcm: np.ndarray, mtcy: np.ndarray, threshold: float, params: List[str]
+) -> np.ndarray:
     """A utility function used by the GLS fitters.
 
     Solves a linearized timing model using singular value decomposition given
@@ -2690,7 +2702,7 @@ def _solve_svd(mtcm, mtcy, threshold, params):
     return xvar, xhat
 
 
-def _solve_cholesky(mtcm, mtcy):
+def _solve_cholesky(mtcm: np.ndarray, mtcy: np.ndarray) -> np.ndarray:
     """A utility function used by the GLS fitters.
 
     Solves a linearized timing model using Cholesky decomposition given
