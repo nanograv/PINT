@@ -549,27 +549,68 @@ class PLDMNoise(CorrelatedNoiseComponent):
                 convert_tcb2tdb=False,
             )
         )
+        self.add_param(
+            floatParameter(
+                name="TNDMFLOG",
+                units="",
+                description="Number of logarithmically spaced DM noise frequencies in the basis.",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNDMFLOG_FACTOR",
+                units="",
+                description="Factor of the log-spaced DM frequencies (2 -> [1/8,1/4,1/2,...])",
+                convert_tcb2tdb=False,
+            )
+        )
 
         self.covariance_matrix_funcs += [self.pl_dm_cov_matrix]
         self.basis_funcs += [self.pl_dm_basis_weight_pair]
 
-    def get_pl_vals(self) -> Tuple[float, float, int]:
-        nf = int(self.TNDMC.value) if self.TNDMC.value is not None else 30
+    def get_plc_vals(self) -> Tuple[float, float, int, int, float]:
+        """
+        Retrieve power-law parameters and frequency-basis parameters
+        from the model, substituting defaults if unspecified.
+        """
+        n_lin = int(self.TNDMC.value) if self.TNDMC.value is not None else 30
+        n_log = int(self.TNDMFLOG.value) if (self.TNDMFLOG.value is not None) else None
+        dm_log_factor = (
+            self.TNDMFLOG_FACTOR.value
+            if (self.TNDMFLOG_FACTOR.value is not None)
+            else 2
+        )
         amp, gam = 10**self.TNDMAMP.value, self.TNDMGAM.value
-        return (amp, gam, nf)
+        f_min_ratio = 1 / (dm_log_factor**n_log) if n_log is not None else 1
+
+        return amp, gam, n_lin, n_log, f_min_ratio
+
+    def get_time_frequencies(self, toas: TOAs) -> Tuple[np.ndarray, np.ndarray]:
+        """Return the frequencies of the noise model"""
+
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        T = np.max(t) - np.min(t)
+
+        (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
+        f_min = f_min_ratio / T
+
+        return t, get_rednoise_freqs(
+            t, n_lin, Tspan=T, logmode=0, f_min=f_min, nlog=n_log
+        )
 
     def get_noise_basis(self, toas: TOAs) -> np.ndarray:
         """Return a Fourier design matrix for DM noise.
 
         See the documentation for pl_dm_basis_weight_pair function for details."""
 
-        tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        t, f = self.get_time_frequencies(toas)
+        Fmat = create_fourier_design_matrix(t, f)
         freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
         fref = 1400 * u.MHz
         D = (fref.value / freqs.value) ** 2
-        nf = self.get_pl_vals()[2]
-        Fmat = create_fourier_design_matrix(t, nf)
+
         return Fmat * D[:, None]
 
     def get_noise_weights(self, toas: TOAs) -> np.ndarray:
@@ -577,11 +618,11 @@ class PLDMNoise(CorrelatedNoiseComponent):
 
         See the documentation for pl_dm_basis_weight_pair for details."""
 
-        tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        amp, gam, nf = self.get_pl_vals()
-        Ffreqs = get_rednoise_freqs(t, nf)
-        return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
+        (amp, gam, _, _, _) = self.get_plc_vals()
+        _, f = self.get_time_frequencies(toas)
+        df = np.diff(np.concatenate([[0], f]))
+
+        return powerlaw(f.repeat(2), amp, gam) * df.repeat(2)
 
     def pl_dm_basis_weight_pair(self, toas: TOAs) -> Tuple[np.ndarray, np.ndarray]:
         """Return a Fourier design matrix and power law DM noise weights.
@@ -627,8 +668,10 @@ class PLChromNoise(CorrelatedNoiseComponent):
     References
     ----------
     - Lentati et al. 2014, MNRAS 437(3), 3004-3023 [1]_
+    - van Haasteren & Vallisneri, 2014, MNRAS 446(2), 1170-1174 [2]_
 
     .. [1] https://ui.adsabs.harvard.edu/abs/2014MNRAS.437.3004L/abstract
+    .. [2] https://ui.adsabs.harvard.edu/abs/2015MNRAS.446.1170V/abstract
     """
 
     register = True
@@ -668,28 +711,73 @@ class PLChromNoise(CorrelatedNoiseComponent):
                 convert_tcb2tdb=False,
             )
         )
+        self.add_param(
+            floatParameter(
+                name="TNCHROMFLOG",
+                units="",
+                description="Number of logarithmically spaced chromatic noise frequencies in the basis.",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNCHROMFLOG_FACTOR",
+                units="",
+                description="Factor of the log-spaced chromatic frequencies (2 -> [1/8,1/4,1/2,...])",
+                convert_tcb2tdb=False,
+            )
+        )
 
         self.covariance_matrix_funcs += [self.pl_chrom_cov_matrix]
         self.basis_funcs += [self.pl_chrom_basis_weight_pair]
 
-    def get_pl_vals(self) -> Tuple[float, float, int]:
-        nf = int(self.TNCHROMC.value) if self.TNCHROMC.value is not None else 30
+    def get_plc_vals(self) -> Tuple[float, float, int, int, float]:
+        """
+        Retrieve power-law parameters and frequency-basis parameters
+        from the model, substituting defaults if unspecified.
+        """
+        n_lin = int(self.TNCHROMC.value) if self.TNCHROMC.value is not None else 30
+        n_log = (
+            int(self.TNCHROMFLOG.value)
+            if (self.TNCHROMFLOG.value is not None)
+            else None
+        )
+        chrom_log_factor = (
+            self.TNCHROMFLOG_FACTOR.value
+            if (self.TNCHROMFLOG_FACTOR.value is not None)
+            else 2
+        )
         amp, gam = 10**self.TNCHROMAMP.value, self.TNCHROMGAM.value
-        return (amp, gam, nf)
+        f_min_ratio = 1 / (chrom_log_factor**n_log) if n_log is not None else 1
+
+        return amp, gam, n_lin, n_log, f_min_ratio
+
+    def get_time_frequencies(self, toas: TOAs) -> np.ndarray:
+        """Return the frequencies of the noise model"""
+
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        T = np.max(t) - np.min(t)
+
+        (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
+        f_min = f_min_ratio / T
+
+        return t, get_rednoise_freqs(
+            t, n_lin, Tspan=T, logmode=0, f_min=f_min, nlog=n_log
+        )
 
     def get_noise_basis(self, toas: TOAs) -> np.ndarray:
         """Return a Fourier design matrix for chromatic noise.
 
         See the documentation for pl_chrom_basis_weight_pair function for details."""
 
-        tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        t, f = self.get_time_frequencies(toas)
+        Fmat = create_fourier_design_matrix(t, f)
         freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
         fref = 1400 * u.MHz
         alpha = self._parent.TNCHROMIDX.value
         D = (fref.value / freqs.value) ** alpha
-        nf = self.get_pl_vals()[2]
-        Fmat = create_fourier_design_matrix(t, nf)
+
         return Fmat * D[:, None]
 
     def get_noise_weights(self, toas: TOAs) -> np.ndarray:
@@ -697,11 +785,11 @@ class PLChromNoise(CorrelatedNoiseComponent):
 
         See the documentation for pl_chrom_basis_weight_pair for details."""
 
-        tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        amp, gam, nf = self.get_pl_vals()
-        Ffreqs = get_rednoise_freqs(t, nf)
-        return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
+        (amp, gam, _, _, _) = self.get_plc_vals()
+        _, f = self.get_time_frequencies(toas)
+        df = np.diff(np.concatenate([[0], f]))
+
+        return powerlaw(f.repeat(2), amp, gam) * df.repeat(2)
 
     def pl_chrom_basis_weight_pair(self, toas: TOAs) -> np.ndarray:
         """Return a Fourier design matrix and power law chromatic noise weights.
@@ -741,8 +829,10 @@ class PLRedNoise(CorrelatedNoiseComponent):
     References
     ----------
     - Lentati et al. 2014, MNRAS 437(3), 3004-3023 [1]_
+    - van Haasteren & Vallisneri, 2014, MNRAS 446(2), 1170-1174 [2]_
 
     .. [1] https://ui.adsabs.harvard.edu/abs/2014MNRAS.437.3004L/abstract
+    .. [2] https://ui.adsabs.harvard.edu/abs/2015MNRAS.446.1170V/abstract
     """
 
     register = True
@@ -801,39 +891,85 @@ class PLRedNoise(CorrelatedNoiseComponent):
                 convert_tcb2tdb=False,
             )
         )
+        self.add_param(
+            floatParameter(
+                name="TNREDFLOG",
+                units="",
+                description="Number of logarithmically spaced red noise frequencies in the basis.",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNREDFLOG_FACTOR",
+                units="",
+                description="Factor of the log-spaced frequencies (2 -> [1/8,1/4,1/2,...])",
+                convert_tcb2tdb=False,
+            )
+        )
 
         self.covariance_matrix_funcs += [self.pl_rn_cov_matrix]
         self.basis_funcs += [self.pl_rn_basis_weight_pair]
 
-    def get_pl_vals(self) -> Tuple[float, float, int]:
-        nf = int(self.TNREDC.value) if self.TNREDC.value is not None else 30
+    def get_plc_vals(self) -> Tuple[float, float, int, int, float]:
+        """
+        Retrieve power-law parameters and frequency-basis parameters
+        from the model, substituting defaults if unspecified.
+        """
+        n_lin = int(self.TNREDC.value) if self.TNREDC.value is not None else 30
+        n_log = (
+            int(self.TNREDFLOG.value) if (self.TNREDFLOG.value is not None) else None
+        )
+        red_log_factor = (
+            self.TNREDFLOG_FACTOR.value
+            if (self.TNREDFLOG_FACTOR.value is not None)
+            else 2
+        )
+
         if self.TNREDAMP.value is not None and self.TNREDGAM.value is not None:
             amp, gam = 10**self.TNREDAMP.value, self.TNREDGAM.value
         elif self.RNAMP.value is not None and self.RNIDX is not None:
             fac = (86400.0 * 365.24 * 1e6) / (2.0 * np.pi * np.sqrt(3.0))
             amp, gam = self.RNAMP.value / fac, -1 * self.RNIDX.value
-        return (amp, gam, nf)
+
+        f_min_ratio = 1 / (red_log_factor**n_log) if n_log is not None else 1
+
+        return amp, gam, n_lin, n_log, f_min_ratio
+
+    def get_time_frequencies(self, toas: TOAs) -> np.ndarray:
+        """Return the frequencies of the noise model"""
+
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        T = np.max(t) - np.min(t)
+
+        (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
+        f_min = f_min_ratio / T
+
+        return t, get_rednoise_freqs(
+            t, n_lin, Tspan=T, logmode=0, f_min=f_min, nlog=n_log
+        )
 
     def get_noise_basis(self, toas: TOAs) -> np.ndarray:
         """Return a Fourier design matrix for red noise.
 
         See the documentation for pl_rn_basis_weight_pair function for details."""
 
-        tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        nf = self.get_pl_vals()[2]
-        return create_fourier_design_matrix(t, nf)
+        t, f = self.get_time_frequencies(toas)
+        Fmat = create_fourier_design_matrix(t, f)
+
+        return Fmat
 
     def get_noise_weights(self, toas: TOAs) -> np.ndarray:
         """Return power law red noise weights.
 
         See the documentation for pl_rn_basis_weight_pair for details."""
 
-        tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        amp, gam, nf = self.get_pl_vals()
-        Ffreqs = get_rednoise_freqs(t, nf)
-        return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
+        (amp, gam, _, _, _) = self.get_plc_vals()
+        _, f = self.get_time_frequencies(toas)
+        df = np.diff(np.concatenate([[0], f]))
+
+        return powerlaw(f.repeat(2), amp, gam) * df.repeat(2)
 
     def pl_rn_basis_weight_pair(self, toas: TOAs) -> Tuple[np.ndarray, np.ndarray]:
         """Return a Fourier design matrix and power law red noise weights.
@@ -893,49 +1029,149 @@ def create_ecorr_quantization_matrix(
     return U
 
 
-def get_rednoise_freqs(t, nmodes: int, Tspan: Optional[u.Quantity] = None):
-    """Frequency components for creating the red noise basis matrix."""
-
-    T = Tspan if Tspan is not None else t.max() - t.min()
-
-    f = np.linspace(1 / T, nmodes / T, nmodes)
-
-    Ffreqs = np.zeros(2 * nmodes)
-    Ffreqs[::2] = f
-    Ffreqs[1::2] = f
-
-    return Ffreqs
-
-
-def create_fourier_design_matrix(t, nmodes: int, Tspan: Optional[u.Quantity] = None):
+def get_rednoise_freqs(
+    t,
+    nmodes: int,
+    Tspan: Optional[u.Quantity] = None,
+    logmode: Optional[int] = None,
+    f_min: Optional[float] = None,
+    nlog: Optional[int] = None,
+) -> np.ndarray:
     """
-    Construct fourier design matrix from eq 11 of Lentati et al, 2013
+    Compute an array of red-noise frequencies, optionally mixing log- and
+    linearly spaced frequencies.
 
-    :param t: vector of time series in seconds
-    :param nmodes: number of fourier coefficients to use
-    :param Tspan: option to some other Tspan
-    :return: F: fourier design matrix
-    :return: f: Sampling frequencies
+    If log-spaced parameters (`logmode`, `f_min`, `nlog`) are provided and valid,
+    this function will prepend `nlog` log-spaced frequencies and then
+    append `nmodes` linearly spaced frequencies. Otherwise, it uses purely
+    linear spacing for `nmodes` frequencies.
+
+    :param nmodes: int
+        Number of linear frequency modes (if using purely linear spacing).
+        If log-spacing is used, these will be the number of linear modes
+        appended after the log-spaced part.
+    :param Tspan: float, optional
+        Span of the data in seconds. If None, but `t` is provided, it is
+        taken as `max(t) - min(t)`.
+    :param t: array-like, optional
+        Vector of time series (TOAs) in seconds. Only required if `Tspan` is
+        None, so we can calculate `Tspan` internally.
+    :param logmode: int, optional
+        The linear mode index at which to switch to log spacing.
+        If < 0 or None, the function reverts to purely linear spacing.
+        Must be >= 0 for log modes.
+    :param f_min: float, optional
+        Minimum frequency for log spacing, expressed as a fraction of 1/Tspan.
+        Only used if logmode >= 0.
+    :param nlog: int, optional
+        Number of log-spaced frequencies. Only used if logmode >= 0.
+    :return:
+        freqs : ndarray
+            Frequencies array of length either `nmodes` (linear-only) or
+            `(nlog + nmodes)` (log + linear).
     """
+    if Tspan is None:
+        if t is None:
+            raise ValueError("Must provide either Tspan or t.")
+        Tspan = np.max(t) - np.min(t)
+
+    def _get_linear_freqs(n_lin, T):
+        """
+        Return an array of n_lin linearly spaced frequencies:
+            [1/T, 2/T, ..., n_lin/T].
+        """
+        return np.arange(1, n_lin + 1) / T
+
+    def _get_loglin_freqs(logmode_, f_min_, n_log, n_lin, T):
+        """
+        Return an array of n_log log-spaced frequencies from f_min_ up to
+        (1+logmode_)/T, then append n_lin linearly spaced frequencies
+        from (1+logmode_)/T onward.
+        """
+        if logmode_ < 0:
+            raise ValueError("Cannot do log-spacing when logmode < 0.")
+
+        # Linear portion
+        df_lin = 1.0 / T
+        f_min_lin = (1.0 + logmode_) / T
+        f_lin = np.linspace(f_min_lin, f_min_lin + (n_lin - 1) * df_lin, n_lin)
+
+        # Log portion
+        f_log = np.logspace(
+            np.log10(f_min_), np.log10((1 + logmode_) / T), n_log, endpoint=False
+        )
+
+        # Combine log + linear
+        return np.concatenate((f_log, f_lin))
+
+    have_logmode = logmode is not None and logmode >= 0
+    have_nlog = nlog is not None and nlog > 0
+    have_fmin = f_min is not None and f_min > 0
+
+    use_log = all([have_logmode, have_nlog, have_fmin])
+
+    if not use_log and np.any([have_logmode, have_nlog, have_fmin]):
+        log.warning(
+            "Log-spaced parameters are ignored because "
+            "logmode, nlog, and f_min ALL neeed to be set"
+            "Use: logmode > 0 and nlog > 0 and f_min > 0."
+        )
+
+    if not use_log:
+        # Purely linear spacing: nmodes frequencies
+        freqs = _get_linear_freqs(nmodes, Tspan)
+    else:
+        # Log + linear: nlog log-freqs + nmodes linear-freqs
+        freqs = _get_loglin_freqs(logmode, f_min, nlog, nmodes, Tspan)
+
+    return freqs
+
+
+def create_fourier_design_matrix(t, f) -> np.ndarray:
+    """
+    Construct a Fourier design matrix from a given set of frequencies.
+    The matrix alternates sine and cosine columns.
+
+    :param t: array-like
+        Vector of time series (TOAs) in seconds.
+    :param f: array-like
+        Array of frequencies (e.g., from get_rednoise_freqs).
+    :return:
+        F : ndarray
+            Fourier design matrix of shape (len(t), 2 * len(f)).
+        freqs : ndarray
+            The same frequencies array `f` is returned for convenience.
+    """
+    t = np.asarray(t)
+    f = np.asarray(f)
 
     N = len(t)
-    F = np.zeros((N, 2 * nmodes))
+    nfreqs = len(f)
 
-    Ffreqs = get_rednoise_freqs(t, nmodes, Tspan=Tspan)
+    # Initialize design matrix
+    F = np.zeros((N, 2 * nfreqs))
 
-    F[:, ::2] = np.sin(2 * np.pi * t[:, None] * Ffreqs[::2])
-    F[:, 1::2] = np.cos(2 * np.pi * t[:, None] * Ffreqs[1::2])
+    # Fill sine (even columns) and cosine (odd columns)
+    F[:, 0::2] = np.sin(2.0 * np.pi * t[:, None] * f)
+    F[:, 1::2] = np.cos(2.0 * np.pi * t[:, None] * f)
 
     return F
 
 
-def powerlaw(f, A: float = 1e-16, gamma: float = 5.0):
+def powerlaw(
+    f, A: float = 1e-16, gamma: float = 5.0, f_low_cut: Optional[float] = None
+):
     """Power-law PSD.
 
     :param f: Sampling frequencies
     :param A: Amplitude of red noise [GW units]
     :param gamma: Spectral index of red noise process
+    :param f_low_cut: Minimum frequency to include [Hz]
+    :return: Power spectral density
     """
 
+    f_low_cut = f_low_cut if f_low_cut is not None else np.min(f)
+    above_fl = np.array(f >= f_low_cut, dtype=float)
+
     fyr = (1 / u.year).to_value(u.Hz)
-    return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma)
+    return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma) * above_fl

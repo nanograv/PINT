@@ -27,6 +27,8 @@ def add_DM_noise_to_model(model):
     model["TNDMAMP"].quantity = -13
     model["TNDMGAM"].quantity = 1.2
     model["TNDMC"].value = 30
+    model["TNDMFLOG"].value = 4
+    model["TNDMFLOG_FACTOR"].value = 2
     model.validate()
 
 
@@ -36,6 +38,8 @@ def add_chrom_noise_to_model(model):
     model["TNCHROMAMP"].quantity = -14
     model["TNCHROMGAM"].quantity = 1.2
     model["TNCHROMC"].value = 30
+    model["TNCHROMFLOG"].value = 4
+    model["TNCHROMFLOG_FACTOR"].value = 2
 
     model.add_component(all_components["ChromaticCM"](), validate=False)
     model["TNCHROMIDX"].value = 4
