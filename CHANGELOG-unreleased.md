@@ -16,6 +16,7 @@ the released changes.
 - Type hints in `pint.models.timing_model`
 - `full_designmatrix()` and `full_basis_weights()` methods in `TimingModel`
 - Added checkbox for optional subtraction of mean in `pintk`
+- Added Log-Linear Powerlaw noise parameters to PLRedNoise, PLDMNoise, PLChromNoise
 - `TimingModel.ntmpar` property
 ### Fixed
 - Made `TimingModel.is_binary()` more robust. 
