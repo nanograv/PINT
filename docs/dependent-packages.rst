@@ -20,5 +20,4 @@ This page provides a list of some of the software packages that use PINT.
 * `stingray <https://github.com/StingraySoftware/stingray>`_
 * `tat-pulsar <https://github.com/tuoyl/tat-pulsar>`_
 * `TOAextractor <https://github.com/matteobachetti/TOAextractor>`_
-
-
+* `Vela.jl <https://abhisrkckl.github.io/Vela.jl/>`_

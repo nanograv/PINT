@@ -23,7 +23,7 @@ the released changes.
     - New methods in `TimingModel` -- `wideband_covariance_matrix()`, `scaled_wideband_uncertainty()`, `noise_model_wideband_designmatrix()`, `full_designmatrix()`, `full_wideband_designmatrix()`, `full_basis_weight()`, `dm_designmatrix()`, `wideband_designmatrix()`
     - New method in `WidebandTOAResiduals` -- `calc_wideband_resids()`
 - Added checkbox for optional subtraction of mean in `pintk`
-- Added Log-Linear Powerlaw noise parameters to PLRedNoise, PLDMNoise, PLChromNoise
+- Added Log-Linear Powerlaw noise parameters to `PLRedNoise`, `PLDMNoise`, `PLChromNoise`
 - `TimingModel.ntmpar` property
 ### Fixed
 - Shape of `Fitter.resids.noise_ampls` (it was wrong before due to bad indexing)
