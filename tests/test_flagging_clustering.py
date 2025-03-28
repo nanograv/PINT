@@ -1,4 +1,5 @@
 """Tests for clustering and flagging"""
+
 import os
 import pytest
 import copy
@@ -38,7 +39,12 @@ def test_jump_by_cluster(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     cp = setup_NGC6440E.m.components["PhaseJump"]
     par = p.maskParameter(
-        name="JUMP", key="mjd", value=0.2, key_value=[54099, 54100], units=u.s
+        name="JUMP",
+        key="mjd",
+        value=0.2,
+        key_value=[54099, 54100],
+        units=u.s,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     # this should be the last group of any TOAs
     cp.add_param(par, setup=True)
@@ -51,7 +57,12 @@ def test_jump_by_cluster(setup_NGC6440E):
     m_copy.add_component(PhaseJump(), validate=False)
     cp_copy = m_copy.components["PhaseJump"]
     par_copy = p.maskParameter(
-        name="JUMP", key="-cluster", value=0.2, key_value=41, units=u.s
+        name="JUMP",
+        key="-cluster",
+        value=0.2,
+        key_value=41,
+        units=u.s,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     # this should be identical to the cluster above
     cp_copy.add_param(par_copy, setup=True)
@@ -61,7 +72,6 @@ def test_jump_by_cluster(setup_NGC6440E):
 
 
 def test_jump_by_cluster_invalidflags(setup_NGC6440E):
-
     # add clusters to the TOAs
     t = copy.deepcopy(setup_NGC6440E.t)
     with pytest.raises(ValueError):
@@ -79,7 +89,3 @@ def test_jump_by_cluster_invalidflags(setup_NGC6440E):
             add_column=False,
             add_flag=1,
         )
-
-
-if __name__ == "__main__":
-    pass

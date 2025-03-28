@@ -1,7 +1,8 @@
 """Various tests to assess the performance of the FD model."""
+
 import copy
 import os
-import unittest
+import pytest
 from io import StringIO
 
 import astropy.units as u
@@ -14,17 +15,17 @@ import pint.residuals
 import pint.toa as toa
 
 
-class TestFD(unittest.TestCase):
+class TestFD:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.parf = os.path.join(datadir, "test_FD.par")
         cls.timf = os.path.join(datadir, "test_FD.simulate.pint_corrected")
         cls.FDm = mb.get_model(cls.parf)
         cls.toas = toa.get_TOAs(cls.timf, include_bipm=False)
         # libstempo result
-        cls.ltres, cls.ltbindelay = np.genfromtxt(cls.parf + ".tempo_test", unpack=True)
+        cls.ltres, cls.ltbindelay = np.genfromtxt(f"{cls.parf}.tempo_test", unpack=True)
 
-    def test_FD(self):
+    def test_fd(self):
         print("Testing FD module.")
         rs = (
             pint.residuals.Residuals(self.toas, self.FDm, use_weighted_mean=False)
@@ -32,7 +33,7 @@ class TestFD(unittest.TestCase):
             .value
         )
         resDiff = rs - self.ltres
-        # NOTE : This prescision is a lower then 1e-7 seconds level, due to some
+        # NOTE : This precision is a lower then 1e-7 seconds level, due to some
         # early parks clock corrections are treated differently.
         # TEMPO2: Clock correction = clock0 + clock1 (in the format of general2)
         # PINT : Clock correction = toas.table['flags']['clkcorr']
@@ -41,13 +42,13 @@ class TestFD(unittest.TestCase):
 
     def test_inf_freq(self):
         test_toas = copy.deepcopy(self.toas)
-        test_toas.table["freq"][0:5] = np.inf * u.MHz
+        test_toas.table["freq"][:5] = np.inf * u.MHz
         fd_delay = self.FDm.components["FD"].FD_delay(test_toas)
         assert np.all(
             np.isfinite(fd_delay)
         ), "FD component is not handling infinite frequency right."
         assert np.all(
-            fd_delay[0:5].value == 0.0
+            fd_delay[:5].value == 0.0
         ), "FD component did not compute infinite frequency delay right"
         d_d_d_fd = self.FDm.d_delay_FD_d_FDX(test_toas, "FD1")
         assert np.all(np.isfinite(d_d_d_fd)), (

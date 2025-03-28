@@ -1,4 +1,3 @@
-#!/usr/bin/python
 import sys
 
 import astropy.time as time
@@ -46,5 +45,5 @@ if __name__ == "__main__":
     ]
 
     add_FD_model(freqrange, fdcoeff, t)
-    outfile = timfile + ".pint_simulate"
+    outfile = f"{timfile}.pint_simulate"
     t.write_TOA_file(outfile, format="TEMPO2")

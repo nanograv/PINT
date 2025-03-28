@@ -1,0 +1,31 @@
+# Created: 2023-08-18T12:08:17.544471
+# PINT_version: 0.9.6+119.g22716c49
+# User: Abhimanyu Susobhanan (abhimanyu)
+# Host: abhimanyu-VirtualBox
+# OS: Linux-6.2.0-26-generic-x86_64-with-glibc2.35
+# Python: 3.10.12 (main, Jul  5 2023, 18:54:27) [GCC 11.2.0]
+# Format: pint
+PSRJ                               WBTEST
+EPHEM                               DE440
+DILATEFREQ                              N
+DMDATA                                  N
+NTOA                                    0
+CHI2                                  0.0
+RAJ                      4:00:00.00000000 1 0.00000000000000000000
+DECJ                    15:00:00.00000000 1 0.00000000000000000000
+PMRA                                  0.0
+PMDEC                                 0.0
+PX                                    0.0
+POSEPOCH           55000.0000000000000000
+F0                                  100.0 1 0.0
+F1                                  1e-15 1 0.0
+PEPOCH             55000.0000000000000000
+PLANET_SHAPIRO                          N
+DM                                   10.0 1 0.0
+DM1                                0.0001 1 0.0
+DMEPOCH            55000.0000000000000000
+TZRMJD             55005.0251256281408097
+TZRSITE                               ssb
+TZRFRQ                                inf
+EFAC tel gmrt                           1
+DMEFAC tel gmrt                         1

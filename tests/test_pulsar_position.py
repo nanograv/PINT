@@ -1,7 +1,8 @@
 """Various tests to assess the performance of the PINT position.
 """
+
 import os
-import unittest
+import pytest
 
 import numpy as np
 
@@ -9,9 +10,9 @@ import pint.models.model_builder as mb
 from pinttestdata import datadir
 
 
-class TestPulsarPosition(unittest.TestCase):
+class TestPulsarPosition:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         # This uses ELONG and ELAT
         cls.m1 = mb.get_model("B1855+09_NANOGrav_9yv1.gls.par")
@@ -33,7 +34,7 @@ class TestPulsarPosition(unittest.TestCase):
         p1 = self.m1.ssb_to_psb_xyz_ICRS(epoch=self.t)
         p2 = self.m2.ssb_to_psb_xyz_ICRS(epoch=self.t)
 
-        self.assertTrue(np.max(np.abs(p1 - p2)) < 1e-6)
+        assert np.max(np.abs(p1 - p2)) < 1e-6
 
         # Switch on PM
         self.m1.PMELONG.value = PMELONG_v
@@ -44,7 +45,7 @@ class TestPulsarPosition(unittest.TestCase):
         p1 = self.m1.ssb_to_psb_xyz_ICRS(epoch=self.t)
         p2 = self.m2.ssb_to_psb_xyz_ICRS(epoch=self.t)
 
-        self.assertTrue(np.max(np.abs(p1 - p2)) < 1e-7)
+        assert np.max(np.abs(p1 - p2)) < 1e-7
 
     def test_parse_line(self):
         self.m1.ELONG.from_parfile_line(
@@ -67,7 +68,7 @@ class TestPulsarPosition(unittest.TestCase):
         self.m1.PMELONG.from_parfile_line("PMELONG  -3.2701  1 0.0141")
         self.m1.PMELAT.from_parfile_line("PMELAT  -5.0982  1  0.0291")
 
-        self.assertTrue(np.isclose(self.m1.ELONG.value, ELONG_v))
-        self.assertTrue(np.isclose(self.m1.ELAT.value, ELAT_v))
-        self.assertTrue(np.isclose(self.m1.PMELONG.value, PMELONG_v))
-        self.assertTrue(np.isclose(self.m1.PMELAT.value, PMELAT_v))
+        assert np.isclose(self.m1.ELONG.value, ELONG_v)
+        assert np.isclose(self.m1.ELAT.value, ELAT_v)
+        assert np.isclose(self.m1.PMELONG.value, PMELONG_v)
+        assert np.isclose(self.m1.PMELAT.value, PMELAT_v)

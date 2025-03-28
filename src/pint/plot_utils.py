@@ -1,11 +1,9 @@
 #!/usr/bin/env python
+import astropy
+import astropy.time
+import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
-from pint.models.priors import GaussianBoundedRV
-import astropy
-import astropy.units as u
-import astropy.time
-from loguru import logger as log
 
 __all__ = ["phaseogram", "phaseogram_binned", "plot_priors"]
 
@@ -169,15 +167,14 @@ def phaseogram_binned(
             ax2.scatter(phss, mjds, s=size, color=colarray)
             ax2.scatter(phss + 1.0, mjds, s=size, color=colarray)
     else:
-        profile = np.zeros(bins, dtype=np.float_)
+        profile = np.zeros(bins, dtype=np.float64)
         ntoa = 64
         toadur = (mjds.max() - mjds.min()) / ntoa
-        mjdstarts = mjds.min() + toadur * np.arange(ntoa, dtype=np.float_)
+        mjdstarts = mjds.min() + toadur * np.arange(ntoa, dtype=np.float64)
         mjdstops = mjdstarts + toadur
         # Loop over blocks to process
         a = []
         for tstart, tstop in zip(mjdstarts, mjdstops):
-
             # Clear profile array
             profile = profile * 0.0
 
@@ -185,15 +182,14 @@ def phaseogram_binned(
 
             if weights is not None:
                 for ph, ww in zip(phases[idx], weights[idx]):
-                    bin = int(ph * bins)
-                    profile[bin] += ww
+                    ibin = int(ph * bins)
+                    profile[ibin] += ww
             else:
                 for ph in phases[idx]:
-                    bin = int(ph * bins)
-                    profile[bin] += 1
+                    ibin = int(ph * bins)
+                    profile[ibin] += 1
 
-            for i in range(bins):
-                a.append(profile[i])
+            a.extend(profile[i] for i in range(bins))
 
         a = np.array(a)
         b = a.reshape(ntoa, bins)
@@ -251,7 +247,7 @@ def plot_priors(
         samples from the chains is not supported. Can be created using
         :meth:`pint.sampler.EmceeSampler.chains_to_dict`
     maxpost_fitvals : list, optional
-        The maximum posterier values returned from MCMC integration for each
+        The maximum posterior values returned from MCMC integration for each
         fitter key. Plots a vertical dashed line to denote the maximum
         posterior value in relation to the histogrammed samples. If the
         values are not provided, then the lines are not plotted
@@ -272,29 +268,30 @@ def plot_priors(
         larger than the other. The scaling is for visual purposes to clearly
         plot the priors with the samples
     """
-    keys = []
     values = []
+    keys = []
     for k, v in chains.items():
         keys.append(k), values.append(v)
 
     priors = []
     x_range = []
     counts = []
-    for i in range(0, len(keys[:-1])):
+    for i in range(len(keys[:-1])):
         values[i] = values[i][burnin:].flatten()
         x_range.append(np.linspace(values[i].min(), values[i].max(), num=bins))
         priors.append(getattr(model, keys[i]).prior.pdf(x_range[i]))
         a, x = np.histogram(values[i], bins=bins, density=True)
         counts.append(a)
 
-    fig, axs = plt.subplots(len(keys), figsize=(8, 11), constrained_layout=True)
+    fig, axs = plt.subplots(
+        len(keys), figsize=(8, len(keys) * 1.5), constrained_layout=True
+    )
 
     for i, p in enumerate(keys):
         if i != len(keys[:-1]):
             axs[i].set_xlabel(
-                str(p)
-                + ": Mean Value = "
-                + str("{:.9e}".format(values[i].mean()))
+                f"{str(p)}: Mean Value = "
+                + "{:.9e}".format(values[i].mean())
                 + " ("
                 + str(getattr(model, p).units)
                 + ")"

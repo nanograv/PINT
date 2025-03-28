@@ -1,4 +1,5 @@
 import astropy.units as u
+import astropy.time
 import pint.simulation
 from pint.models.model_builder import get_model, get_model_and_toas
 from pint.toa import get_TOAs
@@ -8,9 +9,10 @@ import numpy as np
 import tempfile
 import os
 import pint.config
-from pint.fitter import GLSFitter
+from pint.fitter import GLSFitter, DownhillGLSFitter
 from pinttestdata import datadir
 import pytest
+from statsmodels.stats.diagnostic import acorr_ljungbox
 
 
 def roundtrip(toas, model):
@@ -67,11 +69,22 @@ def test_roundtrip(clock, planet):
         obs="gbt",
         error=1 * u.microsecond,
         freq=1400 * u.MHz,
+        flags={"be": "GUPPI"},
     )
     res = pint.residuals.Residuals(toas, model)
     toas2 = roundtrip(toas, model)
     res2 = pint.residuals.Residuals(toas2, model)
     assert np.allclose(res.time_resids, res2.time_resids)
+    assert (
+        "be" in toas.get_all_flags()
+        and all(np.array(toas.get_flag_value("be")[0]) == "GUPPI")
+        and len(toas.get_flag_value("be")[0]) == len(toas)
+    )
+    assert (
+        "be" in toas2.get_all_flags()
+        and all(np.array(toas2.get_flag_value("be")[0]) == "GUPPI")
+        and len(toas2.get_flag_value("be")[0]) == len(toas2)
+    )
 
 
 def test_noise_addition():
@@ -191,7 +204,17 @@ def test_zima():
     assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.5)
 
 
-def test_fake_fromMJDs():
+@pytest.mark.parametrize(
+    "MJDs",
+    [
+        np.linspace(57001, 58000, 200, dtype=np.longdouble) * u.d,
+        np.linspace(57001, 58000, 200, dtype=np.longdouble),
+        astropy.time.Time(
+            np.linspace(57001, 58000, 200, dtype=np.longdouble), format="mjd"
+        ),
+    ],
+)
+def test_fake_fromMJDs(MJDs):
     # basic model, no EFAC or EQUAD
     model = get_model(
         io.StringIO(
@@ -205,7 +228,6 @@ def test_fake_fromMJDs():
         """
         )
     )
-    MJDs = np.linspace(57001, 58000, 200, dtype=np.longdouble) * u.d
     toas = pint.simulation.make_fake_toas_fromMJDs(
         MJDs, model=model, error=1 * u.us, add_noise=True
     )
@@ -215,7 +237,95 @@ def test_fake_fromMJDs():
     assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.2)
 
 
-def test_fake_from_timfile():
+def test_fake_fromMJDs_keepmean():
+    # basic model, no EFAC or EQUAD
+    model = get_model(
+        io.StringIO(
+            """
+        PSRJ J1234+5678
+        ELAT 0
+        ELONG 0
+        DM 10
+        F0 1
+        F1 -1E-15
+        PEPOCH 58000
+        """
+        )
+    )
+    t1 = np.linspace(57001, 57500, 100, dtype=np.longdouble) * u.d
+    t2 = np.linspace(57501, 58000, 100, dtype=np.longdouble) * u.d
+    toas1 = pint.simulation.make_fake_toas_fromMJDs(
+        t1,
+        model=model,
+        error=1 * u.us,
+        add_noise=True,
+    )
+    toas2 = pint.simulation.make_fake_toas_fromMJDs(
+        t2,
+        model=model,
+        error=1 * u.us,
+        add_noise=True,
+    )
+    r = pint.residuals.Residuals(toas1 + toas2, model)
+    toas1m = pint.simulation.make_fake_toas_fromMJDs(
+        t1,
+        model=model,
+        error=1 * u.us,
+        add_noise=True,
+        subtract_mean=False,
+    )
+    toas2m = pint.simulation.make_fake_toas_fromMJDs(
+        t2,
+        model=model,
+        error=1 * u.us,
+        add_noise=True,
+        subtract_mean=False,
+    )
+    r = pint.residuals.Residuals(toas1 + toas2, model)
+    rm = pint.residuals.Residuals(toas1m + toas2m, model)
+
+    # need a generous rtol because of the small statistics
+    # this first test should fail because the two segments won't have the same mean
+    assert not np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.2)
+    # but this should pass because we no longer subtract the mean.  they should be coherent
+    assert np.isclose(rm.calc_time_resids().std(), 1 * u.us, rtol=0.2)
+
+
+@pytest.mark.parametrize(
+    "t1,t2",
+    [
+        (57001, 58000),
+        (57001 * u.d, 58000 * u.d),
+        (
+            astropy.time.Time(57001, format="mjd"),
+            astropy.time.Time(58000, format="mjd"),
+        ),
+    ],
+)
+def test_fake_uniform(t1, t2):
+    # basic model, no EFAC or EQUAD
+    model = get_model(
+        io.StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            """
+        )
+    )
+    toas = pint.simulation.make_fake_toas_uniform(
+        t1, t2, 50, model=model, error=1 * u.us, add_noise=True
+    )
+    r = pint.residuals.Residuals(toas, model)
+
+    # need a generous rtol because of the small statistics
+    assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.2)
+
+
+def test_fake_from_toas():
     # FIXME: this file is unnecessarily huge
     m, t = get_model_and_toas(
         pint.config.examplefile("B1855+09_NANOGrav_9yv1.gls.par"),
@@ -230,6 +340,48 @@ def test_fake_from_timfile():
     t_sim = pint.simulation.make_fake_toas(t, f.model, add_noise=True)
     r_sim = pint.residuals.Residuals(t_sim, f.model)
     # need a generous rtol because of the small statistics
+    assert np.isclose(
+        r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2
+    )
+
+
+@pytest.mark.parametrize("planets", (True, False))
+def test_fake_from_timfile(planets):
+    m = get_model(pint.config.examplefile("NGC6440E.par.good"))
+    t = get_TOAs(pint.config.examplefile("NGC6440E.tim"), planets=planets)
+
+    m.PLANET_SHAPIRO.value = planets
+
+    r = pint.residuals.Residuals(t, m)
+
+    t_sim = pint.simulation.make_fake_toas_fromtim(
+        pint.config.examplefile("NGC6440E.tim"), m, add_noise=True
+    )
+    r_sim = pint.residuals.Residuals(t_sim, m)
+
+    assert t.clock_corr_info["bipm_version"] == t_sim.clock_corr_info["bipm_version"]
+
+    assert np.isclose(
+        r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2
+    )
+
+
+@pytest.mark.parametrize("planets", (True, False))
+def test_fake_from_timfile_wb(planets):
+    m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.gls.par"))
+    t = get_TOAs(
+        os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.tim"), planets=planets
+    )
+
+    m.PLANET_SHAPIRO.value = planets
+
+    r = pint.residuals.Residuals(t, m)
+
+    t_sim = pint.simulation.make_fake_toas_fromtim(
+        os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.tim"), m, add_noise=True
+    )
+    r_sim = pint.residuals.Residuals(t_sim, m)
+
     assert np.isclose(
         r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2
     )
@@ -263,7 +415,7 @@ def test_fake_DMfit():
     f = GLSFitter(t, m)
     f.fit_toas()
 
-    N = 30
+    N = 15
 
     DMs = np.zeros(N) * u.pc / u.cm**3
     for iter in range(N):
@@ -290,3 +442,129 @@ def test_fake_wb_toas():
     )
     assert len(tfu) == 100
     assert all("pp_dm" in f and "pp_dme" in f for f in tfu.get_flags())
+
+
+def test_simulate_corrnoise(tmp_path):
+    parfile = datadir / "B1855+09_NANOGrav_9yv1.gls.par"
+
+    m = get_model(parfile)
+
+    # Simulated TOAs won't have the correct flags for some of these to work.
+    m.remove_component("ScaleToaError")
+    m.remove_component("EcorrNoise")
+    m.remove_component("DispersionDMX")
+    m.remove_component("PhaseJump")
+    m.remove_component("FD")
+    m.PLANET_SHAPIRO.value = False
+
+    t = pint.simulation.make_fake_toas_uniform(
+        m.START.value,
+        m.FINISH.value,
+        1000,
+        m,
+        add_noise=True,
+        add_correlated_noise=True,
+    )
+
+    # Check if the created TOAs can be whitened using
+    # the original timing model. This won't work if the
+    # noise is not realized correctly.
+    ftr = DownhillGLSFitter(t, m)
+    ftr.fit_toas()
+    rc = sum(ftr.resids.noise_resids.values())
+    r = ftr.resids.time_resids
+    rw = r - rc
+    sigma = ftr.resids.get_data_error()
+
+    # This should be independent and standard-normal distributed.
+    x = (rw / sigma).to_value("")
+    assert np.isclose(np.std(x), 1, atol=0.2)
+    assert np.isclose(np.mean(x), 0, atol=0.01)
+
+
+@pytest.mark.parametrize("multifreq", [True, False])
+def test_simulate_uniform_multifreq(multifreq):
+    parfile = os.path.join(datadir, "NGC6440E.par")
+    m = get_model(parfile)
+
+    ntoas = 100
+
+    freqs = np.array([500, 1400]) * u.MHz
+    t = pint.simulation.make_fake_toas_uniform(
+        50000,
+        51000,
+        ntoas,
+        m,
+        add_noise=True,
+        freq=freqs,
+        multi_freqs_in_epoch=multifreq,
+    )
+    assert len(t) == ntoas
+
+    freqs = np.array([500, 750, 1400]) * u.MHz
+    t = pint.simulation.make_fake_toas_uniform(
+        50000,
+        51000,
+        ntoas,
+        m,
+        add_noise=True,
+        freq=freqs,
+        multi_freqs_in_epoch=multifreq,
+    )
+    assert len(t) == ntoas
+
+
+def test_simulate_wideband_dmgp():
+    par = """
+        PSRJ           J0023+0923
+        RAJ             00:23:16.8790858         1  0.00002408141295805134   
+        DECJ           +09:23:23.86936           1  0.00082010713730773120   
+        F0             327.84702062954047136     1  0.00000000000295205483   
+        F1             -1.2278326306812866375e-15 1  3.8219244605614075223e-19
+        PEPOCH         56199.999797564144902       
+        POSEPOCH       56199.999797564144902       
+        DMEPOCH        56200                       
+        DM             14.327978186774068347     1  0.00006751663559857748   
+        BINARY         ELL1
+        PB             0.13879914244858396754    1  0.00000000003514075083   
+        A1             0.034841158415224894973   1  0.00000012173038389247   
+        TASC           56178.804891768506529     1  0.00000007765191894742   
+        EPS1           1.6508830631753595232e-05 1  0.00000477568412215803   
+        EPS2           3.9656838708709247373e-06 1  0.00000458951091435993   
+        CLK            TT(BIPM2015)
+        MODE 1
+        UNITS          TDB
+        TIMEEPH        FB90
+        DILATEFREQ     N
+        PLANET_SHAPIRO N
+        CORRECT_TROPOSPHERE  N
+        EPHEM          DE436
+        TNRedAmp -13.3087
+        TNRedGam 1.5
+        TNRedC 14
+        TNDMAMP -12.2
+        TNDMGAM 3.5
+        TNDMC 15
+    """
+
+    m = get_model(io.StringIO(par))
+    t = pint.simulation.make_fake_toas_uniform(
+        startMJD=54000,
+        endMJD=56000,
+        ntoas=200,
+        model=m,
+        add_noise=True,
+        wideband=True,
+        add_correlated_noise=True,
+    )
+
+    assert t.is_wideband()
+
+    # There is correlated noise in DMs
+    assert (
+        sum(((t.get_dms() - m.total_dm(t)) / m.scaled_dm_uncertainty(t)) ** 2).si.value
+        / len(t)
+        > 10
+    )
+
+    assert all(acorr_ljungbox(t.get_dms() - m.total_dm(t)).lb_pvalue < 1e-5)

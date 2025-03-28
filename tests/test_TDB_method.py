@@ -1,6 +1,7 @@
 """tests for different compute TDB method."""
+
 import os
-import unittest
+import pytest
 
 import numpy as np
 
@@ -8,11 +9,11 @@ import pint.toa as toa
 from pinttestdata import datadir
 
 
-class TestTDBMethod(unittest.TestCase):
+class TestTDBMethod:
     """Compare delays from the dd model with tempo and PINT"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.tim = "B1855+09_NANOGrav_9yv1.tim"
 

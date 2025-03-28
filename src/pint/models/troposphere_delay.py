@@ -1,4 +1,5 @@
 """Delay due to Earth's troposphere"""
+
 import astropy.constants as const
 import astropy.units as u
 import numpy as np
@@ -154,7 +155,6 @@ class TroposphereDelay(DelayComponent):
 
         # if not correcting for troposphere, return the default zero delay
         if self.CORRECT_TROPOSPHERE.value:
-
             radec = self._get_target_skycoord()
 
             # the only python for loop is to iterate through the unique observatory locations
@@ -165,8 +165,7 @@ class TroposphereDelay(DelayComponent):
                 # exclude non topocentric observations
                 if not isinstance(obsobj, TopoObs):
                     log.debug(
-                        "Skipping Troposphere delay for non Topocentric TOA: %s"
-                        % obsobj.name
+                        f"Skipping Troposphere delay for non Topocentric TOA: {obsobj.name}"
                     )
                     continue
 
@@ -201,13 +200,13 @@ class TroposphereDelay(DelayComponent):
         isValid = np.logical_and(isPositive, isLessThan90)
 
         # now make corrections to alt based on the valid status
-        # if not valid, make them appear at the zenith to make the math sensical
+        # if not valid, make them appear at the zenith to make the math sensible
         if not np.all(isValid):
             # it's probably helpful to count how many are invalid
             numInvalid = len(isValid) - np.count_nonzero(isValid)
             message = "Invalid altitude calculated for %i TOAS" % numInvalid
             if obs:
-                message += " from observatory " + obs
+                message += f" from observatory {obs}"
             log.warning(message)
 
             # now correct the values
@@ -239,8 +238,7 @@ class TroposphereDelay(DelayComponent):
         if gph > 11 * u.km:
             log.warning("Pressure approximation invalid for elevations above 11 km")
         T = 288.15 - 0.0065 * H.to(u.m).value  # temperature lapse
-        P = 101.325 * (288.15 / T) ** -5.25575 * u.kPa
-        return P
+        return 101.325 * (288.15 / T) ** -5.25575 * u.kPa
 
     def zenith_delay(self, lat, H):
         """Calculate the hydrostatic zenith delay"""
@@ -269,7 +267,7 @@ class TroposphereDelay(DelayComponent):
             if absLat <= self.LAT[lInd]:
                 return lInd - 1
         # else this is an invalid latitude... huh?
-        raise ValueError("Invaid latitude: %s must be between -90 and 90 degrees" % lat)
+        raise ValueError(f"Invaid latitude: {lat} must be between -90 and 90 degrees")
 
     def mapping_function(self, alt, lat, H, mjd):
         """this implements the Niell mapping function for hydrostatic delays"""
@@ -356,22 +354,16 @@ class TroposphereDelay(DelayComponent):
         but it's more slow because of the looping
         """
 
-        seasonOffset = 0.0
-        if lat < 0:
-            seasonOffset = 0.5
-
-        yearFraction = np.array(
+        seasonOffset = 0.5 if lat < 0 else 0.0
+        return np.array(
             [(i.jyear + seasonOffset + self.DOY_OFFSET / 365.25) % 1.0 for i in mjd]
         )
-        return yearFraction
 
     def _get_year_fraction_fast(self, tdbld, lat):
         """
         use numpy array arithmetic to calculate the year fraction more quickly
         """
-        seasonOffset = 0.0
-        if lat < 0:
-            seasonOffset = 0.5
+        seasonOffset = 0.5 if lat < 0 else 0.0
         return np.mod(
             2000.0 + (tdbld - 51544.5 + self.DOY_OFFSET) / (365.25) + seasonOffset, 1.0
         )

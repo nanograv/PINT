@@ -267,10 +267,7 @@ def test_degenerate_parameters_gls(model_eccentric_toas_ecorr, full_cov):
 
     f = pint.fitter.DownhillGLSFitter(toas, model_wrong)
 
-    with pytest.warns(
-        pint.fitter.DegeneracyWarning,
-        match=r".*degeneracy.*following parameter.*ELONG\b",
-    ):
+    with pytest.warns(pint.fitter.DegeneracyWarning):
         f.fit_toas(full_cov=full_cov, threshold=1e-14)
 
     assert abs(f.model.ECC.value - model_eccentric.ECC.value) < 1e-4

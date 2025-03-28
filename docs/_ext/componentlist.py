@@ -1,9 +1,6 @@
 from docutils import nodes
 from docutils.parsers.rst import Directive
-from docutils.parsers.rst.directives.tables import Table
-from docutils.parsers.rst.directives import unchanged_required
 from docutils.statemachine import ViewList
-import pint.utils
 
 
 class ComponentList(Directive):
@@ -16,12 +13,13 @@ class ComponentList(Directive):
         content.append("", source)
 
         import pint.models.timing_model
+
         d = pint.models.timing_model.Component.component_types.copy()
         for k in sorted(d.keys()):
             class_ = d[k]
             full_name = f"{class_.__module__}.{class_.__name__}"
             if hasattr(class_, "__doc__") and class_.__doc__ is not None:
-                doc = class_.__doc__.split("\n")[0].strip()
+                doc = class_.__doc__.strip().split("\n")[0].strip()
             else:
                 doc = ""
             msg = f"* :class:`~{full_name}` - {doc}"
@@ -40,7 +38,6 @@ class ComponentList(Directive):
 
 
 def setup(app):
-
     app.add_directive("componentlist", ComponentList)
 
     return {

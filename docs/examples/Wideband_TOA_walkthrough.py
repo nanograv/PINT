@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -19,15 +19,12 @@
 # Traditional pulsar timing involved measuring only the arrival time of each pulse. But as receivers have covered wider and wider contiguous bandwidths, it became necessary to generate many TOAs for each time interval, covering different subbands. This frequency coverage allowed better handling of changing dispersion measures, but resulted in a large number of TOAs and had certain limitations. A new approach measures the pulse arrival time and the dispersion measure simultaneously from a frequency-resolved data cube. This produces TOAs, each of which has an associated dispersion measure and uncertainty. Working with this data requires different handling from PINT. This notebook demonstrates that.
 
 # %%
-import os
-
 import astropy.units as u
 import matplotlib.pyplot as plt
 from astropy.visualization import quantity_support
 
 from pint.fitter import Fitter
 from pint.models import get_model_and_toas
-from pint.toa import get_TOAs
 import pint.config
 import pint.logging
 

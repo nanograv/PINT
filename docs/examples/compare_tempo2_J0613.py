@@ -1,4 +1,8 @@
 """Various tests to assess the performance of the J0623-0200."""
+
+# This example requires `tempo2_utils`. It is available at
+# https://github.com/demorest/tempo_utils.
+
 import pint.models.model_builder as mb
 import pint.toa as toa
 import pint.logging
@@ -13,7 +17,6 @@ import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy import log
 from pint.residuals import Residuals as resids
-import os
 
 try:
     import tempo2_utils
@@ -42,7 +45,7 @@ t2_resids = tempo2_vals["pre"]
 presids_us = resids(toas, m).time_resids.to(u.us)
 # Plot residuals
 plt.errorbar(toas.get_mjds().value, presids_us.value, toas.get_errors().value, fmt="x")
-plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
+plt.title(f"{m.PSR.value} Pre-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()

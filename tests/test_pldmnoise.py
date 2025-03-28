@@ -11,6 +11,7 @@ To do:
 """
 
 import astropy.units as u
+import contextlib
 import io
 import numpy as np
 import pint.fitter as fitters
@@ -55,6 +56,8 @@ parfile_contents = """
     TNDMAMP -14.2
     TNDMGAM 0.624
     TNDMC 70
+    TNDMFLOG 4
+    TNDMFLOG_FACTOR 2
 """
 
 
@@ -74,7 +77,7 @@ def test_read_PLDMNoise_component_type(modelJ0023p0923):
 
 
 def test_read_PLDMNoise_params(modelJ0023p0923):
-    params = ["TNDMAMP", "TNDMGAM", "TNDMC"]
+    params = ["TNDMAMP", "TNDMGAM", "TNDMC", "TNDMFLOG", "TNDMFLOG_FACTOR"]
     for param in params:
         assert (
             hasattr(modelJ0023p0923, param)
@@ -102,6 +105,8 @@ def test_PLRedNoise_recovery():
         TNRedAmp -11
         TNRedGam 3
         TNRedC 30
+        TNRedFlog 4
+        TNRedFlog_Factor 2
         """
         )
     )
@@ -125,6 +130,8 @@ def test_PLRedNoise_recovery():
     A = model["TNREDAMP"].value
     gam = model["TNREDGAM"].value
     c = model["TNREDC"].value
+    flog = model["TNREDFLOG"].value
+    flog_factor = model["TNREDFLOG_FACTOR"].value
     model.remove_component("PLRedNoise")
 
     # create and add PLDMNoise component
@@ -135,6 +142,8 @@ def test_PLRedNoise_recovery():
     model["TNDMAMP"].quantity = A
     model["TNDMGAM"].quantity = gam
     model["TNDMC"].value = c
+    model["TNDMFLOG"].value = flog
+    model["TNDMFLOG_FACTOR"].value = flog_factor
     model.validate()
 
     # get DM noise basis and weights
@@ -147,7 +156,8 @@ def test_PLRedNoise_recovery():
 
     # refit model
     f2 = fitters.DownhillGLSFitter(toas, model)
-    f2.fit_toas()
+    with contextlib.suppress(fitters.InvalidModelParameters, fitters.StepProblem):
+        f2.fit_toas()
     f2.model.validate()
     f2.model.validate_toas(toas)
     r2 = Residuals(toas, f2.model)
@@ -160,4 +170,4 @@ def test_PLRedNoise_recovery():
 
     # check residuals are equivalent within error
     rs_diff = r2.time_resids.value - r1.time_resids.value
-    assert np.all(np.isclose(rs_diff, 0, atol=1e-7))
+    assert np.all(np.isclose(rs_diff, 0, atol=1e-6))

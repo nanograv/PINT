@@ -1,9 +1,8 @@
-#!/usr/bin/env python
 # This test is DISABLED because event_optimize requires PRESTO to be installed
 # to get the fftfit module.  It can be run manually by people who have PRESTO
 import os
 import sys
-import unittest
+import pytest
 
 from io import StringIO
 
@@ -13,8 +12,8 @@ parfile = os.path.join(datadir, "PSRJ0030+0451_psrcat.par")
 eventfile = os.path.join(datadir, "evtfiles.txt")
 
 
-@unittest.skip
-class TestEventOptimizeMultiple(unittest.TestCase):
+@pytest.mark.skip
+class TestEventOptimizeMultiple:
     def test_result(self):
         # Delay import because of fftfit
         from pint.scripts import event_optimize_multiple
@@ -27,7 +26,3 @@ class TestEventOptimizeMultiple(unittest.TestCase):
         lines = sys.stdout.getvalue()
         # Need to add some check here.
         sys.stdout = saved_stdout
-
-
-if __name__ == "__main__":
-    unittest.main()

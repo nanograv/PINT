@@ -1,7 +1,10 @@
 """The ELL1 model for approximately handling near-circular orbits."""
+
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
+
+from pint.models.parameter import InvalidModelParameters
 
 from .binary_generic import PSR_BINARY
 
@@ -137,153 +140,6 @@ class ELL1BaseModel(PSR_BINARY):
         except Exception:
             return self.d_M_d_par(par)
 
-    def d_Dre_d_par(self, par):
-        """Derivative computation.
-
-        Computes::
-
-            Dre = delayR = a1/c.c*(sin(phi) - 0.5* eps1*cos(2*phi) +  0.5* eps2*sin(2*phi))
-            d_Dre_d_par = d_a1_d_par /c.c*(sin(phi) - 0.5* eps1*cos(2*phi) +  0.5* eps2*sin(2*phi)) +
-                          d_Dre_d_Phi * d_Phi_d_par + d_Dre_d_eps1*d_eps1_d_par + d_Dre_d_eps2*d_eps2_d_par
-        """
-        a1 = self.a1()
-        Phi = self.Phi()
-        eps1 = self.eps1()
-        eps2 = self.eps2()
-        d_a1_d_par = self.prtl_der("a1", par)
-        d_Dre_d_Phi = self.Drep()
-        d_Phi_d_par = self.prtl_der("Phi", par)
-        d_Dre_d_eps1 = a1 / c.c * (-0.5 * np.cos(2 * Phi))
-        d_Dre_d_eps2 = a1 / c.c * (0.5 * np.sin(2 * Phi))
-
-        with u.set_enabled_equivalencies(u.dimensionless_angles()):
-            d_Dre_d_par = (
-                d_a1_d_par
-                / c.c
-                * (
-                    np.sin(Phi)
-                    - 0.5 * eps1 * np.cos(2 * Phi)
-                    + 0.5 * eps2 * np.sin(2 * Phi)
-                )
-                + d_Dre_d_Phi * d_Phi_d_par
-                + d_Dre_d_eps1 * self.prtl_der("eps1", par)
-                + d_Dre_d_eps2 * self.prtl_der("eps2", par)
-            )
-        return d_Dre_d_par
-
-    def Drep(self):
-        """dDre/dPhi"""
-        a1 = self.a1()
-        eps1 = self.eps1()
-        eps2 = self.eps2()
-        Phi = self.Phi()
-        # Here we are using full d Dre/dPhi. But Tempo and Tempo2 ELL1 model
-        # does not have the last two terms. This will result a difference in
-        # the order of magnitude of 1e-8s level.
-        return (
-            a1
-            / c.c
-            * (np.cos(Phi) + eps1 * np.sin(2.0 * Phi) + eps2 * np.cos(2.0 * Phi))
-        )
-
-    def d_Drep_d_par(self, par):
-        """Derivative computation.
-
-        Computes::
-
-            Drep = d_Dre_d_Phi = a1/c.c*(cos(Phi) + eps1 * sin(Phi) + eps2 * cos(Phi))
-            d_Drep_d_par = d_a1_d_par /c.c*(cos(Phi) + eps1 * sin(Phi) + eps2 * cos(Phi)) +
-                          d_Drep_d_Phi * d_Phi_d_par + d_Drep_d_eps1*d_eps1_d_par +
-                          d_Drep_d_eps2*d_eps2_d_par
-        """
-        a1 = self.a1()
-        Phi = self.Phi()
-        eps1 = self.eps1()
-        eps2 = self.eps2()
-        d_a1_d_par = self.prtl_der("a1", par)
-        d_Drep_d_Phi = self.Drepp()
-        d_Phi_d_par = self.prtl_der("Phi", par)
-        d_Drep_d_eps1 = a1 / c.c * np.sin(2.0 * Phi)
-        d_Drep_d_eps2 = a1 / c.c * np.cos(2.0 * Phi)
-
-        with u.set_enabled_equivalencies(u.dimensionless_angles()):
-            d_Drep_d_par = (
-                d_a1_d_par
-                / c.c
-                * (np.cos(Phi) + eps1 * np.sin(2.0 * Phi) + eps2 * np.cos(2.0 * Phi))
-                + d_Drep_d_Phi * d_Phi_d_par
-                + d_Drep_d_eps1 * self.prtl_der("eps1", par)
-                + d_Drep_d_eps2 * self.prtl_der("eps2", par)
-            )
-        return d_Drep_d_par
-
-    def Drepp(self):
-        a1 = self.a1()
-        eps1 = self.eps1()
-        eps2 = self.eps2()
-        Phi = self.Phi()
-        return (
-            a1
-            / c.c
-            * (
-                -np.sin(Phi)
-                + 2.0 * (eps1 * np.cos(2.0 * Phi) - eps2 * np.sin(2.0 * Phi))
-            )
-        )
-
-    def d_Drepp_d_par(self, par):
-        """Derivative computation
-
-        Computes::
-
-            Drepp = d_Drep_d_Phi = a1/c.c*(-sin(Phi) + 2.0* (eps1 * cos(2.0*Phi) - eps2 * sin(2.0*Phi)))
-            d_Drepp_d_par = d_a1_d_par /c.c*(-sin(Phi) + 2.0* (eps1 * cos(2.0*Phi) - eps2 * sin(2.0*Phi))) +
-                          d_Drepp_d_Phi * d_Phi_d_par + d_Drepp_d_eps1*d_eps1_d_par +
-                          d_Drepp_d_eps2*d_eps2_d_par
-        """
-        a1 = self.a1()
-        Phi = self.Phi()
-        eps1 = self.eps1()
-        eps2 = self.eps2()
-        d_a1_d_par = self.prtl_der("a1", par)
-        d_Drepp_d_Phi = (
-            a1
-            / c.c
-            * (
-                -np.cos(Phi)
-                - 4.0 * (eps1 * np.sin(2.0 * Phi) + eps2 * np.cos(2.0 * Phi))
-            )
-        )
-        d_Phi_d_par = self.prtl_der("Phi", par)
-        d_Drepp_d_eps1 = a1 / c.c * 2.0 * np.cos(2.0 * Phi)
-        d_Drepp_d_eps2 = -a1 / c.c * 2.0 * np.sin(2.0 * Phi)
-
-        with u.set_enabled_equivalencies(u.dimensionless_angles()):
-            d_Drepp_d_par = (
-                d_a1_d_par
-                / c.c
-                * (
-                    -np.sin(Phi)
-                    + 2.0 * (eps1 * np.cos(2.0 * Phi) - eps2 * np.sin(2.0 * Phi))
-                )
-                + d_Drepp_d_Phi * d_Phi_d_par
-                + d_Drepp_d_eps1 * self.prtl_der("eps1", par)
-                + d_Drepp_d_eps2 * self.prtl_der("eps2", par)
-            )
-        return d_Drepp_d_par
-
-    def delayR(self):
-        """ELL1 Roemer delay in proper time. Ch. Lange et al 2001 eq. A6"""
-        Phi = self.Phi()
-        return (
-            self.a1()
-            / c.c
-            * (
-                np.sin(Phi)
-                + 0.5 * (self.eps2() * np.sin(2 * Phi) - self.eps1() * np.cos(2 * Phi))
-            )
-        ).decompose()
-
     def delayI(self):
         """Inverse time delay formula.
 
@@ -363,6 +219,368 @@ class ELL1BaseModel(PSR_BINARY):
             np.arctan(self.eps1() / self.eps2())
         ).to(u.Unit(""), equivalencies=u.dimensionless_angles())
 
+    ###############################
+    def d_delayR_da1(self):
+        """ELL1 Roemer delay in proper time divided by a1/c, including third order corrections
+
+        typo corrected from Zhu et al., following:
+        https://github.com/nanograv/tempo/blob/master/src/bnryell1.f
+        """
+        Phi = self.Phi()
+        eps1 = self.eps1()
+        eps2 = self.eps2()
+        return (
+            np.sin(Phi)
+            + 0.5 * (eps2 * np.sin(2 * Phi) - eps1 * np.cos(2 * Phi))
+            - (1.0 / 8)
+            * (
+                5 * eps2**2 * np.sin(Phi)
+                - 3 * eps2**2 * np.sin(3 * Phi)
+                - 2 * eps2 * eps1 * np.cos(Phi)
+                + 6 * eps2 * eps1 * np.cos(3 * Phi)
+                + 3 * eps1**2 * np.sin(Phi)
+                + 3 * eps1**2 * np.sin(3 * Phi)
+            )
+            - (1.0 / 12)
+            * (
+                5 * eps2**3 * np.sin(2 * Phi)
+                + 3 * eps1**2 * eps2 * np.sin(2 * Phi)
+                - 6 * eps1 * eps2**2 * np.cos(2 * Phi)
+                - 4 * eps1**3 * np.cos(2 * Phi)
+                - 4 * eps2**3 * np.sin(4 * Phi)
+                + 12 * eps1**2 * eps2 * np.sin(4 * Phi)
+                + 12 * eps1 * eps2**2 * np.cos(4 * Phi)
+                - 4 * eps1**3 * np.cos(4 * Phi)
+            )
+        )
+
+    def d_d_delayR_dPhi_da1(self):
+        """d (ELL1 Roemer delay)/dPhi in proper time divided by a1/c"""
+        Phi = self.Phi()
+        eps1 = self.eps1()
+        eps2 = self.eps2()
+        return (
+            np.cos(Phi)
+            + eps1 * np.sin(2 * Phi)
+            + eps2 * np.cos(2 * Phi)
+            - (1.0 / 8)
+            * (
+                5 * eps2**2 * np.cos(Phi)
+                - 9 * eps2**2 * np.cos(3 * Phi)
+                + 2 * eps1 * eps2 * np.sin(Phi)
+                - 18 * eps1 * eps2 * np.sin(3 * Phi)
+                + 3 * eps1**2 * np.cos(Phi)
+                + 9 * eps1**2 * np.cos(3 * Phi)
+            )
+            - (1.0 / 12)
+            * (
+                10 * eps2**3 * np.cos(2 * Phi)
+                + 6 * eps1**2 * eps2 * np.cos(2 * Phi)
+                + 12 * eps1 * eps2**2 * np.sin(2 * Phi)
+                + 8 * eps1**3 * np.sin(2 * Phi)
+                - 16 * eps2**3 * np.cos(4 * Phi)
+                + 48 * eps1**2 * eps2 * np.cos(4 * Phi)
+                - 48 * eps1 * eps2**2 * np.sin(4 * Phi)
+                + 16 * eps1**3 * np.sin(4 * Phi)
+            )
+        )
+
+    def d_dd_delayR_dPhi_da1(self):
+        """d^2 (ELL1 Roemer delay)/dPhi^2 in proper time divided by a1/c"""
+        Phi = self.Phi()
+        eps1 = self.eps1()
+        eps2 = self.eps2()
+        return (
+            -np.sin(Phi)
+            + 2 * eps1 * np.cos(2 * Phi)
+            - 2 * eps2 * np.sin(2 * Phi)
+            - (1.0 / 8)
+            * (
+                -5 * eps2**2 * np.sin(Phi)
+                + 27 * eps2**2 * np.sin(3 * Phi)
+                + 2 * eps1 * eps2 * np.cos(Phi)
+                - 54 * eps1 * eps2 * np.cos(3 * Phi)
+                - 3 * eps1**2 * np.sin(Phi)
+                - 27 * eps1**2 * np.sin(3 * Phi)
+            )
+            - (1.0 / 12)
+            * (
+                -20 * eps2**3 * np.sin(2 * Phi)
+                - 12 * eps1**2 * eps2 * np.sin(2 * Phi)
+                + 24 * eps1 * eps2**2 * np.cos(2 * Phi)
+                + 16 * eps1**3 * np.cos(2 * Phi)
+                + 64 * eps2**3 * np.sin(4 * Phi)
+                - 192 * eps1**2 * eps2 * np.sin(4 * Phi)
+                - 192 * eps1 * eps2**2 * np.cos(4 * Phi)
+                + 64 * eps1**3 * np.cos(4 * Phi)
+            )
+        )
+
+    def delayR(self):
+        """ELL1 Roemer delay in proper time.
+        Include terms up to third order in eccentricity
+        Zhu et al. (2019), Eqn. 1
+        Fiore et al. (2023), Eqn. 4
+        """
+        return ((self.a1() / c.c) * self.d_delayR_da1()).decompose()
+
+    def d_Dre_d_par(self, par):
+        """Derivative computation.
+
+        Computes::
+
+            Dre = delayR = a1/c.c*(sin(phi) - 0.5* eps1*cos(2*phi) +  0.5* eps2*sin(2*phi) + ...)
+            d_Dre_d_par = d_a1_d_par /c.c*(sin(phi) - 0.5* eps1*cos(2*phi) +  0.5* eps2*sin(2*phi)) +
+                          d_Dre_d_Phi * d_Phi_d_par + d_Dre_d_eps1*d_eps1_d_par + d_Dre_d_eps2*d_eps2_d_par
+        """
+        a1 = self.a1()
+        Phi = self.Phi()
+        eps1 = self.eps1()
+        eps2 = self.eps2()
+        d_a1_d_par = self.prtl_der("a1", par)
+        d_Dre_d_Phi = self.Drep()
+        d_Phi_d_par = self.prtl_der("Phi", par)
+        d_Dre_d_eps1 = (
+            a1
+            / c.c
+            * (
+                -0.5 * np.cos(2 * Phi)
+                - (1.0 / 8)
+                * (
+                    -2 * eps2 * np.cos(Phi)
+                    + 6 * eps2 * np.cos(3 * Phi)
+                    + 6 * eps1 * np.sin(Phi)
+                    + 6 * eps1 * np.sin(3 * Phi)
+                )
+                - (1.0 / 12)
+                * (
+                    6 * eps1 * eps2 * np.sin(2 * Phi)
+                    - 6 * eps2**2 * np.cos(2 * Phi)
+                    - 12 * eps1**2 * np.cos(2 * Phi)
+                    + 24 * eps1 * eps2 * np.sin(4 * Phi)
+                    + 12 * eps2**2 * np.cos(4 * Phi)
+                    - 12 * eps1**2 * np.cos(4 * Phi)
+                )
+            )
+        )
+
+        d_Dre_d_eps2 = (
+            a1
+            / c.c
+            * (
+                0.5 * np.sin(2 * Phi)
+                - (1.0 / 8)
+                * (
+                    -2 * eps1 * np.cos(Phi)
+                    + 6 * eps1 * np.cos(3 * Phi)
+                    + 10 * eps2 * np.sin(Phi)
+                    - 6 * eps2 * np.sin(3 * Phi)
+                )
+                - (1.0 / 12)
+                * (
+                    15 * eps2**2 * np.sin(2 * Phi)
+                    + 3 * eps1**2 * np.sin(2 * Phi)
+                    - 12 * eps1 * eps2 * np.cos(2 * Phi)
+                    - 12 * eps2**2 * np.sin(4 * Phi)
+                    + 12 * eps1**2 * np.sin(4 * Phi)
+                    + 24 * eps1 * eps2 * np.cos(4 * Phi)
+                )
+            )
+        )
+
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            d_Dre_d_par = (
+                d_a1_d_par / c.c * self.d_delayR_da1()
+                + d_Dre_d_Phi * d_Phi_d_par
+                + d_Dre_d_eps1 * self.prtl_der("eps1", par)
+                + d_Dre_d_eps2 * self.prtl_der("eps2", par)
+            )
+        return d_Dre_d_par
+
+    def Drep(self):
+        """dDre/dPhi"""
+        a1 = self.a1()
+        # Here we are using full d Dre/dPhi. But Tempo and Tempo2 ELL1 model
+        # does not have terms beyond the first one. This will result a difference in
+        # the order of magnitude of 1e-8s level.
+        return a1 / c.c * self.d_d_delayR_dPhi_da1()
+
+    def d_Drep_d_par(self, par):
+        """Derivative computation.
+
+        Computes::
+
+            Drep = d_Dre_d_Phi = a1/c.c*(cos(Phi) + eps1 * sin(Phi) + eps2 * cos(Phi) + ...)
+            d_Drep_d_par = ...
+        """
+        a1 = self.a1()
+        Phi = self.Phi()
+        eps1 = self.eps1()
+        eps2 = self.eps2()
+        d_a1_d_par = self.prtl_der("a1", par)
+        d_Drep_d_Phi = self.Drepp()
+        d_Phi_d_par = self.prtl_der("Phi", par)
+        d_Drep_d_eps1 = (
+            a1
+            / c.c
+            * (
+                np.sin(2.0 * Phi)
+                - (1.0 / 8)
+                * (
+                    6 * eps1 * np.cos(Phi)
+                    + 18 * eps1 * np.cos(3 * Phi)
+                    + 2 * eps2 * np.sin(Phi)
+                    - 18 * eps2 * np.sin(3 * Phi)
+                )
+                - (1.0 / 12)
+                * (
+                    12 * eps1 * eps2 * np.cos(2 * Phi)
+                    + 12 * eps2**2 * np.sin(2 * Phi)
+                    + 16 * eps1**2 * np.sin(2 * Phi)
+                    + 96 * eps1 * eps2 * np.cos(4 * Phi)
+                    - 48 * eps2**2 * np.sin(4 * Phi)
+                    + 48 * eps1**2 * np.sin(4 * Phi)
+                )
+            )
+        )
+
+        d_Drep_d_eps2 = (
+            a1
+            / c.c
+            * (
+                np.cos(2.0 * Phi)
+                - (1.0 / 8)
+                * (
+                    2 * eps1 * np.sin(Phi)
+                    - 18 * eps1 * np.sin(3 * Phi)
+                    + 10 * eps2 * np.cos(Phi)
+                    - 18 * eps2 * np.cos(3 * Phi)
+                )
+                - (1.0 / 12)
+                * (
+                    30 * eps2**2 * np.cos(2 * Phi)
+                    + 6 * eps1**2 * np.cos(2 * Phi)
+                    + 24 * eps1 * eps2 * np.sin(2 * Phi)
+                    - 48 * eps2**2 * np.cos(4 * Phi)
+                    + 48 * eps1**2 * np.cos(4 * Phi)
+                    - 96 * eps1 * eps2 * np.sin(4 * Phi)
+                )
+            )
+        )
+
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            d_Drep_d_par = (
+                d_a1_d_par / c.c * self.d_d_delayR_dPhi_da1()
+                + d_Drep_d_Phi * d_Phi_d_par
+                + d_Drep_d_eps1 * self.prtl_der("eps1", par)
+                + d_Drep_d_eps2 * self.prtl_der("eps2", par)
+            )
+        return d_Drep_d_par
+
+    def Drepp(self):
+        """d^2Dre/dPhi^2"""
+        a1 = self.a1()
+        return a1 / c.c * self.d_dd_delayR_dPhi_da1()
+
+    def d_Drepp_d_par(self, par):
+        """Derivative computation
+
+        Computes::
+
+            Drepp = d_Drep_d_Phi = ...
+            d_Drepp_d_par = ...
+        """
+        a1 = self.a1()
+        Phi = self.Phi()
+        eps1 = self.eps1()
+        eps2 = self.eps2()
+        d_a1_d_par = self.prtl_der("a1", par)
+        d_Drepp_d_Phi = (
+            a1
+            / c.c
+            * (
+                -np.cos(Phi)
+                - 4.0 * (eps1 * np.sin(2.0 * Phi) + eps2 * np.cos(2.0 * Phi))
+                - (1.0 / 8)
+                * (
+                    -5 * eps2**2 * np.cos(Phi)
+                    + 81 * eps2**2 * np.cos(3 * Phi)
+                    - 2 * eps1 * eps2 * np.sin(Phi)
+                    + 162 * eps1 * eps2 * np.sin(3 * Phi)
+                    - 3 * eps1**2 * np.cos(Phi)
+                    - 81 * eps1**2 * np.cos(3 * Phi)
+                )
+                - (1.0 / 12)
+                * (
+                    -40 * eps2**3 * np.cos(2 * Phi)
+                    - 24 * eps1**2 * eps2 * np.cos(2 * Phi)
+                    - 48 * eps1 * eps2**2 * np.sin(2 * Phi)
+                    - 32 * eps1**3 * np.sin(2 * Phi)
+                    + 256 * eps2**3 * np.cos(4 * Phi)
+                    - 768 * eps1**2 * eps2 * np.cos(4 * Phi)
+                    + 768 * eps1 * eps2**2 * np.sin(4 * Phi)
+                    - 256 * eps1**3 * np.sin(4 * Phi)
+                )
+            )
+        )
+
+        d_Phi_d_par = self.prtl_der("Phi", par)
+        d_Drepp_d_eps1 = (
+            a1
+            / c.c
+            * (
+                2.0 * np.cos(2.0 * Phi)
+                - (1.0 / 8)
+                * (
+                    -6 * eps1 * np.sin(Phi)
+                    - 54 * eps1 * np.sin(3 * Phi)
+                    + 2 * eps2 * np.cos(Phi)
+                    - 54 * eps2 * np.cos(3 * Phi)
+                )
+                - (1.0 / 12)
+                * (
+                    -24 * eps1 * eps2 * np.sin(2 * Phi)
+                    + 24 * eps2**2 * np.cos(2 * Phi)
+                    + 48 * eps1**2 * np.cos(2 * Phi)
+                    - 384 * eps1 * eps2 * np.sin(4 * Phi)
+                    - 192 * eps2**2 * np.cos(4 * Phi)
+                    + 192 * eps1**2 * np.cos(4 * Phi)
+                )
+            )
+        )
+        d_Drepp_d_eps2 = (
+            a1
+            / c.c
+            * (
+                -2.0 * np.sin(2.0 * Phi)
+                - (1.0 / 8)
+                * (
+                    2 * eps1 * np.cos(Phi)
+                    - 54 * eps1 * np.cos(3 * Phi)
+                    - 10 * eps2 * np.sin(Phi)
+                    + 54 * eps2 * np.sin(3 * Phi)
+                )
+                - (1.0 / 12)
+                * (
+                    -60 * eps2**2 * np.sin(2 * Phi)
+                    - 12 * eps1**2 * np.sin(2 * Phi)
+                    + 48 * eps1 * eps2 * np.cos(2 * Phi)
+                    + 192 * eps2**2 * np.sin(4 * Phi)
+                    - 192 * eps1**2 * np.sin(4 * Phi)
+                    - 384 * eps1 * eps2 * np.cos(4 * Phi)
+                )
+            )
+        )
+
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            d_Drepp_d_par = (
+                d_a1_d_par / c.c * self.d_dd_delayR_dPhi_da1()
+                + d_Drepp_d_Phi * d_Phi_d_par
+                + d_Drepp_d_eps1 * self.prtl_der("eps1", par)
+                + d_Drepp_d_eps2 * self.prtl_der("eps2", par)
+            )
+        return d_Drepp_d_par
+
 
 class ELL1model(ELL1BaseModel):
     """This is a ELL1 model using M2 and SINI as the Shapiro delay parameters.
@@ -384,6 +602,8 @@ class ELL1model(ELL1BaseModel):
         """ELL1 Shapiro delay. Lange et al 2001 eq. A16"""
         TM2 = self.TM2()
         Phi = self.Phi()
+        if np.any(self.SINI < 0) or np.any(self.SINI > 1):
+            raise InvalidModelParameters("SINI must be between 0 and 1")
         return -2 * TM2 * np.log(1 - self.SINI * np.sin(Phi))
 
     def d_delayS_d_par(self, par):

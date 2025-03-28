@@ -4,7 +4,6 @@ import numpy as np
 
 from .binary_generic import PSR_BINARY
 
-
 """
 This version of the BT model is under construction. Overview of progress:
 
@@ -215,33 +214,33 @@ class BTmodel(PSR_BINARY):
 
     def d_delayL1_d_par(self, par):
         if par not in self.binary_params:
-            errorMesg = par + " is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
-        if hasattr(self, "d_delayL1_d_" + par):
-            func = getattr(self, "d_delayL1_d_" + par)
-            return func()
-        else:
-            if par in self.orbits_cls.orbit_params:
-                return self.d_delayL1_d_E() * self.d_E_d_par(par)
-            else:
-                return np.zeros(len(self.t)) * u.second / par_obj.unit
+        if not hasattr(self, f"d_delayL1_d_{par}"):
+            return (
+                self.d_delayL1_d_E() * self.d_E_d_par(par)
+                if par in self.orbits_cls.orbit_params
+                else np.zeros(len(self.t)) * u.second / par_obj.unit
+            )
+        func = getattr(self, f"d_delayL1_d_{par}")
+        return func()
 
     def d_delayL2_d_par(self, par):
         if par not in self.binary_params:
-            errorMesg = par + " is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
-        if hasattr(self, "d_delayL2_d_" + par):
-            func = getattr(self, "d_delayL2_d_" + par)
-            return func()
-        else:
-            if par in self.orbits_cls.orbit_params:
-                return self.d_delayL2_d_E() * self.d_E_d_par(par)
-            else:
-                return np.zeros(len(self.t)) * u.second / par_obj.unit
+        if not hasattr(self, f"d_delayL2_d_{par}"):
+            return (
+                self.d_delayL2_d_E() * self.d_E_d_par(par)
+                if par in self.orbits_cls.orbit_params
+                else np.zeros(len(self.t)) * u.second / par_obj.unit
+            )
+        func = getattr(self, f"d_delayL2_d_{par}")
+        return func()
 
     def d_BTdelay_d_par(self, par):
         return self.delayR() * (self.d_delayL1_d_par(par) + self.d_delayL2_d_par(par))

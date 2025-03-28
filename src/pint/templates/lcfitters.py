@@ -4,7 +4,7 @@ unweighted sets of photon phases.  The model is encapsulated in LCTemplate,
 a mixture model.
 
 LCPrimitives are combined to form a light curve (LCTemplate).
-LCFitter then performs a maximum likielihood fit to determine the
+LCFitter then performs a maximum likelihood fit to determine the
 light curve parameters.
 
 LCFitter also allows fits to subsets of the phases for TOA calculation.
@@ -14,9 +14,10 @@ $Header: /nfs/slac/g/glast/ground/cvs/pointlike/python/uw/pulsar/lcfitters.py,v 
 author: M. Kerr <matthew.kerr@gmail.com>
 
 """
+
 import numpy as np
 import scipy
-from pint.eventstats import hm, hmw
+from pint.eventstats import hmw
 from scipy.optimize import fmin, fmin_tnc, leastsq
 
 SECSPERDAY = 86400.0
@@ -239,8 +240,7 @@ class LCFitter:
         if not self.template.shift_mode and np.any(p < 0):
             return 2e100 * np.ones_like(x) / len(x)
         args[0].set_parameters(p)
-        chi = (bg + (1 - bg) * self.template(x) - y) / yerr
-        return chi
+        return (bg + (1 - bg) * self.template(x) - y) / yerr
 
     def quick_fit(self):
         t = self.template
@@ -262,9 +262,8 @@ class LCFitter:
                 old_state.append(p.free[i])
                 if restore_state is not None:
                     p.free[i] = restore_state[counter]
-                else:
-                    if i < (len(p.p) - 1):
-                        p.free[i] = False
+                elif i < (len(p.p) - 1):
+                    p.free[i] = False
                 counter += 1
         return old_state
 
@@ -341,25 +340,29 @@ class LCFitter:
         else:
             f = self.fit_fmin(fit_func, ftol=ftol)
         if (ll0 > self.ll) or (ll0 == 2e20) or (np.isnan(ll0)):
-            if unbinned_refit and np.isnan(ll0) and (not unbinned):
-                if (self.binned_bins * 2) < 400:
-                    print(
-                        "Did not converge using %d bins... retrying with %d bins..."
-                        % (self.binned_bins, self.binned_bins * 2)
-                    )
-                    self.template.set_parameters(p0)
-                    self.ll = ll0
-                    self.fitvals = p0
-                    self.binned_bins *= 2
-                    self._hist_setup()
-                    return self.fit(
-                        quick_fit_first=quick_fit_first,
-                        unbinned=unbinned,
-                        use_gradient=use_gradient,
-                        positions_first=positions_first,
-                        estimate_errors=estimate_errors,
-                        prior=prior,
-                    )
+            if (
+                unbinned_refit
+                and np.isnan(ll0)
+                and (not unbinned)
+                and (self.binned_bins * 2) < 400
+            ):
+                print(
+                    "Did not converge using %d bins... retrying with %d bins..."
+                    % (self.binned_bins, self.binned_bins * 2)
+                )
+                self.template.set_parameters(p0)
+                self.ll = ll0
+                self.fitvals = p0
+                self.binned_bins *= 2
+                self._hist_setup()
+                return self.fit(
+                    quick_fit_first=quick_fit_first,
+                    unbinned=unbinned,
+                    use_gradient=use_gradient,
+                    positions_first=positions_first,
+                    estimate_errors=estimate_errors,
+                    prior=prior,
+                )
             self.bad_p = self.template.get_parameters().copy()
             self.bad_ll = self.ll
             print("Failed likelihood fit -- resetting parameters.")
@@ -373,14 +376,12 @@ class LCFitter:
             self.ll = ll0
             self.fitvals = p0
             return False
-        if estimate_errors:
-            if not self.hess_errors(use_gradient=use_gradient):
-                # try:
-                if try_bootstrap:
-                    self.bootstrap_errors(set_errors=True)
-                # except ValueError:
-                #    print('Warning, could not estimate errors.')
-                #    self.template.set_errors(np.zeros_like(p0))
+        if (
+            estimate_errors
+            and not self.hess_errors(use_gradient=use_gradient)
+            and try_bootstrap
+        ):
+            self.bootstrap_errors(set_errors=True)
         if not quiet:
             print("Improved log likelihood by %.2f" % (self.ll - ll0))
         return True
@@ -470,7 +471,7 @@ class LCFitter:
     def fit_cg(self):
         from scipy.optimize import fmin_cg
 
-        fit = fmin_cg(
+        return fmin_cg(
             self.loglikelihood,
             self.template.get_parameters(),
             fprime=self.gradient,
@@ -478,7 +479,6 @@ class LCFitter:
             full_output=1,
             disp=1,
         )
-        return fit
 
     def fit_bfgs(self):
         from scipy.optimize import fmin_bfgs
@@ -523,10 +523,9 @@ class LCFitter:
 
         x0 = self.template.get_parameters()
         bounds = self.template.get_bounds()
-        fit = fmin_l_bfgs_b(
+        return fmin_l_bfgs_b(
             self.loglikelihood, x0, fprime=self.gradient, bounds=bounds, factr=1e-5
         )
-        return fit
 
     def hess_errors(self, use_gradient=True):
         """Set errors from hessian.  Fit should be called first..."""
@@ -714,7 +713,6 @@ class LCFitter:
     def plot_ebands(
         self, nband=4, fignum=2, plot_zoom=True, equalize_y=False, **plot_kwargs
     ):
-
         import pylab as pl
 
         pl.close(fignum)
@@ -751,9 +749,7 @@ class LCFitter:
                 axzoom.tick_params(
                     labelleft=False, labelright=True, labelbottom=i == (nband - 1)
                 )
-                if i < (nband - 1):
-                    pass
-                else:
+                if i >= nband - 1:
                     axzoom.set_xticks([0.2, 0.4, 0.6, 0.8, 1.0])
                 axzoom.set_xlabel("")
                 axzoom.set_ylabel("")
@@ -773,7 +769,7 @@ class LCFitter:
             fig.supxlabel("Phase")
         except AttributeError:
             axes[-1].set_xlabel("Phase")
-            if len(axzooms) > 0:
+            if axzooms:
                 axzooms[-1].set_xlabel("Phase")
             for ax in axes:
                 ax.set_ylabel("Normalized Profile")
@@ -863,10 +859,7 @@ class LCFitter:
         else:
             template = self.template
         nump = len(self.template.get_parameters())
-        if self.weights is None:
-            n = len(self.phases)
-        else:
-            n = self.weights.sum()
+        n = len(self.phases) if self.weights is None else self.weights.sum()
         ts = nump * np.log(n) + 2 * self()
         self.template = template
         return ts
@@ -876,18 +869,13 @@ def hessian(m, mf, *args, **kwargs):
     """Calculate the Hessian; mf is the minimizing function, m is the model,args additional arguments for mf."""
     p = m.get_parameters().copy()
     p0 = p.copy()  # sacrosanct copy
-    if "delt" in kwargs.keys():
-        delta = kwargs["delt"]
-    else:
-        delta = [0.01] * len(p)
-
+    delta = kwargs.get("delt", [0.01] * len(p))
     hessian = np.zeros([len(p), len(p)])
     for i in range(len(p)):
         delt = delta[i]
         for j in range(
             i, len(p)
         ):  # Second partials by finite difference; could be done analytically in a future revision
-
             xhyh, xhyl, xlyh, xlyl = p.copy(), p.copy(), p.copy(), p.copy()
             xdelt = delt if p[i] >= 0 else -delt
             ydelt = delt if p[j] >= 0 else -delt
@@ -1082,9 +1070,7 @@ def calc_step_size(logl, par, minstep=1e-5, maxstep=1e-1):
         p0[i] = par[i] + x
         delta_ll = logl(p0) - ll0 - 0.5
         p0[i] = par[i]
-        if abs(delta_ll) < 0.05:
-            return 0
-        return delta_ll
+        return 0 if abs(delta_ll) < 0.05 else delta_ll
 
     for i in range(len(par)):
         if f(maxstep, i) <= 0:

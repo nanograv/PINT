@@ -4,25 +4,33 @@ This module if for wrapping standalone binary models so that they work
 as PINT timing models.
 """
 
-
-import astropy.units as u
 import contextlib
+
+import astropy.constants as consts
+import astropy.units as u
 import numpy as np
-from astropy.time import Time
 from astropy.coordinates import SkyCoord
 from loguru import logger as log
 
 from pint import ls
-from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
-from pint.models.stand_alone_psr_binaries import binary_orbits as bo
-from pint.models.timing_model import (
-    DelayComponent,
-    MissingParameter,
-    TimingModelError,
-    UnknownParameter,
+from pint.exceptions import MissingParameter, TimingModelError, UnknownParameter
+from pint.models.parameter import (
+    MJDParameter,
+    floatParameter,
+    funcParameter,
+    prefixParameter,
 )
-from pint.utils import taylor_horner_deriv
+from pint.models.stand_alone_psr_binaries import binary_orbits as bo
+from pint.models.timing_model import DelayComponent
 from pint.pulsar_ecliptic import PulsarEcliptic
+from pint.utils import parse_time, taylor_horner_deriv
+
+# def _p_to_f(p):
+#     return 1 / p
+
+
+# def _pdot_to_fdot(p, pdot):
+#     return -pdot / p**2
 
 
 class PulsarBinary(DelayComponent):
@@ -51,6 +59,18 @@ class PulsarBinary(DelayComponent):
         - FB0 - orbital frequency (1/s, alternative to PB, non-negative)
         - FBn - time derivatives of orbital frequency (1/s**(n+1))
 
+    The following ORBWAVEs parameters define a Fourier series model for orbital phase
+    variations, as an alternative to the FBn Taylor series expansion:
+
+        - ORBWAVE_OM - base angular frequency for ORBWAVEs expansion (rad / s)
+        - ORBWAVE_EPOCH - reference epoch for ORBWAVEs model (MJD)
+        - ORBWAVECn/ORBWAVESn - coefficients for cosine/sine components (dimensionless)
+
+    The orbital phase is then given by:
+        orbits(t) = (t - T0) / PB
+                    + \sum_{n=0} (ORBWAVECn cos(ORBWAVE_OM * (n + 1) * (t - ORBWAVE_EPOCH))
+                                + ORBWAVESn sin(ORBWAVE_OM * (n + 1) * (t - ORBWAVE_EPOCH))
+
     The internal calculation code uses different names for some parameters:
 
         - Eccentric Anomaly:               E (not parameter ECC)
@@ -75,7 +95,11 @@ class PulsarBinary(DelayComponent):
         self.binary_model_class = None
         self.add_param(
             floatParameter(
-                name="PB", units=u.day, description="Orbital period", long_double=True
+                name="PB",
+                units=u.day,
+                description="Orbital period",
+                long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -86,11 +110,15 @@ class PulsarBinary(DelayComponent):
                 unit_scale=True,
                 scale_factor=1e-12,
                 scale_threshold=1e-7,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
             floatParameter(
-                name="A1", units=ls, description="Projected semi-major axis, a*sin(i)"
+                name="A1",
+                units=ls,
+                description="Projected semi-major axis of pulsar orbit, ap*sin(i)",
+                tcb2tdb_scale_factor=(1 / consts.c),
             )
         )
         # NOTE: the DOT here takes the value and times 1e-12, tempo/tempo2 can
@@ -100,15 +128,20 @@ class PulsarBinary(DelayComponent):
                 name="A1DOT",
                 aliases=["XDOT"],
                 units=ls / u.s,
-                description="Derivative of projected semi-major axis, da*sin(i)/dt",
+                description="Derivative of projected semi-major axis, d[ap*sin(i)]/dt",
                 unit_scale=True,
                 scale_factor=1e-12,
                 scale_threshold=1e-7,
+                tcb2tdb_scale_factor=(1 / consts.c),
             )
         )
         self.add_param(
             floatParameter(
-                name="ECC", units="", aliases=["E"], description="Eccentricity"
+                name="ECC",
+                units="",
+                aliases=["E"],
+                description="Eccentricity",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -119,11 +152,15 @@ class PulsarBinary(DelayComponent):
                 unit_scale=True,
                 scale_factor=1e-12,
                 scale_threshold=1e-7,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
             MJDParameter(
-                name="T0", description="Epoch of periastron passage", time_scale="tdb"
+                name="T0",
+                description="Epoch of periastron passage",
+                time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -132,6 +169,7 @@ class PulsarBinary(DelayComponent):
                 units=u.deg,
                 description="Longitude of periastron",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -140,18 +178,23 @@ class PulsarBinary(DelayComponent):
                 units="deg/year",
                 description="Rate of advance of periastron",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
             floatParameter(
                 name="M2",
                 units=u.M_sun,
-                description="Mass of companion in the unit Sun mass",
+                description="Companion mass",
+                tcb2tdb_scale_factor=(consts.G / consts.c**3),
             )
         )
         self.add_param(
             floatParameter(
-                name="SINI", units="", description="Sine of inclination angle"
+                name="SINI",
+                units="",
+                description="Sine of inclination angle",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -165,8 +208,53 @@ class PulsarBinary(DelayComponent):
                 description_template=self.FBX_description,
                 type_match="float",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
+
+        self.add_param(
+            prefixParameter(
+                name="ORBWAVEC0",
+                value=None,
+                units="",
+                description="Amplitude of cosine wave in Tasc-shift function",
+                aliases=["ORBWAVEC"],
+                description_template=self.ORBWAVEC_description,
+                type_match="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+
+        self.add_param(
+            prefixParameter(
+                name="ORBWAVES0",
+                value=None,
+                units="",
+                description="Amplitude of sine wave in Tasc-shift function",
+                aliases=["ORBWAVES"],
+                description_template=self.ORBWAVES_description,
+                type_match="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+
+        self.add_param(
+            floatParameter(
+                name="ORBWAVE_OM",
+                units="rad/s",
+                description="Base frequency for ORBWAVEs model",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+        self.add_param(
+            MJDParameter(
+                name="ORBWAVE_EPOCH",
+                description="Reference epoch for ORBWAVEs model",
+                time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+
         self.internal_params = []
         self.warn_default_params = ["ECC", "OM"]
         # Set up delay function
@@ -190,6 +278,101 @@ class PulsarBinary(DelayComponent):
             self.binary_instance.orbits_cls = bo.OrbitFBX(
                 self.binary_instance, list(FBXs.keys())
             )
+            # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
+
+            # # remove the PB parameterization, replace with functions
+            # self.remove_param("PB")
+            # self.remove_param("PBDOT")
+            # self.add_param(
+            #     funcParameter(
+            #         name="PB",
+            #         units=u.day,
+            #         description="Orbital period",
+            #         long_double=True,
+            #         params=("FB0",),
+            #         func=_p_to_f,
+            #     )
+            # )
+            # self.add_param(
+            #     funcParameter(
+            #         name="PBDOT",
+            #         units=u.day / u.day,
+            #         description="Orbital period derivative respect to time",
+            #         unit_scale=True,
+            #         scale_factor=1e-12,
+            #         scale_threshold=1e-7,
+            #         params=("FB0", "FB1"),
+            #         func=_pdot_to_fdot,
+            #     )
+            # )
+
+        ORBWAVES_mapping = self.get_prefix_mapping_component("ORBWAVES")
+        ORBWAVES = {
+            ows: getattr(self, ows).quantity for ows in ORBWAVES_mapping.values()
+        }
+        ORBWAVEC_mapping = self.get_prefix_mapping_component("ORBWAVEC")
+        ORBWAVEC = {
+            owc: getattr(self, owc).quantity for owc in ORBWAVEC_mapping.values()
+        }
+
+        if any(v is not None for v in ORBWAVES.values()):
+            for k in ["ORBWAVE_OM", "ORBWAVE_EPOCH"]:
+                self.binary_instance.add_binary_params(k, getattr(self, k).value)
+
+            for k in ORBWAVES.keys():
+                self.binary_instance.add_binary_params(k, ORBWAVES[k])
+
+            for k in ORBWAVEC.keys():
+                self.binary_instance.add_binary_params(k, ORBWAVEC[k])
+
+            using_FBX = any(v is not None for v in FBXs.values())
+            if using_FBX:
+                fbx = sorted(list(FBXs.keys()))
+                if len(fbx) > 2:
+                    raise ValueError("Only FB0/FB1 are supported.")
+                if (len(fbx) == 2) and (fbx[1] != "FB1"):
+                    raise ValueError("Only FB0/FB1 are supported.")
+                self.binary_instance.orbits_cls = bo.OrbitWavesFBX(
+                    self.binary_instance,
+                    fbx
+                    + ["TASC", "ORBWAVE_OM", "ORBWAVE_EPOCH"]
+                    + list(ORBWAVES.keys())
+                    + list(ORBWAVEC.keys()),
+                )
+            else:
+                self.binary_instance.orbits_cls = bo.OrbitWaves(
+                    self.binary_instance,
+                    ["PB", "TASC", "ORBWAVE_OM", "ORBWAVE_EPOCH"]
+                    + list(ORBWAVES.keys())
+                    + list(ORBWAVEC.keys()),
+                )
+
+        # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
+        # else:
+        #     # remove the FB parameterization, replace with functions
+        #     self.remove_param("FB0")
+        #     self.add_param(
+        #         funcParameter(
+        #             name="FB0",
+        #             units="1/s^1",
+        #             description="0th time derivative of frequency of orbit",
+        #             aliases=["FB"],
+        #             long_double=True,
+        #             params=("PB",),
+        #             func=_p_to_f,
+        #         )
+        #     )
+        #     self.add_param(
+        #         funcParameter(
+        #             name="FB1",
+        #             units="1/s^2",
+        #             description="1st time derivative of frequency of orbit",
+        #             long_double=True,
+        #             params=("PB", "PBDOT"),
+        #             func=_pdot_to_fdot,
+        #         )
+        #     )
+
         # Update the parameters in the stand alone binary
         self.update_binary_object(None)
 
@@ -224,7 +407,10 @@ class PulsarBinary(DelayComponent):
                 raise ValueError(
                     f"Binary period PB must be non-negative ({self.PB.quantity})"
                 )
-            if self.FB0.value is not None:
+            if self.FB0.value is not None and not (
+                isinstance(self.FB0, funcParameter)
+                or isinstance(self.PB, funcParameter)
+            ):
                 raise ValueError("Model cannot have values for both FB0 and PB")
         if self.FB0.value is not None and self.FB0.value <= 0:
             raise ValueError(
@@ -240,11 +426,11 @@ class PulsarBinary(DelayComponent):
                 method_name = f"{p.lower()}_func"
                 try:
                     par_method = getattr(self.binary_instance, method_name)
-                except AttributeError:
+                except AttributeError as e:
                     raise MissingParameter(
                         self.binary_model_name,
                         f"{p} is required for '{self.binary_model_name}'.",
-                    )
+                    ) from e
                 par_method()
 
     # With new parameter class set up, do we need this?
@@ -332,10 +518,18 @@ class PulsarBinary(DelayComponent):
             if hasattr(self._parent, par) or set(alias).intersection(self.params):
                 try:
                     pint_bin_name = self._parent.match_param_aliases(par)
-                except UnknownParameter:
+                except UnknownParameter as e:
                     if par in self.internal_params:
                         pint_bin_name = par
+                    else:
+                        raise UnknownParameter(
+                            f"Unable to find {par} in the parent model"
+                        ) from e
                 binObjpar = getattr(self._parent, pint_bin_name)
+
+                # make sure we aren't passing along derived parameters to the binary instance
+                if isinstance(binObjpar, funcParameter):
+                    continue
                 instance_par = getattr(self.binary_instance, par)
                 if hasattr(instance_par, "value"):
                     instance_par_val = instance_par.value
@@ -389,6 +583,18 @@ class PulsarBinary(DelayComponent):
     def FBX_description(self, n):
         return "%dth time derivative of frequency of orbit" % n
 
+    def ORBWAVES_description(self, n):
+        return (
+            "Coefficient of the %dth sine wave in Fourier series model of Tasc variations"
+            % n
+        )
+
+    def ORBWAVEC_description(self, n):
+        return (
+            "Coefficient of the %dth cosine wave in Fourier series model of Tasc variations"
+            % n
+        )
+
     def change_binary_epoch(self, new_epoch):
         """Change the epoch for this binary model.
 
@@ -410,13 +616,10 @@ class PulsarBinary(DelayComponent):
         new_epoch: float MJD (in TDB) or `astropy.Time` object
             The new epoch value.
         """
-        if isinstance(new_epoch, Time):
-            new_epoch = Time(new_epoch, scale="tdb", precision=9)
-        else:
-            new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
+        new_epoch = parse_time(new_epoch, scale="tdb", precision=9)
 
         # Get PB and PBDOT from model
-        if self.PB.quantity is not None:
+        if self.PB.quantity is not None and not isinstance(self.PB, funcParameter):
             PB = self.PB.quantity
             if self.PBDOT.quantity is not None:
                 PBDOT = self.PBDOT.quantity
@@ -465,3 +668,64 @@ class PulsarBinary(DelayComponent):
         self.OM.quantity = self.OM.quantity + dOM
         dA1 = self.A1DOT.quantity * dt_integer_orbits
         self.A1.quantity = self.A1.quantity + dA1
+
+    def pb(self, t=None):
+        """Return binary period and uncertainty (optionally evaluated at different times) regardless of binary model
+
+        Parameters
+        ----------
+        t : astropy.time.Time, astropy.units.Quantity, numpy.ndarray, float, int, str, optional
+            Time(s) to evaluate period
+
+        Returns
+        -------
+        astropy.units.Quantity :
+            Binary period
+        astropy.units.Quantity :
+            Binary period uncertainty
+
+        """
+        if self.binary_model_name.startswith("ELL1"):
+            t0 = self.TASC.quantity
+        else:
+            t0 = self.T0.quantity
+        t = t0 if t is None else parse_time(t)
+        if self.PB.quantity is not None:
+            if self.PBDOT.quantity is None and (
+                not hasattr(self, "XPBDOT")
+                or getattr(self, "XPBDOT").quantity is not None
+            ):
+                return self.PB.quantity, self.PB.uncertainty
+            pb = self.PB.as_ufloat(u.d)
+            if self.PBDOT.quantity is not None:
+                pbdot = self.PBDOT.as_ufloat(u.s / u.s)
+            if hasattr(self, "XPBDOT") and self.XPBDOT.quantity is not None:
+                pbdot += self.XPBDOT.as_ufloat(u.s / u.s)
+            pnew = pb + pbdot * (t - t0).jd
+            if not isinstance(pnew, np.ndarray):
+                return pnew.n * u.d, pnew.s * u.d if pnew.s > 0 else None
+            import uncertainties.unumpy
+
+            return (
+                uncertainties.unumpy.nominal_values(pnew) * u.d,
+                uncertainties.unumpy.std_devs(pnew) * u.d,
+            )
+
+        elif self.FB0.quantity is not None:
+            # assume FB terms
+            dt = (t - t0).sec
+            coeffs = []
+            unit = u.Hz
+            for p in self.get_prefix_mapping_component("FB").values():
+                coeffs.append(getattr(self, p).as_ufloat(unit))
+                unit /= u.s
+            pnew = 1 / taylor_horner_deriv(dt, coeffs, deriv_order=0)
+            if not isinstance(pnew, np.ndarray):
+                return pnew.n * u.s, pnew.s * u.s if pnew.s > 0 else None
+            import uncertainties.unumpy
+
+            return (
+                uncertainties.unumpy.nominal_values(pnew) * u.s,
+                uncertainties.unumpy.std_devs(pnew) * u.s,
+            )
+        raise AttributeError("Neither PB nor FB0 is present in the timing model.")

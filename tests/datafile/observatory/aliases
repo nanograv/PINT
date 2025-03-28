@@ -1,0 +1,38 @@
+# This file is a list of aliases for observatories.
+# Each line lists the aliases for a single observatory, the short code for
+# which is the first word on the line. One or more aliases may be listed for
+# each observatory.
+#
+# These aliases differ from the tempo aliases because there are too many 
+# observatories and different sites were added differently at times.
+#
+# If you need to use tempo site codes, try setting TEMPO2_ALIAS="tempo"
+gbt 1 gb
+atca 2
+ao 3 arecebo arecibo
+hobart 4
+nanshan 5
+tid43 6
+pks 7
+jb 8 y # z # this is used by srt
+vla c
+ncy f
+eff g
+jbdfb q
+wsrt i
+# jb42 i # This is used by wsrt now
+lofar t
+ncyobs w
+lwa1 x
+srt z
+jbmk2 h
+jbmk3 j
+meerkat m
+gmrt r
+# eMerlin sites
+tabley k
+darnhall l
+knockin k
+defford n
+# Other single char codes in observatories.dat
+lapalma p

@@ -70,7 +70,6 @@ def test_prim_io():
 
 
 def test_prim_gauss_wrapping():
-
     # default is to wrap a function by 10 times; make a fat pulse here and
     # check against a manually calculated wrap
 
@@ -256,7 +255,6 @@ def test_template_caching():
 
 
 def test_component_manipulation():
-
     # test sorting components
     lct = default_template()
     lct.order_primitives(order=0)  # sort by position, should swap them
@@ -600,7 +598,6 @@ def test_vonmises():
 
 
 def test_skewnorm():
-
     # check bounds and limits
     with pytest.raises(ValueError):
         lcprimitives.LCSkewGaussian(p=[0.0001, 0.1, 0.5])
@@ -634,38 +631,41 @@ def test_skewnorm():
     lct = lctemplate.LCTemplate([p1, p2], [0.4, 0.6])
     assert lct.check_gradient(quiet=True, seed=0)
     assert lct.check_derivative()
-    return
 
-    p1.free[1] = False
-    assert p1.gradient(ph[:10], free=True).shape[0] == 1
+    # @abhisrkckl : There was a return statement above which made the code below unreachable.
+    # I have removed the return statement and commented out the below code.
+    # The following tests don't actually work. I am not sure why.
 
-    p1 = lceprimitives.LCEVonMises(p=[0.05, 0.1], slope=[0, 0.1])
-    p2 = lceprimitives.LCEVonMises(p=[0.05, 0.4], slope=[0.05, 0.05])
-    assert np.all(p2.slope == 0.05)
-    assert np.allclose(p1(ph, log10_ens=en), vm(ph, [0.05, 0.1 + (en - 3) * 0.1]))
-    lct = lctemplate.LCTemplate([p1, p2], [0.4, 0.6])
-    assert lct.is_energy_dependent()
-    assert p1.gradient(ph[:10], free=True).shape[0] == 2
-    assert p1.gradient(ph[:10], free=False).shape[0] == 4
-    assert lct.check_gradient(quiet=True, seed=0)
-    assert lct.check_derivative()
+    # p1.free[1] = False
+    # assert p1.gradient(ph[:10], free=True).shape[0] == 1
 
-    # check integral
-    ens = np.linspace(2, 4, 21)
-    integrals = p1.integrate(0, 0.5, log10_ens=ens)
-    quads = [
-        quad(lambda x: p1(x, log10_ens=ens[i]), 0, 0.5)[0] for i in range(len(ens))
-    ]
-    assert np.allclose(quads, integrals)
+    # p1 = lceprimitives.LCEVonMises(p=[0.05, 0.1], slope=[0, 0.1])
+    # p2 = lceprimitives.LCEVonMises(p=[0.05, 0.4], slope=[0.05, 0.05])
+    # assert np.all(p2.slope == 0.05)
+    # assert np.allclose(p1(ph, log10_ens=en), vm(ph, [0.05, 0.1 + (en - 3) * 0.1]))
+    # lct = lctemplate.LCTemplate([p1, p2], [0.4, 0.6])
+    # assert lct.is_energy_dependent()
+    # assert p1.gradient(ph[:10], free=True).shape[0] == 2
+    # assert p1.gradient(ph[:10], free=False).shape[0] == 4
+    # assert lct.check_gradient(quiet=True, seed=0)
+    # assert lct.check_derivative()
 
-    # check overflow
-    p1 = lceprimitives.LCEVonMises()
-    p1.p[0] = p1.bounds[0][0]
-    assert not np.isnan(p1(p1.p[-1]))
+    # # check integral
+    # ens = np.linspace(2, 4, 21)
+    # integrals = p1.integrate(0, 0.5, log10_ens=ens)
+    # quads = [
+    #     quad(lambda x: p1(x, log10_ens=ens[i]), 0, 0.5)[0] for i in range(len(ens))
+    # ]
+    # assert np.allclose(quads, integrals)
 
-    # check fast Bessel function
-    q = np.logspace(-1, np.log10(700), 201)
-    I0 = lcprimitives.FastBessel(order=0)
-    I1 = lcprimitives.FastBessel(order=1)
-    assert np.all(np.abs(I0(q) / i0(q) - 1) < 1e-2)
-    assert np.all(np.abs(I1(q) / i1(q) - 1) < 1e-2)
+    # # check overflow
+    # p1 = lceprimitives.LCEVonMises()
+    # p1.p[0] = p1.bounds[0][0]
+    # assert not np.isnan(p1(p1.p[-1]))
+
+    # # check fast Bessel function
+    # q = np.logspace(-1, np.log10(700), 201)
+    # I0 = lcprimitives.FastBessel(order=0)
+    # I1 = lcprimitives.FastBessel(order=1)
+    # assert np.all(np.abs(I0(q) / i0(q) - 1) < 1e-2)
+    # assert np.all(np.abs(I1(q) / i1(q) - 1) < 1e-2)

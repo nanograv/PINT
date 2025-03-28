@@ -1,9 +1,11 @@
 """Damour and Deruelle binary model."""
+
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
 
 from pint import Tsun
+from pint.models.parameter import InvalidModelParameters
 
 from .binary_generic import PSR_BINARY
 
@@ -70,6 +72,16 @@ class DDmodel(PSR_BINARY):
 
     # calculations for delays in DD model
 
+    @property
+    def k(self):
+        # separate this into a property so it can be calculated correctly in DDGR
+        # note that this include self.pb() in the calculation of k
+        # and self.pb() is PB + PBDOT*dt, so it can vary slightly
+        # compared to a definition that does not include PBDOT
+        # I am not certain about how this should be done
+        # but this is keeping the behavior consistent
+        return self.OMDOT.to(u.rad / u.second) / (2 * np.pi * u.rad / self.pb())
+
     # DDmodel special omega.
     def omega(self):
         """T. Damour and N. Deruelle (1986) equation [25]
@@ -81,13 +93,7 @@ class DDmodel(PSR_BINARY):
 
         (T. Damour and N. Deruelle (1986) equation between Eq 16 Eq 17)
         """
-        PB = self.pb()
-        PB = PB.to("second")
-        OMDOT = self.OMDOT
-        OM = self.OM
-        nu = self.nu()
-        k = OMDOT.to(u.rad / u.second) / (2 * np.pi * u.rad / PB)
-        return (OM + nu * k).to(u.rad)
+        return (self.OM + self.nu() * self.k).to(u.rad)
 
     def d_omega_d_par(self, par):
         """derivative for omega respect to user input Parameter.
@@ -116,19 +122,18 @@ class DDmodel(PSR_BINARY):
         OMDOT = self.OMDOT
         OM = self.OM
         nu = self.nu()
-        k = OMDOT.to(u.rad / u.second) / (2 * np.pi * u.rad / PB)
         if par in ["OM", "OMDOT"]:
             dername = f"d_omega_d_{par}"
             return getattr(self, dername)()
         elif par in self.orbits_cls.orbit_params:
             d_nu_d_par = self.d_nu_d_par(par)
             d_pb_d_par = self.d_pb_d_par(par)
-            return d_nu_d_par * k + d_pb_d_par * nu * OMDOT.to(u.rad / u.second) / (
-                2 * np.pi * u.rad
-            )
+            return d_nu_d_par * self.k + d_pb_d_par * nu * OMDOT.to(
+                u.rad / u.second
+            ) / (2 * np.pi * u.rad)
         else:
             # For parameters only in nu
-            return (k * self.d_nu_d_par(par)).to(
+            return (self.k * self.d_nu_d_par(par)).to(
                 OM.unit / par_obj.unit, equivalencies=u.dimensionless_angles()
             )
 
@@ -704,6 +709,9 @@ class DDmodel(PSR_BINARY):
         cOmega = np.cos(self.omega())
         TM2 = self.M2.value * Tsun
 
+        if np.any(self.SINI < 0) or np.any(self.SINI > 1):
+            raise InvalidModelParameters("SINI parameter must be between 0 and 1")
+
         return (
             -2
             * TM2
@@ -752,10 +760,7 @@ class DDmodel(PSR_BINARY):
                 -2
                 * TM2
                 / logNum
-                * (
-                    e * sE
-                    - self.SINI * (np.sqrt(1 - e**2) * cE * cOmega - sE * sOmega)
-                )
+                * (e * sE - self.SINI * (np.sqrt(1 - e**2) * cE * cOmega - sE * sOmega))
             )
             domega_dpar = self.prtl_der("omega", par)
             dsDelay_domega = (
@@ -838,7 +843,6 @@ class DDmodel(PSR_BINARY):
 
             decc_dpar = self.prtl_der("ecc", par)
             daDelay_decc = A0 * sOmega + B0 * cOmega
-
             return (
                 domega_dpar * daDelay_domega
                 + dnu_dpar * daDelay_dnu

@@ -1,0 +1,157 @@
+# New format observatory information file.
+#
+# Values are x,y,z geocentric coordinates
+# The last column contains the old-style telescope ID code
+#
+   882589.289   -4924872.368    3943729.418      GBT                 gbt
+-4752329.7000  2790505.9340     -3200483.7470    NARRABRI            atca
+  2390487.080   -5564731.357    1994720.633      ARECIBO             ao
+ 228310.702   4631922.905      4367064.059      NANSHAN             NS
+ 228310.702   4631922.905      4367064.059      UAO	  	    NS
+ -4460892.6     2682358.9       -3674756.0       DSS_43              tid43
+ -4554231.5     2816759.1       -3454036.3       PARKES              pks
+ 4865182.7660  791922.6890      4035137.1740     SRT                 srt
+  -1601192.     -5041981.4       3554871.4        VLA                 vla
+ 4324165.81     165927.11       4670132.83       NANCAY              ncy
+ 4324165.81     165927.11       4670132.83       NUPPI               ncyobs
+ 4324165.81     165927.11       4670132.83       OP                  obspm
+ 4033949.5      486989.4        4900430.8        EFFELSBERG          eff
+ 4033949.5      486989.4        4900430.8        EFFELSBERG_ASTERIX  effix
+ 4033949.5      486989.4        4900430.8        LEAP                leap
+ 3822252.643   -153995.683      5086051.443      JODRELLM4           jbm4
+ 881856.58     -4925311.86      3943459.70       GB300               gb300
+ 882872.57     -4924552.73      3944154.92       GB140               gb140
+ 882315.33     -4925191.41      3943414.05       GB853               gb853
+ 883775.18     -4924398.84      3944052.95       NRAO20              gb20
+ 5327021.651    -1719555.576    3051967.932      LA_PALMA            lap
+ -3950077.96    2522377.31     -4311667.52       Hobart              hob
+ 5085442.780   2668263.483     -2768697.034      Hartebeesthoek      hart
+ 3828445.659    445223.600000   5064921.5677     WSRT                wsrt
+ -5115425.60    477880.31      -3767042.81       Warkworth_30m       wark30m
+ -5115324.399   477843.305     -3767192.886      Warkworth_12m       wark12m
+ 3826577.462    461022.624      5064892.526      LOFAR               lofar
+ 4034038.635    487026.223      4900280.057      DE601LBA            EFlfrlba
+ 4034038.635    487026.223      4900280.057      DE601LBH            EFlfrlbh
+ 4034101.901    487012.401      4900230.210      DE601HBA            EFlfrhba
+ 4034101.901    487012.401      4900230.210      DE601               EFlfr
+ 4152561.068    828868.725      4754356.878      DE602LBA            UWlfrlba
+ 4152561.068    828868.725      4754356.878      DE602LBH            UWlfrlbh
+ 4152568.416    828788.802      4754361.926      DE602HBA            UWlfrhba
+ 4152568.416    828788.802      4754361.926      DE602               UWlfr
+ 3940285.328    816802.001      4932392.757      DE603LBA            TBlfrlba
+ 3940285.328    816802.001      4932392.757      DE603LBH            TBlfrlbh
+ 3940296.126    816722.532      4932394.152      DE603HBA            TBlfrhba
+ 3940296.126    816722.532      4932394.152      DE603               TBlfr
+ 3796327.609    877591.315      5032757.252      DE604LBA            POlfrlba
+ 3796327.609    877591.315      5032757.252      DE604LBH            POlfrlbh
+ 3796380.254    877613.809      5032712.272      DE604HBA            POlfrhba
+ 3796380.254    877613.809      5032712.272      DE604               POlfr
+ 4005681.742    450968.282      4926457.670      DE605LBA            JUlfrlba
+ 4005681.742    450968.282      4926457.670      DE605LBH            JUlfrlbh
+ 4005681.407    450968.304      4926457.940      DE605HBA            JUlfrhba
+ 4005681.407    450968.304      4926457.940      DE605               JUlfr
+ 4323980.155    165608.408      4670302.803      FR606LBA            FRlfrlba
+ 4323980.155    165608.408      4670302.803      FR606LBH            FRlfrlbh
+ 4324017.054    165545.160      4670271.072      FR606HBA            FRlfrhba
+ 4324017.054    165545.160      4670271.072      FR606               FRlfr
+ 3370287.366    712053.586      5349991.228      SE607LBA            ONlfrlba
+ 3370287.366    712053.586      5349991.228      SE607LBH            ONlfrlbh
+ 3370272.092    712125.596      5349990.934      SE607HBA            ONlfrhba
+ 3370272.092    712125.596      5349990.934      SE607               ONlfr
+ 4008438.796    -100310.064     4943735.554      UK608LBA            UKlfrlba
+ 4008438.796    -100310.064     4943735.554      UK608LBH            UKlfrlbh
+ 4008462.280    -100376.948     4943716.600      UK608HBA            UKlfrhba
+ 4008462.280    -100376.948     4943716.600      UK608               UKlfr
+ 3727207.778    655184.900      5117000.625      DE609LBA            NDlfrlba
+ 3727207.778    655184.900      5117000.625      DE609LBH            NDlfrlbh
+ 3727218.128    655108.821      5117002.847      DE609HBA            NDlfrhba
+ 3727218.128    655108.821      5117002.847      DE609               NDlfr
+ 2136833.225    810088.740      5935285.279      FI609LBA            Filfrlba
+ 2136833.225    810088.740      5935285.279      FI609LBH            Filfrlbh
+ 2136819.1940   810039.5757     5935299.0536     FI609HBA            Filfrhba
+ 2136819.1940   810039.5757     5935299.0536     FI609               Filfr
+ 3307865.236   2487350.541      4836939.784      UTR-2               UTR2
+  1656342.30    5797947.77      2073243.16       GMRT                gmrt
+ -2353621.22   -4641341.52      3677052.352      GOLDSTONE           gs
+ -4483311.64    2648815.92      -3671909.31      MOST                mo
+ -2826711.951   4679231.627     3274665.675      SHAO                shao
+  5088964.00    301689.80       3825017.0        PICO_VELETA         pv
+ -2524263.18    -4123529.78     4147966.36       ATA                 ata
+
+
+# IAR
+ 2765357.08    -4449628.98      -3625726.47      IAR1                iar1
+ 2765322.49    -4449569.52      -3625825.14      IAR2                iar2
+#
+
+# FAST
+-1666460.00    5499910.00       2759950.00       FAST                fast
+#
+
+# Murchison Widefield Array (MWA)
+-2559454.08    5095372.14      -2849057.18       MWA                 mwa
+
+# MeerKAT
+#
+5109943.1050   2003650.7359   -3239908.3195   KAT-7           k7
+5109360.133    2006852.586    -3238948.127       MEERKAT             meerkat
+
+# eMerlin telescopes
+####### From Jodrell obsys.dat file
+#
+ 383395.727    -173759.585      5077751.313      MKIII               jbmk3
+ 3817176.557   -162921.170      5089462.046      TABLEY              tabley
+ 3828714.504   -169458.987      5080647.749      DARNHALL            darnhall
+ 3859711.492   -201995.082      5056134.285      KNOCKIN             knockin
+ 3923069.135   -146804.404      5009320.570      DEFFORD             defford
+ 3919982.752    2651.9820       5013849.826      CAMBRIDGE           cam
+       0.0           1.0              0.0        COE                 coe  
+
+# MJK Approximate location for Princeton observatory
+ 1288748.38 -4694221.77 4107418.80              PRINCETON           princeton
+ 3788815.62 1131748.336 5035101.190             HAMBURG             hamburg
+#
+###### Telescope ID changed from the Jodrell obsys.dat file
+# Jodrell Bank Telescopes and Backends
+# JBO generic... use only for clock corrections
+ 3822626.04    -154105.65       5086486.04       JODRELL             jb
+# Lovell Digital Filterbank
+ 3822626.04    -154105.65       5086486.04       JBODFB              jbdfb
+# Lovell ROACH coherent dedisperser
+ 3822626.04    -154105.65       5086486.04       JBOROACH            jbroach
+# Lovell Analogue Filterbank
+ 3822626.04    -154105.65       5086486.04       JBOAFB              jbafb
+# 42ft telescope
+ 3822294.825   -153862.275      5085987.071      JB_42ft             jb42
+
+# MkII Position from VLBI (MJK 2018)
+# X=  3822846.7600  Y=  -153802.2800  Z=  5086285.9000
+# MkII telescope Analogue Filterbank
+ 3822846.7600  -153802.2800      5086285.9000    JB_MKII             jbmk2
+# MkII ROACH coherent dedisperser
+ 3822846.7600  -153802.2800      5086285.9000    JB_MKII_RCH         jbmk2roach
+# MkII Digital Filterbank
+ 3822846.7600  -153802.2800      5086285.9000    JB_MKII_DFB         jbmk2dfb
+
+#
+# New telescopes
+ 1719555.576   5327021.651      3051967.932      LA_PALMA            lapalma
+ -1602196.60   -5042313.47      3553971.51       LWA1                lwa1
+-1531155.54418 -5045324.30517   3579583.89450    LWA_SV              lwasv
+
+ 6346273.5310  -33779.7127      634844.9454      GRAO                grao
+
+ -2059166.313  -3621302.972    4814304.113       CHIME               chime
+
+
+# groud-based gravitational wave observatories
+  4546374.0990    842989.6976    4378576.9624     VIRGO               virgo
+ -2161414.9264  -3834695.1789    4600350.2266     HANFORD             lho
+   -74276.0447  -5496283.7197    3224257.0174     LIVINGSTON          llo
+  3856309.9493    666598.9563    5019641.4172     GEO600              geo600
+ -3777336.0240   3484898.411     3765313.6970     KAGRA               kagra
+
+# Fake telescope for IPTA data challenge
+   6378138.00    0.0     0.0                      AXIS                axi  
+
+ 0 0 0 STL_BAT STL_BAT

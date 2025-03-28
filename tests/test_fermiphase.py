@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import os
 import sys
 from io import StringIO
@@ -6,12 +5,14 @@ from pathlib import Path
 
 import pytest
 
+import numpy as np
+
 from astropy.io import fits
+from astropy import units as u
 
 import pint.models
 import pint.scripts.fermiphase as fermiphase
-import pint.toa as toa
-from pint.fermi_toas import load_Fermi_TOAs
+from pint.fermi_toas import get_Fermi_TOAs, _default_uncertainty
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pinttestdata import datadir
 
@@ -58,10 +59,12 @@ def test_process_and_accuracy():
 
     modelin = pint.models.get_model(parfile)
     get_satellite_observatory("Fermi", ft2file)
-    tl = load_Fermi_TOAs(eventfileraw, weightcolumn="PSRJ0030+0451")
-    # ts = toa.TOAs(toalist=tl)
-    ts = toa.get_TOAs_list(
-        tl, include_gps=False, include_bipm=False, planets=False, ephem="DE405"
+    ts = get_Fermi_TOAs(
+        eventfileraw,
+        weightcolumn="PSRJ0030+0451",
+        include_bipm=False,
+        planets=False,
+        ephem="DE405",
     )
     iphss, phss = modelin.phase(ts, abs_phase=True)
     ph_pint = phss % 1
@@ -80,3 +83,29 @@ def test_process_and_accuracy():
     # require absolute phase to be within 500 ns; NB this relies on
     # GBT clock corrections since the TZR is referenced there
     assert max(abs(resids_mus)) < 0.5
+
+
+def test_for_toa_errors_default():
+    get_satellite_observatory("Fermi", ft2file, overwrite=True)
+    ts = get_Fermi_TOAs(
+        eventfileraw,
+        weightcolumn="PSRJ0030+0451",
+        include_bipm=False,
+        planets=False,
+        ephem="DE405",
+    )
+    assert np.all(ts.get_errors() == _default_uncertainty)
+
+
+@pytest.mark.parametrize("errors", [2, 2 * u.us])
+def test_for_toa_errors_manual(errors):
+    get_satellite_observatory("Fermi", ft2file, overwrite=True)
+    ts = get_Fermi_TOAs(
+        eventfileraw,
+        weightcolumn="PSRJ0030+0451",
+        include_bipm=False,
+        planets=False,
+        ephem="DE405",
+        errors=errors,
+    )
+    assert np.all(ts.get_errors() == 2 * u.us)

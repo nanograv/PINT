@@ -1,5 +1,3 @@
-#! /usr/bin/env python
-
 import tempfile
 
 import pytest

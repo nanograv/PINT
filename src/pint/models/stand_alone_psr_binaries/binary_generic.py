@@ -3,10 +3,8 @@
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
-
-from loguru import logger as log
-
 from erfa import DAYSEC as SECS_PER_DAY
+from loguru import logger as log
 
 from pint import Tsun, ls
 from pint.models.stand_alone_psr_binaries.binary_orbits import OrbitPB
@@ -255,6 +253,7 @@ class PSR_BINARY:
             raise AttributeError(
                 f"Can not find parameter {par} in {self.binary_name} model"
             )
+
         # Get first derivative in the delay derivative function
         result = self.d_binarydelay_d_par_funcs[0](par)
         if len(self.d_binarydelay_d_par_funcs) > 1:
@@ -317,7 +316,6 @@ class PSR_BINARY:
         xU = U[1]
         # Call derivative functions
         derU = yU / xU
-
         if hasattr(self, f"d_{y}_d_{x}"):
             dername = f"d_{y}_d_{x}"
             result = getattr(self, dername)()
@@ -355,7 +353,6 @@ class PSR_BINARY:
             e = np.longdouble(eccentricity).value
         else:
             e = eccentricity
-
         if any(e < 0) or any(e >= 1):
             raise ValueError("Eccentricity should be in the range of [0,1).")
 
@@ -381,9 +378,9 @@ class PSR_BINARY:
 
     def ecc(self):
         """Calculate eccentricity with EDOT"""
-        ECC = self.ECC
-        EDOT = self.EDOT
-        return ECC + (self.tt0 * EDOT).decompose()
+        if hasattr(self, "_tt0"):
+            return self.ECC + (self.tt0 * self.EDOT).decompose()
+        return self.ECC
 
     def d_ecc_d_T0(self):
         result = np.empty(len(self.tt0))
@@ -397,7 +394,7 @@ class PSR_BINARY:
         return self.tt0
 
     def a1(self):
-        return self.A1 + self.tt0 * self.A1DOT
+        return self.A1 + self.tt0 * self.A1DOT if hasattr(self, "_tt0") else self.A1
 
     def d_a1_d_A1(self):
         return np.longdouble(np.ones(len(self.tt0))) * u.Unit("")
@@ -534,6 +531,7 @@ class PSR_BINARY:
             else:
                 E = self.E()
                 return np.zeros(len(self.tt0)) * E.unit / par_obj.unit
+        return func()
 
     def nu(self):
         """True anomaly  (Ae)"""

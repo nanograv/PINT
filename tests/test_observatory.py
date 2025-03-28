@@ -1,23 +1,31 @@
-#!/usr/bin/env python
 import io
 import os
 import json
 
 import astropy.units as u
+import contextlib
 import numpy as np
 import pytest
 from astropy import units as u
 
 from pint.pulsar_mjd import Time
+from pinttestdata import datadir as testdatadir
 
 import pint.observatory
-from pint.observatory import NoClockCorrections, Observatory, get_observatory
+from pint.observatory import (
+    NoClockCorrections,
+    Observatory,
+    get_observatory,
+    compare_t2_observatories_dat,
+    compare_tempo_obsys_dat,
+)
 from pint.pulsar_mjd import Time
 import pint.observatory.topo_obs
 from pint.observatory.topo_obs import (
     TopoObs,
     load_observatories,
 )
+from collections import defaultdict
 
 tobs = ["aro", "ao", "chime", "drao"]
 
@@ -29,36 +37,32 @@ def test_time():
 
 @pytest.mark.parametrize("tobs", tobs)
 def test_get_obs(tobs):
-    site = get_observatory(
-        tobs, include_gps=False, include_bipm=True, bipm_version="BIPM2015"
-    )
+    site = get_observatory(tobs)
     assert site
 
 
 @pytest.mark.parametrize("tobs", tobs)
 def test_different_bipm(tobs):
-    site = get_observatory(
-        tobs, include_gps=False, include_bipm=True, bipm_version="BIPM2019"
-    )
+    site = get_observatory(tobs)
     assert site
 
 
 @pytest.mark.parametrize("tobs", tobs)
 def test_clock_corr_shape(tobs, test_time):
-    site = get_observatory(
-        tobs, include_gps=True, include_bipm=True, bipm_version="BIPM2015"
+    site = get_observatory(tobs)
+    clock_corr = site.clock_corrections(
+        test_time, include_bipm=True, bipm_version="BIPM2015"
     )
-    clock_corr = site.clock_corrections(test_time)
     assert len(clock_corr) == len(test_time)
-    clock_corr1 = site.clock_corrections(test_time[0])
+    clock_corr1 = site.clock_corrections(
+        test_time[0], include_bipm=True, bipm_version="BIPM2015"
+    )
     assert clock_corr1.shape == ()
 
 
 @pytest.mark.parametrize("tobs", tobs)
 def test_get_TDBs(tobs, test_time):
-    site = get_observatory(
-        tobs, include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-    )
+    site = get_observatory(tobs)
     # Test default TDB calculation
     tdbs = site.get_TDBs(test_time)
     assert len(tdbs) == len(test_time)
@@ -68,9 +72,7 @@ def test_get_TDBs(tobs, test_time):
 
 @pytest.mark.parametrize("tobs", tobs)
 def test_get_TDBs_ephemeris(tobs, test_time):
-    site = get_observatory(
-        tobs, include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-    )
+    site = get_observatory(tobs)
 
     # Test TDB calculation from ephemeris
     tdbs = site.get_TDBs(test_time, method="ephemeris", ephem="de430t")
@@ -81,18 +83,14 @@ def test_get_TDBs_ephemeris(tobs, test_time):
 
 @pytest.mark.parametrize("tobs", tobs)
 def test_positions_shape(tobs, test_time):
-    site = get_observatory(
-        tobs, include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-    )
+    site = get_observatory(tobs)
     posvel = site.posvel(test_time, ephem="de436")
     assert posvel.pos.shape == (3, len(test_time))
     assert posvel.vel.shape == (3, len(test_time))
 
 
 def test_wrong_TDB_method_raises(test_time):
-    site = get_observatory(
-        "ao", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-    )
+    site = get_observatory("ao")
     with pytest.raises(ValueError):
         site.get_TDBs(test_time, method="ephemeris")
     with pytest.raises(ValueError):
@@ -114,10 +112,8 @@ def sandbox():
     o = Sandbox()
     e = os.environ.copy()
 
-    try:
+    with contextlib.suppress(KeyError):
         del os.environ["PINT_OBS_OVERRIDE"]
-    except KeyError:
-        pass
     reg = pint.observatory.Observatory._registry.copy()
     try:
         yield o
@@ -148,6 +144,7 @@ good_observatories = [
 
 @pytest.mark.parametrize("observatory", good_observatories)
 def test_can_compute_corrections(observatory):
+    # This will use the default settings for use_bipm, use_gps, and bipm_version
     get_observatory(observatory).clock_corrections(
         Time(55600, format="mjd"), limits="error"
     )
@@ -180,12 +177,15 @@ def test_no_clock_means_no_corrections():
         o = TopoObs(
             "arecibo_bogus",
             itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
-            include_gps=False,
-            include_bipm=False,
+            apply_gps2utc=False,
         )
 
         assert (
-            o.clock_corrections(Time(57600, format="mjd"), limits="error").to_value(u.s)
+            o.clock_corrections(
+                Time(57600, format="mjd"),
+                include_bipm=False,
+                limits="error",
+            ).to_value(u.s)
             == 0
         )
     finally:
@@ -220,7 +220,6 @@ def test_gbt_registered():
 
 
 def test_is_gbt_still_ok():
-
     gbt = get_observatory("gbt")
     assert gbt.location.y < 0
 
@@ -271,8 +270,10 @@ def test_json_observatory_output(sandbox):
     gbt_reload = get_observatory("gbt")
 
     for p in gbt_orig.__dict__:
-        if not p in ["_clock"]:
+        if p not in ["_clock", "_aliases"]:
             assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
+
+        assert set(gbt_orig._aliases) == set(gbt_reload._aliases)
 
 
 def test_json_observatory_input_latlon(sandbox):
@@ -288,9 +289,13 @@ def test_json_observatory_input_latlon(sandbox):
     gbt_reload = get_observatory("gbt")
 
     for p in gbt_orig.__dict__:
-        if not p in ["location", "_clock"]:
+        if p not in ["location", "_clock"]:
             # everything else should be identical
-            assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
+            # but fix the order if it is a list
+            if isinstance(getattr(gbt_orig, p), list):
+                assert set(getattr(gbt_orig, p)) == set(getattr(gbt_reload, p))
+            else:
+                assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
     # check distance separately to allow for precision
     distance = gbt_orig.separation(gbt_reload)
     assert distance < 1 * u.m
@@ -316,3 +321,18 @@ def test_valid_past_end():
     o = pint.observatory.get_observatory("jbroach")
     o.last_clock_correction_mjd()
     o.clock_corrections(o._clock[0].time[-1] + 1 * u.d, limits="error")
+
+
+def test_names_and_aliases():
+    na = Observatory.names_and_aliases()
+    assert isinstance(na, dict) and isinstance(na["gbt"], list)
+
+
+def test_compare_t2_observatories_dat():
+    s = compare_t2_observatories_dat(testdatadir)
+    assert isinstance(s, defaultdict)
+
+
+def test_compare_tempo_obsys_dat():
+    s = compare_tempo_obsys_dat(testdatadir / "observatory")
+    assert isinstance(s, defaultdict)

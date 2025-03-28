@@ -1,4 +1,5 @@
 """Various tests to assess the performance of parfile writing."""
+
 import numbers
 import os
 from io import StringIO
@@ -24,16 +25,14 @@ def test_parfile_write(tmp_path):
     for p in modelB1855.params:
         par = getattr(modelB1855, p)
         # Change value for 20%
-        if isinstance(par.value, numbers.Number):
+        if isinstance(par.value, numbers.Number) and not isinstance(
+            par, mp.MJDParameter
+        ):
             ov = par.value
-            if isinstance(par, mp.MJDParameter):
-                continue
-            else:
-                par.value = ov * 0.8
+            par.value = ov * 0.8
     res = Residuals(toasB1855, modelB1855, use_weighted_mean=False).time_resids.to(u.s)
-    f = open(out_parfile, "w")
-    f.write(modelB1855.as_parfile())
-    f.close()
+    with open(out_parfile, "w") as f:
+        f.write(modelB1855.as_parfile())
     read_model = mb.get_model(out_parfile)
     read_res = Residuals(toasB1855, read_model, use_weighted_mean=False).time_resids.to(
         u.s

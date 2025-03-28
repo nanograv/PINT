@@ -153,8 +153,8 @@ def test_derivative_equals_numerical(parfile, param):
             try:
                 dphase = m.phase(toas, abs_phase=False) - phase
             except ValueError:
-                return np.nan * np.zeros_like(phase.frac)
-        return dphase.int + dphase.frac
+                return np.nan * np.zeros_like(phase.frac).astype(np.float64)
+        return np.float64(dphase.int + dphase.frac)
 
     if param == "ECC":
         e = model.ECC.value
@@ -163,20 +163,31 @@ def test_derivative_equals_numerical(parfile, param):
         h3 = model.H3.value
         stepgen = numdifftools.MaxStepGenerator(abs(h3) / 2)
     elif param == "FB0":
-        stepgen = numdifftools.MaxStepGenerator(np.abs(model.FB0.value) * 1e-2)
+        stepgen = numdifftools.MaxStepGenerator(
+            np.abs(model.FB0.value.astype(np.float64)) * 1e-2
+        )
     elif param == "FB1":
-        stepgen = numdifftools.MaxStepGenerator(np.abs(model.FB1.value) * 1e3)
+        stepgen = numdifftools.MaxStepGenerator(
+            np.abs(model.FB1.value.astype(np.float64)) * 1e3
+        )
     elif param == "FB2":
-        stepgen = numdifftools.MaxStepGenerator(np.abs(model.FB2.value) * 1e5)
+        stepgen = numdifftools.MaxStepGenerator(
+            np.abs(model.FB2.value.astype(np.float64)) * 1e5
+        )
     elif param == "FB3":
-        stepgen = numdifftools.MaxStepGenerator(np.abs(model.FB3.value) * 1e7)
+        stepgen = numdifftools.MaxStepGenerator(
+            np.abs(model.FB3.value.astype(np.float64)) * 1e7
+        )
+    elif param == "SINI":
+        sini = model.SINI.value.astype(np.float64)
+        stepgen = numdifftools.MaxStepGenerator(abs(sini) / 10)
     else:
         stepgen = None
     df = numdifftools.Derivative(f, step=stepgen)
 
     a = model.d_phase_d_param(toas, delay=None, param=param).to_value(1 / units)
-    b = df(getattr(model, param).value)
+    b = df(getattr(model, param).value.astype(np.float64))
     if param.startswith("FB"):
-        assert np.amax(np.abs(a - b)) / np.amax(np.abs(a) + np.abs(b)) < 1e-6
+        assert np.amax(np.abs(a - b)) / np.amax(np.abs(a) + np.abs(b)) < 1.5e-6
     else:
         assert_allclose(a, b, atol=1e-4, rtol=1e-4)

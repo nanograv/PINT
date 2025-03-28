@@ -6,7 +6,7 @@ import numpy as np
 from scipy.stats import norm, uniform
 
 from pint.models.priors import Prior, UniformUnboundedRV
-from pint.residuals import Residuals
+from pint.residuals import Residuals, WidebandTOAResiduals
 
 
 class BayesianTiming:
@@ -34,19 +34,32 @@ class BayesianTiming:
     1. The `prior` attribute of each free parameter in the `model` object should be set to
        an instance of :class:`pint.models.priors.Prior`.
 
-    2. The parameters of BayesianTiming.model will change for every likelihood function call.
+    2. The parameters of `BayesianTiming.model` will change for every likelihood function call.
        These parameters in general will not be the best-fit values. Hence, it is NOT a good
        idea to save it as a par file.
 
-    3. Only narow-band TOAs are supported at present.
+    3. Both narrow-band and wide-band TOAs are supported.
 
     4. Currently, only uniform and normal distributions are supported in prior_info. More
        general priors should be set directly in the TimingModel object before creating the
-       BayesianTiming object. Here is an example prior_info object:
+       BayesianTiming object. Here is an example prior_info object::
 
-    `prior_info = { "F0" : {"distr" : "normal", "mu" : 1, "sigma" : 0.00001}, "EFAC1" : {"distr" : "uniform", "pmin" : 0.5, "pmax" : 2.0} }`
+        ```
+        prior_info = {
+            "F0" : {
+                "distr" : "normal",
+                "mu" : 1,
+                "sigma" : 0.00001
+            },
+            "EFAC1" : {
+                "distr" : "uniform",
+                "pmin" : 0.5,
+                "pmax" : 2.0
+            }
+        }
+        ```
 
-    See examples/bayesian-example-NGC6440E.py for detailed example.
+    See `examples/bayesian-example-NGC6440E.py` and `examples/bayesian-wideband-example` for detailed examples.
     """
 
     def __init__(self, model, toas, use_pulse_numbers=False, prior_info=None):
@@ -54,8 +67,12 @@ class BayesianTiming:
         self.model = deepcopy(model)
         self.toas = toas
 
-        if toas.is_wideband():
-            raise NotImplementedError("Wideband TOAs are not yet supported.")
+        if use_pulse_numbers:
+            self.toas.compute_pulse_numbers(self.model)
+
+        self.track_mode = "use_pulse_numbers" if use_pulse_numbers else "nearest"
+
+        self.is_wideband = toas.is_wideband()
 
         self.param_labels = self.model.free_params
         self.params = [getattr(self.model, par) for par in self.param_labels]
@@ -79,8 +96,6 @@ class BayesianTiming:
 
         self.likelihood_method = self._decide_likelihood_method()
 
-        self.track_mode = "use_pulse_numbers" if use_pulse_numbers else "nearest"
-
     def _validate_priors(self):
         for param in self.params:
             if not hasattr(param, "prior") or param.prior is None:
@@ -91,25 +106,20 @@ class BayesianTiming:
                 )
 
     def _decide_likelihood_method(self):
-        """Weighted least squares with normalization term (wls), or Generalized
-        least-squares with normalization term (gls)."""
+        """Weighted least squares with normalization term (wls), or Generalized least
+        squares with normalization term (gls), for narrow-band (nb) or wide-band (wb)
+        dataset."""
 
         if "NoiseComponent" not in self.model.component_types:
             return "wls"
-        else:
-            correlated_errors_present = np.any(
-                [
-                    nc.introduces_correlated_errors
-                    for nc in self.model.NoiseComponent_list
-                ]
+        if correlated_errors_present := np.any(
+            [nc.introduces_correlated_errors for nc in self.model.NoiseComponent_list]
+        ):
+            raise NotImplementedError(
+                "GLS likelihood for correlated noise is not yet implemented."
             )
-            if not correlated_errors_present:
-                return "wls"
-            else:
-                raise NotImplementedError(
-                    "GLS likelihood for correlated noise is not yet implemented."
-                )
-                # return "gls"
+        else:
+            return "wls"
 
     def lnprior(self, params):
         """Basic implementation of a factorized log prior.
@@ -123,7 +133,8 @@ class BayesianTiming:
         """
         if len(params) != self.nparams:
             raise IndexError(
-                f"The number of input parameters ({len(params)}) should be the same as the number of free parameters ({self.nparams})."
+                f"The number of input parameters ({len(params)}) should be the same "
+                f"as the number of free parameters ({self.nparams})."
             )
 
         lnsum = 0.0
@@ -147,10 +158,7 @@ class BayesianTiming:
         Returns:
             ndarray : Sample drawn from the prior distribution
         """
-        result = np.array(
-            [param.prior._rv.ppf(x) for x, param in zip(cube, self.params)]
-        )
-        return result
+        return np.array([param.prior._rv.ppf(x) for x, param in zip(cube, self.params)])
 
     def lnlikelihood(self, params):
         """The Log-likelihood function. If the model does not contain any noise components or
@@ -166,7 +174,11 @@ class BayesianTiming:
             float: The value of the log-likelihood at params
         """
         if self.likelihood_method == "wls":
-            return self._wls_lnlikelihood(params)
+            return (
+                self._wls_wb_lnlikelihood(params)
+                if self.is_wideband
+                else self._wls_nb_lnlikelihood(params)
+            )
         elif self.likelihood_method == "gls":
             raise NotImplementedError(
                 "GLS likelihood for correlated noise is not yet implemented."
@@ -185,21 +197,21 @@ class BayesianTiming:
             float: The value of the log-posterior at params
         """
         lnpr = self.lnprior(params)
-        if np.isnan(lnpr):
-            return -np.inf
-        else:
-            return lnpr + self.lnlikelihood(params)
+        return lnpr + self.lnlikelihood(params) if np.isfinite(lnpr) else -np.inf
 
-    def _wls_lnlikelihood(self, params):
-        """Implementation of Log-Likelihood function for uncorrelated noise only.
-        `wls' stands for weighted least squares. Also includes the normalization
-        term to enable sampling over white noise parameters (EFAC and EQUAD).
+    def _wls_nb_lnlikelihood(self, params):
+        """Implementation of Log-Likelihood function for uncorrelated noise only for
+        narrow-band TOAs. `wls' stands for weighted least squares. Also includes the
+        normalization term to enable sampling over white noise parameters (EFAC and
+        EQUAD).
 
         Args:
-            params (array-like): Parameters
+            params : (array-like)
+                Parameters
 
         Returns:
-            float: The value of the log-likelihood at params
+            float :
+                The value of the log-likelihood at params
         """
         params_dict = dict(zip(self.param_labels, params))
         self.model.set_param_values(params_dict)
@@ -207,3 +219,34 @@ class BayesianTiming:
         chi2 = res.calc_chi2()
         sigmas = self.model.scaled_toa_uncertainty(self.toas).si.value
         return -chi2 / 2 - np.sum(np.log(sigmas))
+
+    def _wls_wb_lnlikelihood(self, params):
+        """Implementation of Log-Likelihood function for uncorrelated noise only for
+        wide-band TOAs. `wls' stands for weighted least squares. Also includes the
+        normalization terms to enable sampling over white noise parameters (EFAC, EQUAD,
+        DMEFAC and DMEQUAD).
+
+        Args:
+            params : (array-like)
+                Parameters
+
+        Returns:
+            float :
+                The value of the log-likelihood at params
+        """
+        params_dict = dict(zip(self.param_labels, params))
+        self.model.set_param_values(params_dict)
+
+        res = WidebandTOAResiduals(
+            self.toas, self.model, toa_resid_args={"track_mode": self.track_mode}
+        )
+
+        chi2_toa = res.toa.calc_chi2()
+        sigmas_toa = self.model.scaled_toa_uncertainty(self.toas).si.value
+        lnL_toa = -chi2_toa / 2 - np.sum(np.log(sigmas_toa))
+
+        chi2_dm = res.dm.calc_chi2()
+        sigmas_dm = self.model.scaled_dm_uncertainty(self.toas).si.value
+        lnL_dm = -chi2_dm / 2 - np.sum(np.log(sigmas_dm))
+
+        return lnL_toa + lnL_dm

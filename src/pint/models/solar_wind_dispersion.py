@@ -1,15 +1,22 @@
 """Dispersion due to the solar wind."""
+
 from warnings import warn
 
 import astropy.constants as const
-import astropy.units as u
 import astropy.time
+import astropy.units as u
 import numpy as np
 import scipy.special
 
-from pint.models.dispersion_model import Dispersion
-from pint.models.parameter import floatParameter, prefixParameter
 import pint.utils
+from pint import DMconst
+from pint.models.dispersion_model import Dispersion
+from pint.models.parameter import (
+    MJDParameter,
+    floatParameter,
+    intParameter,
+    prefixParameter,
+)
 from pint.models.timing_model import MissingTOAs
 from pint.toa_select import TOASelect
 
@@ -256,7 +263,13 @@ def _get_reference_time(
     return default
 
 
-class SolarWindDispersion(Dispersion):
+class SolarWindDispersionBase(Dispersion):
+    """Abstract base class for solar wind dispersion components."""
+
+    pass
+
+
+class SolarWindDispersion(SolarWindDispersionBase):
     """Dispersion due to the solar wind (basic model).
 
     The model is a simple spherically-symmetric model that is fit
@@ -291,6 +304,27 @@ class SolarWindDispersion(Dispersion):
                 value=0.0,
                 aliases=["NE1AU", "SOLARN0"],
                 description="Solar Wind density at 1 AU",
+                tcb2tdb_scale_factor=(const.c * DMconst),
+            )
+        )
+        self.add_param(
+            prefixParameter(
+                name="NE_SW1",
+                units="cm^-3 / yr",
+                value=0.0,
+                description="Derivative of Solar Wind density at 1 AU",
+                unit_template=self.NE_SW_derivative_unit,
+                description_template=self.NE_SW_derivative_description,
+                type_match="float",
+                tcb2tdb_scale_factor=(const.c * DMconst),
+            )
+        )
+        self.add_param(
+            MJDParameter(
+                name="SWEPOCH",
+                description="Epoch of NE_SW measurement",
+                time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -299,13 +333,13 @@ class SolarWindDispersion(Dispersion):
                 value=2.0,
                 units="",
                 description="Solar Wind Model radial power-law index (only for SWM=1)",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="SWM",
-                value=0.0,
-                units="",
+                value=0,
                 description="Solar Wind Model (0 is from Edwards+ 2006, 1 is from You+2007,2012/Hazboun+ 2022)",
             )
         )
@@ -315,10 +349,23 @@ class SolarWindDispersion(Dispersion):
 
     def setup(self):
         super().setup()
-        self.register_dm_deriv_funcs(self.d_dm_d_ne_sw, "NE_SW")
-        self.register_deriv_funcs(self.d_delay_d_ne_sw, "NE_SW")
+
         self.register_dm_deriv_funcs(self.d_dm_d_swp, "SWP")
         self.register_deriv_funcs(self.d_delay_d_swp, "SWP")
+
+        base_nesws = ["NE_SW"] + list(
+            self.get_prefix_mapping_component("NE_SW").values()
+        )
+
+        for nesw_name in base_nesws:
+            self.register_deriv_funcs(self.d_delay_d_ne_sw, nesw_name)
+            self.register_dm_deriv_funcs(self.d_dm_d_ne_sw, nesw_name)
+
+    def NE_SW_derivative_unit(self, n):
+        return f"cm^-3/yr^{n}" if n != 0 else "cm^-3"
+
+    def NE_SW_derivative_description(self, n):
+        return f"{n}'th time derivative of the Solar Wind density at 1 AU"
 
     def solar_wind_geometry(self, toas):
         """Return the geometry of solar wind dispersion.
@@ -366,42 +413,84 @@ class SolarWindDispersion(Dispersion):
         SWM==1:
             Hazboun et al. 2022
         """
-        if self.NE_SW.value == 0:
-            return np.zeros(len(toas)) * u.pc / u.cm**3
-        if self.SWM.value == 0 or self.SWM.value == 1:
-            solar_wind_geometry = self.solar_wind_geometry(toas)
-            solar_wind_dm = self.NE_SW.quantity * solar_wind_geometry
+        ne_sw_terms = self.get_NE_SW_terms()
+
+        if len(ne_sw_terms) == 1:
+            ne_sw = self.NE_SW.quantity * np.ones(len(toas))
         else:
-            raise NotImplementedError(
-                "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
+            if any(t.value != 0 for t in ne_sw_terms[1:]):
+                SWEPOCH = self.SWEPOCH.value
+                if SWEPOCH is None:
+                    # Should be ruled out by validate()
+                    raise ValueError(
+                        f"SWEPOCH not set but some NE_SW derivatives are not zero: {ne_sw_terms}"
+                    )
+                else:
+                    dt = (toas["tdbld"] - SWEPOCH) * u.day
+                dt_value = dt.to_value(u.yr)
+            else:
+                dt_value = np.zeros(len(toas), dtype=np.longdouble)
+
+            ne_sw_terms_value = [d.value for d in ne_sw_terms]
+            ne_sw = (
+                pint.utils.taylor_horner(dt_value, ne_sw_terms_value) * self.NE_SW.units
             )
+
+        if np.all(ne_sw.value == 0):
+            return np.zeros(len(toas)) * u.pc / u.cm**3
+
+        if self.SWM.value not in [0, 1]:
+            raise NotImplementedError(
+                f"Solar Dispersion Delay not implemented for SWM {self.SWM.value}"
+            )
+
+        solar_wind_geometry = self.solar_wind_geometry(toas)
+        solar_wind_dm = ne_sw * solar_wind_geometry
         return solar_wind_dm.to(u.pc / u.cm**3)
 
     def solar_wind_delay(self, toas, acc_delay=None):
         """This is a wrapper function to compute solar wind dispersion delay."""
-        if self.NE_SW.value == 0:
-            return np.zeros(len(toas)) * u.s
         return self.dispersion_type_delay(toas)
+
+    def get_NE_SW_terms(self):
+        """Return a list of the NE_SW term values in the model: [NE_SW, NE_SW1, ..., NE_SWn]"""
+        return [self.NE_SW.quantity] + self._parent.get_prefix_list(
+            "NE_SW", start_index=1
+        )
 
     def d_dm_d_ne_sw(self, toas, param_name, acc_delay=None):
         """Derivative of of DM wrt the solar wind ne amplitude."""
-        if self.SWM.value == 0 or self.SWM.value == 1:
+        if self.SWM.value in [0, 1]:
             solar_wind_geometry = self.solar_wind_geometry(toas)
         else:
             raise NotImplementedError(
                 "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
             )
-        return solar_wind_geometry
+
+        par = getattr(self, param_name)
+        order = 0 if param_name == "NE_SW" else par.index
+
+        ne_sws = self.get_NE_SW_terms()
+
+        ne_sw_terms = np.longdouble(np.zeros(len(ne_sws)))
+        ne_sw_terms[order] = np.longdouble(1.0)
+
+        if self.SWEPOCH.value is None:
+            if any(t.value != 0 for t in ne_sws[1:]):
+                # Should be ruled out by validate()
+                raise ValueError(f"SWEPOCH is not set but {param_name} is not zero")
+            SWEPOCH = 0
+        else:
+            SWEPOCH = self.SWEPOCH.value
+
+        dt = (toas["tdbld"] - SWEPOCH) * u.day
+
+        return (solar_wind_geometry * dt**order / scipy.special.factorial(order)).to(
+            u.pc / u.cm**3 / par.units
+        )
 
     def d_delay_d_ne_sw(self, toas, param_name, acc_delay=None):
-        try:
-            bfreq = self._parent.barycentric_radio_freq(toas)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = toas.table["freq"]
-        deriv = self.d_delay_d_dmparam(toas, "NE_SW")
-        deriv[bfreq < 1.0 * u.MHz] = 0.0
-        return deriv
+        return self.d_delay_d_dmparam(toas, param_name)
 
     def d_solar_wind_geometry_d_swp(self, toas, param_name, acc_delay=None):
         """Derivative of solar_wind_geometry (path length) wrt power-law index p
@@ -444,10 +533,12 @@ class SolarWindDispersion(Dispersion):
 
     def print_par(self, format="pint"):
         result = ""
-        result += getattr(self, "NE_SW").as_parfile_line(format=format)
-        result += getattr(self, "SWM").as_parfile_line(format=format)
-        if self.SWM.value == 1:
-            result += getattr(self, "SWP").as_parfile_line(format=format)
+        for par in self.params:
+            if par == "SWP" and self.SWM.value != 1:
+                continue
+            else:
+                result += getattr(self, par).as_parfile_line(format=format)
+
         return result
 
     def get_max_dm(self):
@@ -514,11 +605,12 @@ class SolarWindDispersion(Dispersion):
             )
 
 
-class SolarWindDispersionX(Dispersion):
+class SolarWindDispersionX(SolarWindDispersionBase):
     """This class provides a SWX model - multiple Solar Wind segments.
 
     This model lets the user specify time ranges and fit for a different
-    SWXDM (max solar wind DM) value and SWXP (radial power-law index) in each time range.
+    SWXDM (max solar wind DM) value with a different SWXP (radial power-law index)
+    in each time range.
 
     The default radial power-law index value of 2 corresponds to the Edwards et al. model.
     Other values are for the You et al./Hazboun et al. model.
@@ -528,6 +620,8 @@ class SolarWindDispersionX(Dispersion):
     However, to get the peak to still be the requested max DM the values are scaled compared
     to the standard model: the standard model goes from opposition (min) to conjunction (max),
     while this model goes from 0 to conjunction (max), so the scaling is ``((conjunction - opposition)/conjuction)``.
+
+    Also note that fitting for SWXP is possible but not advised.
 
     See `Solar Wind Examples <examples/solar_wind.html>`_.
 
@@ -560,7 +654,7 @@ class SolarWindDispersionX(Dispersion):
     def __init__(self):
         super().__init__()
 
-        self.add_swx_range(None, None, swxdm=0, swxp=2, frozen=False, index=1)
+        self.add_swx_range(None, None, swxdm=0, swxp=2, index=1)
 
         self.set_special_params(["SWXDM_0001", "SWXP_0001", "SWXR1_0001", "SWXR2_0001"])
         self.dm_value_funcs += [self.swx_dm]
@@ -690,7 +784,7 @@ class SolarWindDispersionX(Dispersion):
         swxp : float or astropy.quantity.Quantity
             Solar wind power-law index
         frozen : bool
-            Indicates whether SWXDM and SWXP will be fit.
+            Indicates whether SWXDM will be fit.
 
         Returns
         -------
@@ -713,8 +807,7 @@ class SolarWindDispersionX(Dispersion):
 
         if int(index) in self.get_prefix_mapping_component("SWXDM_"):
             raise ValueError(
-                "Index '%s' is already in use in this model. Please choose another."
-                % index
+                f"Index '{index}' is already in use in this model. Please choose another."
             )
         if isinstance(swxdm, u.quantity.Quantity):
             swxdm = swxdm.to_value(u.pc / u.cm**3)
@@ -730,41 +823,45 @@ class SolarWindDispersionX(Dispersion):
             swxp = swxp.value
         self.add_param(
             prefixParameter(
-                name="SWXDM_" + i,
+                name=f"SWXDM_{i}",
                 units="pc cm^-3",
                 value=swxdm,
                 description="Max Solar Wind DM",
                 parameter_type="float",
                 frozen=frozen,
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
             prefixParameter(
-                name="SWXP_" + i,
+                name=f"SWXP_{i}",
                 value=swxp,
                 description="Solar wind power-law index",
                 parameter_type="float",
-                frozen=frozen,
+                frozen=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
             prefixParameter(
-                name="SWXR1_" + i,
+                name=f"SWXR1_{i}",
                 units="MJD",
                 description="Beginning of SWX interval",
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_start,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
             prefixParameter(
-                name="SWXR2_" + i,
+                name=f"SWXR2_{i}",
                 units="MJD",
                 description="End of SWX interval",
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_end,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.setup()
@@ -781,11 +878,7 @@ class SolarWindDispersionX(Dispersion):
             Number or list/array of numbers corresponding to SWX indices to be removed from model.
         """
 
-        if (
-            isinstance(index, int)
-            or isinstance(index, float)
-            or isinstance(index, np.int64)
-        ):
+        if isinstance(index, (int, float, np.int64)):
             indices = [index]
         elif isinstance(index, (list, np.ndarray)):
             indices = index
@@ -807,10 +900,7 @@ class SolarWindDispersionX(Dispersion):
         inds : np.ndarray
             Array of SWX indices in model.
         """
-        inds = []
-        for p in self.params:
-            if "SWXDM_" in p:
-                inds.append(int(p.split("_")[-1]))
+        inds = [int(p.split("_")[-1]) for p in self.params if "SWXDM_" in p]
         return np.array(inds)
 
     def setup(self):
@@ -821,7 +911,7 @@ class SolarWindDispersionX(Dispersion):
             if prefix_par.startswith("SWXDM_"):
                 # check to make sure power-law index is present
                 # if not, put in default
-                p_name = "SWXP_" + pint.utils.split_prefixed_name(prefix_par)[1]
+                p_name = f"SWXP_{pint.utils.split_prefixed_name(prefix_par)[1]}"
                 if not hasattr(self, p_name):
                     self.add_param(
                         prefixParameter(
@@ -924,8 +1014,8 @@ class SolarWindDispersionX(Dispersion):
         # Get SWX delays
         dm = np.zeros(len(tbl)) * self._parent.DM.units
         for k, v in select_idx.items():
-            dmmax = getattr(self, k).quantity
             if len(v) > 0:
+                dmmax = getattr(self, k).quantity
                 dm[v] += (
                     dmmax
                     * (
@@ -1001,7 +1091,7 @@ class SolarWindDispersionX(Dispersion):
         r1 = getattr(self, SWXR1_mapping[swxp_index]).quantity
         r2 = getattr(self, SWXR2_mapping[swxp_index]).quantity
 
-        swx_name = "SWXDM_" + pint.utils.split_prefixed_name(param_name)[1]
+        swx_name = f"SWXDM_{pint.utils.split_prefixed_name(param_name)[1]}"
         condition = {swx_name: (r1.mjd, r2.mjd)}
         select_idx = self.swx_toas_selector.get_select_index(
             condition, tbl["mjd_float"]
@@ -1151,7 +1241,7 @@ class SolarWindDispersionX(Dispersion):
         sorted_list = sorted(SWXDM_mapping.keys())
         if len(ne_sws) == 1:
             ne_sws = ne_sws[0] * np.ones(len(sorted_list))
-        if not len(sorted_list) == len(ne_sws):
+        if len(sorted_list) != len(ne_sws):
             raise ValueError(
                 f"Length of input NE_SW values ({len(ne_sws)}) must match number of SWX segments ({len(sorted_list)})"
             )

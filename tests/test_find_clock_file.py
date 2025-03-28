@@ -1,6 +1,7 @@
 import os
 
 import astropy.units as u
+import contextlib
 import numpy as np
 import pytest
 from astropy.time import Time
@@ -17,18 +18,12 @@ def sandbox(tmp_path):
 
     o = Sandbox()
     e = os.environ.copy()
-    try:
+    with contextlib.suppress(KeyError):
         del os.environ["PINT_CLOCK_OVERRIDE"]
-    except KeyError:
-        pass
-    try:
+    with contextlib.suppress(KeyError):
         del os.environ["TEMPO"]
-    except KeyError:
-        pass
-    try:
+    with contextlib.suppress(KeyError):
         del os.environ["TEMPO2"]
-    except KeyError:
-        pass
     o.override_dir = tmp_path / "override"
     o.override_dir.mkdir()
     o.repo_dir = tmp_path / "repo"
@@ -56,7 +51,7 @@ def sandbox(tmp_path):
         T2runtime/clock/fake.clk                 7.0   ---
         """
     )
-    o.repo_uri = o.repo_dir.as_uri() + "/"
+    o.repo_uri = f"{o.repo_dir.as_uri()}/"
 
     o.t2_dir = tmp_path / "t2"
     o.t2_clock = o.clocks[2]

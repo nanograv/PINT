@@ -9,9 +9,9 @@ The pulse phase and frequency at time T are then calculated as:
 
     \\Delta T = 1440(T-T_{\\rm mid})
 
-    \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+    \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
 
-    f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+    f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \\Delta T + 3 COEFF[4] \\Delta T^2  + \\ldots \\right)
 
 Examples
 --------
@@ -32,13 +32,15 @@ References
 ----------
 http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
 """
+
+from collections import OrderedDict
+from warnings import warn
+
 import astropy.table as table
 import astropy.units as u
 import numpy as np
 from astropy.io import registry
 from astropy.time import Time
-from collections import OrderedDict
-
 from loguru import logger as log
 
 try:
@@ -46,9 +48,7 @@ try:
 except (ModuleNotFoundError, ImportError) as e:
 
     def tqdm(*args, **kwargs):
-        if args:
-            return args[0]
-        return kwargs.get("iterable", None)
+        return args[0] if args else kwargs.get("iterable", None)
 
 
 import pint.toa as toa
@@ -86,7 +86,7 @@ class PolycoEntry:
     """One Polyco entry.
 
     Referenced from polyco.py authored by
-        - Paul S. Ray <paul.ray@nrl.navy.mil>
+        - Paul S. Ray <paul.s.ray3.civ@us.navy.mil>
         - Matthew Kerr <matthew.kerr@gmail.com>
 
     Parameters
@@ -200,8 +200,7 @@ class PolycoEntry:
         s = data2longdouble(0.0)
         for i in range(1, self.ncoeff):
             s += data2longdouble(i) * self.coeffs[i] * dt ** (i - 1)
-        freq = self.f0 + s / 60.0
-        return freq
+        return self.f0 + s / 60.0
 
     def evalfreqderiv(self, t):
         """Return the frequency derivative at time t.
@@ -226,8 +225,7 @@ class PolycoEntry:
                 * self.coeffs[i]
                 * dt ** (i - 2)
             )
-        freqd = s / (60.0 * 60.0)
-        return freqd
+        return s / (60.0 * 60.0)
 
 
 # Read polycos file data to table
@@ -268,9 +266,9 @@ def tempo_polyco_table_reader(filename):
 
         \\Delta T = 1440(T-T_{\\rm mid})
 
-        \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+        \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
 
-        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \\Delta T + 3 COEFF[4] \\Delta T^2  + \\ldots \\right)
 
     Parameters
     ----------
@@ -305,7 +303,7 @@ def tempo_polyco_table_reader(filename):
             fields = f.readline().split()
             refPhaseInt, refPhaseFrac = fields[0].split(".")
             refPhaseInt = np.longdouble(refPhaseInt)
-            refPhaseFrac = np.longdouble("." + refPhaseFrac)
+            refPhaseFrac = np.longdouble(f".{refPhaseFrac}")
             if refPhaseInt < 0:
                 refPhaseFrac = -refPhaseFrac
 
@@ -324,10 +322,9 @@ def tempo_polyco_table_reader(filename):
 
             # Read coefficients
             coeffs = []
-            for i in range(-(nCoeff // -3)):
+            for _ in range(-(nCoeff // -3)):
                 line = f.readline()
-                for c in line.split():
-                    coeffs.append(data2longdouble(c))
+                coeffs.extend(data2longdouble(c) for c in line.split())
             coeffs = np.array(coeffs)
 
             entry = PolycoEntry(
@@ -357,8 +354,7 @@ def tempo_polyco_table_reader(filename):
 
             line = f.readline()
 
-    pTable = table.Table(entries, meta={"name": "Polyco Data Table"})
-    return pTable
+    return table.Table(entries, meta={"name": "Polyco Data Table"})
 
 
 def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
@@ -397,9 +393,9 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
 
         \\Delta T = 1440(T-T_{\\rm mid})
 
-        \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+        \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
 
-        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \\Delta T + 3 COEFF[4] \\Delta T^2  + \\ldots \\right)
 
     Parameters
     ----------
@@ -468,6 +464,9 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
                 if (i + 1) % 3 == 0:
                     coeff_block += "\n"
 
+            if not coeff_block.endswith("\n"):
+                coeff_block += "\n"
+
             f.write(line1 + line2 + coeff_block)
 
 
@@ -511,7 +510,7 @@ class Polycos:
                 cls.add_polyco_file_format(
                     fmt["format"], "w", None, fmt["write_method"]
                 )
-            elif fmt["read_method"] is not None and fmt["write_method"] is not None:
+            elif fmt["read_method"] is not None:
                 cls.add_polyco_file_format(
                     fmt["format"], "rw", fmt["read_method"], fmt["write_method"]
                 )
@@ -533,9 +532,11 @@ class Polycos:
             log.info(f"Reading polycos from '{filename}'")
             if format not in [f["format"] for f in self.polycoFormats]:
                 raise ValueError(
-                    "Unknown polyco file format '" + format + "'\n"
-                    "Please use function 'Polyco.add_polyco_file_format()'"
-                    " to register the format\n"
+                    (
+                        f"Unknown polyco file format '{format}" + "'\n"
+                        "Please use function 'Polyco.add_polyco_file_format()'"
+                        " to register the format\n"
+                    )
                 )
             else:
                 self.fileFormat = format
@@ -652,16 +653,20 @@ class Polycos:
         Polycos
 
         """
-        raise DeprecationWarning(
-            "Use `p=pint.polycos.Polycos.read()` rather than `p.read_polyco_file()`"
+        warn(
+            "Use `p=pint.polycos.Polycos.read()` rather than `p.read_polyco_file()`",
+            DeprecationWarning,
         )
+
         self.fileName = filename
 
         if format not in [f["format"] for f in self.polycoFormats]:
             raise ValueError(
-                "Unknown polyco file format '" + format + "'\n"
-                "Please use function 'Polyco.add_polyco_file_format()'"
-                " to register the format\n"
+                (
+                    f"Unknown polyco file format '{format}'\n"
+                    f"Please use function 'Polyco.add_polyco_file_format()'"
+                    f" to register the format\n"
+                )
             )
         else:
             self.fileFormat = format
@@ -727,8 +732,6 @@ class Polycos:
         mjdStart = data2longdouble(mjdStart)
         mjdEnd = data2longdouble(mjdEnd)
         segLength = int(segLength)
-        obsFreq = float(obsFreq)
-
         # Use the planetary ephemeris specified in the model, if available.
         if model.EPHEM.value is not None:
             ephem = model.EPHEM.value
@@ -750,93 +753,100 @@ class Polycos:
         )
         tmids = data2longdouble(tmids) / MIN_PER_DAY
 
-        # generate the ploynomial coefficents
-        if method == "TEMPO":
-            entryList = []
-            # Using tempo1 method to create polycos
-            # If you want to disable the progress bar, add disable=True to the tqdm() call.
-            for tmid in tqdm(tmids, disable=not progress):
-                tStart = tmid - mjdSpan / 2
-                tStop = tmid + mjdSpan / 2
-                nodes = np.linspace(tStart, tStop, numNodes)
-
-                toaMid = toa.get_TOAs_list(
-                    [
-                        toa.TOA(
-                            (np.modf(tmid)[1], np.modf(tmid)[0]), obs=obs, freq=obsFreq
-                        )
-                    ],
-                    ephem=ephem,
-                )
-
-                refPhase = model.phase(toaMid, abs_phase=True)
-
-                # Create node toas(Time sample using TOA class)
-                toaList = [
-                    toa.TOA(
-                        (np.modf(toaNode)[1], np.modf(toaNode)[0]),
-                        obs=obs,
-                        freq=obsFreq,
-                    )
-                    for toaNode in nodes
-                ]
-
-                toas = toa.get_TOAs_list(toaList, ephem=ephem)
-
-                ph = model.phase(toas, abs_phase=True)
-                dt = (nodes - tmid) * MIN_PER_DAY
-                rdcPhase = ph - refPhase
-                rdcPhase = rdcPhase.int - (dt * model.F0.value * 60.0) + rdcPhase.frac
-                dtd = dt.astype(float)  # Truncate to double
-                rdcPhased = rdcPhase.astype(float)
-                coeffs = np.polyfit(dtd, rdcPhased, ncoeff - 1)[::-1]
-
-                date, hms = Time(tmid, format="mjd", scale="utc").iso.split()
-                yy, mm, dd = date.split("-")
-                date = dd + "-" + MONTHS[int(mm) - 1] + "-" + yy[-2:]
-                hms = float(hms.replace(":", ""))
-
-                entry = PolycoEntry(
-                    tmid,
-                    segLength,
-                    refPhase.int,
-                    refPhase.frac,
-                    model.F0.value,
-                    ncoeff,
-                    coeffs,
-                )
-
-                entry_dict = OrderedDict()
-                entry_dict["psr"] = model.PSR.value
-                entry_dict["date"] = date
-                entry_dict["utc"] = hms
-                entry_dict["tmid"] = tmid
-                entry_dict["dm"] = model.DM.value
-                entry_dict["doppler"] = 0.0
-                entry_dict["logrms"] = 0.0
-                entry_dict["mjd_span"] = segLength
-                entry_dict["t_start"] = entry.tstart
-                entry_dict["t_stop"] = entry.tstop
-                entry_dict["obs"] = obs
-                entry_dict["obsfreq"] = obsFreq
-
-                if model.is_binary:
-                    binphase = model.orbital_phase(toaMid, radians=False)[0]
-                    entry_dict["binary_phase"] = binphase
-                    b = model.get_components_by_category()["pulsar_system"][0]
-                    entry_dict["f_orbit"] = 1 / b.PB.value
-
-                entry_dict["entry"] = entry
-                entryList.append(entry_dict)
-
-            pTable = table.Table(entryList, meta={"name": "Polyco Data Table"})
-            out = cls()
-            out.polycoTable = pTable
-            if len(out.polycoTable) == 0:
-                raise ValueError("Zero polycos found for table")
-            return out
-        else:
+        if method != "TEMPO":
             raise NotImplementedError("Only TEMPO method has been implemented.")
+        entryList = []
+        obsFreq = float(obsFreq)
+
+        # Using tempo1 method to create polycos
+        # If you want to disable the progress bar, add disable=True to the tqdm() call.
+        for tmid in tqdm(tmids, disable=not progress):
+            tStart = tmid - mjdSpan / 2
+            tStop = tmid + mjdSpan / 2
+            nodes = np.linspace(tStart, tStop, numNodes)
+
+            toaMid = toa.get_TOAs_array(
+                (np.modf(tmid)[1], np.modf(tmid)[0]),
+                obs=obs,
+                freqs=obsFreq,
+                ephem=ephem,
+            )
+            # toaMid = toa.get_TOAs_list(
+            #     [toa.TOA()],
+            # )
+
+            refPhase = model.phase(toaMid, abs_phase=True)
+
+            # Create node toas(Time sample using TOA class)
+            # toaList = [
+            #     toa.TOA(
+            #         (np.modf(toaNode)[1], np.modf(toaNode)[0]),
+            #         obs=obs,
+            #         freq=obsFreq,
+            #     )
+            #     for toaNode in nodes
+            # ]
+
+            # toas = toa.get_TOAs_list(toaList, ephem=ephem)
+            toas = toa.get_TOAs_array(
+                (np.modf(nodes)[0], np.modf(nodes)[1]),
+                obs=obs,
+                freqs=obsFreq,
+                ephem=ephem,
+            )
+
+            ph = model.phase(toas, abs_phase=True)
+            dt = (nodes - tmid) * MIN_PER_DAY
+            rdcPhase = ph - refPhase
+            rdcPhase = rdcPhase.int - (dt * model.F0.value * 60.0) + rdcPhase.frac
+            dtd = dt.astype(float)  # Truncate to double
+            rdcPhased = rdcPhase.astype(float)
+            coeffs = np.polyfit(dtd, rdcPhased, ncoeff - 1)[::-1]
+
+            date, hms = Time(tmid, format="mjd", scale="utc").iso.split()
+            yy, mm, dd = date.split("-")
+            date = f"{dd}-{MONTHS[int(mm) - 1]}-{yy[-2:]}"
+            hms = float(hms.replace(":", ""))
+
+            entry = PolycoEntry(
+                tmid,
+                segLength,
+                refPhase.int,
+                refPhase.frac,
+                model.F0.value,
+                ncoeff,
+                coeffs,
+            )
+
+            entry_dict = OrderedDict()
+            entry_dict["psr"] = model.PSR.value
+            entry_dict["date"] = date
+            entry_dict["utc"] = hms
+            entry_dict["tmid"] = tmid
+            entry_dict["dm"] = model.DM.value
+            entry_dict["doppler"] = 0.0
+            entry_dict["logrms"] = 0.0
+            entry_dict["mjd_span"] = segLength
+            entry_dict["t_start"] = entry.tstart
+            entry_dict["t_stop"] = entry.tstop
+            entry_dict["obs"] = obs
+            entry_dict["obsfreq"] = obsFreq
+
+            if model.is_binary:
+                binphase = model.orbital_phase(toaMid, radians=False)[0]
+                entry_dict["binary_phase"] = binphase
+                b = model.get_components_by_category()["pulsar_system"][0]
+                entry_dict["f_orbit"] = 1 / b.PB.value
+
+            entry_dict["entry"] = entry
+            entryList.append(entry_dict)
+
+        pTable = table.Table(entryList, meta={"name": "Polyco Data Table"})
+        out = cls()
+        out.polycoTable = pTable
+        if len(out.polycoTable) == 0:
+            raise ValueError("Zero polycos found for table")
+        return out
 
     def write_polyco_file(self, filename="polyco.dat", format="tempo"):
         """Write Polyco table to a file.
@@ -851,9 +861,11 @@ class Polycos:
 
         if format not in [f["format"] for f in self.polycoFormats]:
             raise ValueError(
-                "Unknown polyco file format '" + format + "'\n"
-                "Please use function 'self.add_polyco_file_format()'"
-                " to register the format\n"
+                (
+                    f"Unknown polyco file format '{format}" + "'\n"
+                    "Please use function 'self.add_polyco_file_format()'"
+                    " to register the format\n"
+                )
             )
 
         self.polycoTable.write(filename, format=format)
@@ -933,7 +945,7 @@ class Polycos:
 
         .. math::
 
-            \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \\ldots
+            \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
 
         Calculation done using :meth:`pint.polycos.PolycoEntry.evalabsphase`
         """
@@ -956,9 +968,7 @@ class Polycos:
             # Maybe add sort function here, since the time has been masked.
         phaseInt = np.hstack(phaseInt).value
         phaseFrac = np.hstack(phaseFrac).value
-        absPhase = Phase(phaseInt, phaseFrac)
-
-        return absPhase
+        return Phase(phaseInt, phaseFrac)
 
     def eval_spin_freq(self, t):
         """

@@ -14,7 +14,7 @@ import pint.models
 import pint.residuals
 import pint.toa as toa
 from pint.eventstats import h2sig, hmw
-from pint.fermi_toas import load_Fermi_TOAs
+from pint.fermi_toas import get_Fermi_TOAs
 from pint.fits_utils import read_fits_event_mjds_tuples
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram
@@ -25,7 +25,6 @@ __all__ = ["main"]
 
 
 def main(argv=None):
-
     parser = argparse.ArgumentParser(
         description="Use PINT to compute H-test and plot Phaseogram from a Fermi FT1 event file.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -78,6 +77,16 @@ def main(argv=None):
     parser.add_argument(
         "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
     )
+    parser.add_argument(
+        "--allow_tcb",
+        action="store_true",
+        help="Convert TCB par files to TDB automatically",
+    )
+    parser.add_argument(
+        "--allow_T2",
+        action="store_true",
+        help="Guess the underlying binary model when T2 is given",
+    )
 
     args = parser.parse_args(argv)
     pint.logging.setup(
@@ -89,7 +98,10 @@ def main(argv=None):
         args.addphase = True
 
     # Read in model
-    modelin = pint.models.get_model(args.parfile)
+    modelin = pint.models.get_model(
+        args.parfile, allow_T2=args.allow_T2, allow_tcb=args.allow_tcb
+    )
+
     if "ELONG" in modelin.params:
         tc = SkyCoord(
             modelin.ELONG.quantity,
@@ -106,20 +118,14 @@ def main(argv=None):
     # Read event file and return list of TOA objects
     maxmjd = np.inf if (args.maxMJD is None) else float(args.maxMJD)
     minmjd = 0.0 if (args.minMJD is None) else float(args.minMJD)
-    tl = load_Fermi_TOAs(
+    # Now convert to TOAs object and compute TDBs and posvels
+    # For Fermi, we are not including GPS or TT(BIPM) corrections
+    ts = get_Fermi_TOAs(
         args.eventfile,
         maxmjd=maxmjd,
         minmjd=minmjd,
         weightcolumn=args.weightcol,
         targetcoord=tc,
-    )
-
-    # Now convert to TOAs object and compute TDBs and posvels
-    # For Fermi, we are not including GPS or TT(BIPM) corrections
-    ts = toa.get_TOAs_list(
-        tl,
-        include_gps=False,
-        include_bipm=False,
         planets=args.planets,
         ephem=args.ephem,
     )
@@ -174,11 +180,11 @@ def main(argv=None):
             hdulist[1] = bt
         if args.outfile is None:
             # Overwrite the existing file
-            log.info("Overwriting existing FITS file " + args.eventfile)
+            log.info(f"Overwriting existing FITS file {args.eventfile}")
             hdulist.flush(verbose=True, output_verify="warn")
         else:
             # Write to new output file
-            log.info("Writing output FITS file " + args.outfile)
+            log.info(f"Writing output FITS file {args.outfile}")
             hdulist.writeto(
                 args.outfile, overwrite=True, checksum=True, output_verify="warn"
             )

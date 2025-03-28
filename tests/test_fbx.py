@@ -1,4 +1,5 @@
 """Various tests to assess the performance of the FBX model."""
+
 import os
 
 import astropy.units as u
@@ -29,7 +30,7 @@ def modelJ0023():
 
 
 ltres, ltbindelay = np.genfromtxt(
-    parfileJ0023 + ".tempo2_test", skip_header=1, unpack=True
+    f"{parfileJ0023}.tempo2_test", skip_header=1, unpack=True
 )
 
 
@@ -51,13 +52,13 @@ def test_derivative(modelJ0023, toasJ0023):
     testp = tdu.get_derivative_params(modelJ0023)
     delay = modelJ0023.delay(toasJ0023)
     for p in testp.keys():
-        print("Runing derivative for %s", "d_delay_d_" + p)
+        print("Runing derivative for %s", f"d_delay_d_{p}")
         if p in ["EPS2", "EPS1"]:
             testp[p] = 15
         ndf = modelJ0023.d_phase_d_param_num(toasJ0023, p, testp[p])
         adf = modelJ0023.d_phase_d_param(toasJ0023, delay, p)
         diff = adf - ndf
-        if not np.all(diff.value) == 0.0:
+        if np.all(diff.value) != 0.0:
             mean_der = (adf + ndf) / 2.0
             relative_diff = np.abs(diff) / np.abs(mean_der)
             # print "Diff Max is :", np.abs(diff).max()
@@ -76,8 +77,10 @@ def test_derivative(modelJ0023, toasJ0023):
             else:
                 tol = 1e-3
             print(
-                "derivative relative diff for %s, %lf"
-                % ("d_delay_d_" + p, np.nanmax(relative_diff).value)
+                (
+                    "derivative relative diff for %s, %lf"
+                    % (f"d_delay_d_{p}", np.nanmax(relative_diff).value)
+                )
             )
             assert np.nanmax(relative_diff) < tol, msg
         else:

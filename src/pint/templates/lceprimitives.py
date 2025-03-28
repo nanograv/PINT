@@ -14,7 +14,7 @@ def edep_gradient(self, grad_func, phases, log10_ens=3, free=False):
     the difference in (log) energy.
 
     However, there is one complication.  Because of the bounds enforced
-    by "_make_p", the gradient for the slope parameters vanishese at
+    by "_make_p", the gradient for the slope parameters vanishes at
     some energies when the bound has saturated.  These entries should be
     zeroed.
     """
@@ -37,9 +37,7 @@ def edep_gradient(self, grad_func, phases, log10_ens=3, free=False):
         hi_mask = p[i] >= bounds[i][1]
         t[n + i, lo_mask | hi_mask] = 0
         t[i, lo_mask | hi_mask] = 0
-    if free:
-        return t[np.append(self.free, self.slope_free)]
-    return t
+    return t[np.append(self.free, self.slope_free)] if free else t
 
 
 class LCEPrimitive(LCPrimitive):
@@ -48,11 +46,11 @@ class LCEPrimitive(LCPrimitive):
 
     # TODO -- this is so awkward, fix it?
     def parse_kwargs(self, kwargs):
-        # acceptable keyword arguments, can be overriden by children
+        # acceptable keyword arguments, can be overridden by children
         recognized_kwargs = ["p", "free", "slope", "slope_free"]
         for key in kwargs.keys():
             if key not in recognized_kwargs:
-                raise ValueError("kwarg %s not recognized" % key)
+                raise ValueError(f"kwarg {key} not recognized")
         self.__dict__.update(kwargs)
 
     def _einit(self):
@@ -150,7 +148,6 @@ class LCEPrimitive(LCPrimitive):
 
 
 class LCEWrappedFunction(LCEPrimitive, LCWrappedFunction):
-
     __doc__ = LCWrappedFunction.__doc__
 
     def gradient(self, phases, log10_ens=3, free=False):
@@ -268,29 +265,31 @@ class LCELorentzian2(LCEWrappedFunction, LCLorentzian2):
     def base_int(self, x1, x2, log10_ens, index=0):
         # TODO -- I haven't checked this code
         raise NotImplementedError()
-        e, gamma1, gamma2, x0 = self._make_p(log10_ens)
-        # the only case where g1 and g2 can be different is if we're on the
-        # 0th wrap, i.e. index=0; this also includes the case when we want
-        # to use base_int to do a "full" integral
-        g1 = np.where((x1 + index) < x0, gamma1, gamma2)
-        g2 = np.where((x2 + index) >= x0, gamma2, gamma1)
-        z1 = (x1 + index - x0) / g1
-        z2 = (x2 + index - x0) / g2
-        k = 2.0 / (gamma1 + gamma2) / PI
-        return k * (g2 * np.arctan(z2) - g1 * np.arctan(z1))
+        # abhisrkckl: commented out unreachable code
+        # e, gamma1, gamma2, x0 = self._make_p(log10_ens)
+        # # the only case where g1 and g2 can be different is if we're on the
+        # # 0th wrap, i.e. index=0; this also includes the case when we want
+        # # to use base_int to do a "full" integral
+        # g1 = np.where((x1 + index) < x0, gamma1, gamma2)
+        # g2 = np.where((x2 + index) >= x0, gamma2, gamma1)
+        # z1 = (x1 + index - x0) / g1
+        # z2 = (x2 + index - x0) / g2
+        # k = 2.0 / (gamma1 + gamma2) / PI
+        # return k * (g2 * np.arctan(z2) - g1 * np.arctan(z1))
 
     def random(self, log10_ens):
         """Use multinomial technique to return random photons from
         both components."""
         # TODO -- I haven't checked this code
         raise NotImplementedError()
-        if not isvector(log10_ens):
-            n = log10_ens
-            log10_ens = 3
-        else:
-            n = len(log10_ens)
-        e, gamma1, gamma2, x0 = self._make_p(log10_ens)  # only change
-        return two_comp_mc(n, gamma1, gamma2, x0, cauchy.rvs)
+        # abhisrkckl: commented out unreachable code
+        # if not isvector(log10_ens):
+        #     n = log10_ens
+        #     log10_ens = 3
+        # else:
+        #     n = len(log10_ens)
+        # e, gamma1, gamma2, x0 = self._make_p(log10_ens)  # only change
+        # return two_comp_mc(n, gamma1, gamma2, x0, cauchy.rvs)
 
 
 class LCEGaussian2(LCEWrappedFunction, LCGaussian2):
@@ -309,27 +308,29 @@ class LCEGaussian2(LCEWrappedFunction, LCGaussian2):
     def base_int(self, x1, x2, log10_ens, index=0):
         # TODO -- I haven't checked this code
         raise NotImplementedError()
-        e, width1, width2, x0 = self._make_p(log10_ens)
-        w1 = np.where((x1 + index) < x0, width1, width2)
-        w2 = np.where((x2 + index) >= x0, width2, width1)
-        z1 = (x1 + index - x0) / w1
-        z2 = (x2 + index - x0) / w2
-        k1 = 2 * w1 / (width1 + width2)
-        k2 = 2 * w2 / (width1 + width2)
-        return 0.5 * (k2 * erf(z2 / ROOT2) - k1 * erf(z1 / ROOT2))
+        # abhisrkckl: commented out unreachable code
+        # e, width1, width2, x0 = self._make_p(log10_ens)
+        # w1 = np.where((x1 + index) < x0, width1, width2)
+        # w2 = np.where((x2 + index) >= x0, width2, width1)
+        # z1 = (x1 + index - x0) / w1
+        # z2 = (x2 + index - x0) / w2
+        # k1 = 2 * w1 / (width1 + width2)
+        # k2 = 2 * w2 / (width1 + width2)
+        # return 0.5 * (k2 * erf(z2 / ROOT2) - k1 * erf(z1 / ROOT2))
 
     def random(self, log10_ens):
         """Use multinomial technique to return random photons from
         both components."""
         # TODO -- I haven't checked this code
         raise NotImplementedError()
-        if not isvector(log10_ens):
-            n = log10_ens
-            log10_ens = 3
-        else:
-            n = len(log10_ens)
-        e, width1, width2, x0 = self.p
-        return two_comp_mc(n, width1, width2, x0, norm.rvs)
+        # abhisrkckl: commented out unreachable code
+        # if not isvector(log10_ens):
+        #     n = log10_ens
+        #     log10_ens = 3
+        # else:
+        #     n = len(log10_ens)
+        # e, width1, width2, x0 = self.p
+        # return two_comp_mc(n, width1, width2, x0, norm.rvs)
 
 
 class LCEVonMises(LCEPrimitive, LCVonMises):

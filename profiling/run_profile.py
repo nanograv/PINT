@@ -9,7 +9,8 @@ selected output sort key.
 A .pdf file with the name <script_name> + <git_branch_name>.pdf will be
 generated for listing all the calls.
 """
-import cProfile
+
+
 import argparse
 import subprocess
 import pstats
@@ -28,16 +29,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     outfile = args.script.replace(".py", "_profile")
     if args.sort is None:
-        cline = "python -m cProfile -o " + outfile + " " + args.script
+        cline = f"python -m cProfile -o {outfile} {args.script}"
     else:
-        cline = (
-            "python -m cProfile -o " + outfile + " -s " + args.sort + " " + args.script
-        )
+        cline = f"python -m cProfile -o {outfile} -s {args.sort} {args.script}"
     print(cline)
     subprocess.call(cline, shell=True)
-    call_tree_line = (
-        "gprof2dot -f pstats " + outfile + " | dot -Tpdf -o " + outfile + ".pdf"
-    )
+    call_tree_line = f"gprof2dot -f pstats {outfile} | dot -Tpdf -o {outfile}.pdf"
     subprocess.call(call_tree_line, shell=True)
     # Check stats
     p = pstats.Stats(outfile)

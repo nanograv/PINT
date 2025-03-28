@@ -1,31 +1,68 @@
 """The DDK model - Damour and Deruelle with kinematics."""
+
 import warnings
+
 import numpy as np
 from astropy import units as u
 from loguru import logger as log
 
+from pint.exceptions import MissingParameter, TimingModelError
 from pint.models.binary_dd import BinaryDD
-from pint.models.parameter import boolParameter, floatParameter
+from pint.models.parameter import boolParameter, floatParameter, funcParameter
 from pint.models.stand_alone_psr_binaries.DDK_model import DDKmodel
-from pint.models.timing_model import MissingParameter, TimingModelError
+
+
+def _convert_kin(kin):
+    """Convert DDK KIN to/from IAU/DT92 conventions
+
+    Parameters
+    ----------
+    kin : astropy.units.Quantity
+
+    Returns
+    -------
+    astropy.units.Quantity
+        Value returned in other convention
+    """
+    return 180 * u.deg - kin
+
+
+def _convert_kom(kom):
+    """Convert DDK KOM to/from IAU/DT92 conventions
+
+    Parameters
+    ----------
+    kom : astropy.units.Quantity
+
+    Returns
+    -------
+    astropy.units.Quantity
+        Value returned in other convention
+    """
+    return 90 * u.deg - kom
 
 
 class BinaryDDK(BinaryDD):
-    """Damour and Deruelle model with kinematics.
+    r"""Damour and Deruelle model with kinematics.
 
     This extends the :class:`pint.models.binary_dd.BinaryDD` model with
     "Shklovskii" and "Kopeikin" terms that account for the finite distance
     of the system from Earth, the finite size of the system, and the
     interaction of these with the proper motion.
 
-    From Kopeikin (1995) this includes :math:`\Delta_{\pi M}` (Equation 17), the mixed annual-orbital parallax term, which changes :math:`a_1` and :math:`\omega`
-    (:meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_a1_parallax` and :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_omega_parallax`).
+    From Kopeikin (1995) this includes :math:`\Delta_{\pi M}` (Equation 17),
+    the mixed annual-orbital parallax term, which changes :math:`a_1` and :math:`\omega`
+    (:meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_a1_parallax`
+    and :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_omega_parallax`).
 
-    It does not include :math:`\Delta_{\pi P}`, the pure pulsar orbital parallax term (Equation 14).
+    It does not include :math:`\Delta_{\pi P}`, the pure pulsar orbital parallax term
+    (Equation 14).
 
-    From Kopeikin (1996) this includes apparent changes in :math:`\omega`, :math:`a_1`, and :math:`i` due to the proper motion
-    (:meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_omega_proper_motion`, :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_a1_proper_motion`,
-    :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_kin_proper_motion`) (Equations 8, 9, 10).
+    From Kopeikin (1996) this includes apparent changes in :math:`\omega`, :math:`a_1`, and
+    :math:`i` due to the proper motion (:meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_omega_proper_motion`,
+    :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_a1_proper_motion`,
+    :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_kin_proper_motion`)
+    (Equations 8, 9, 10).
 
     The actual calculations for this are done in
     :class:`pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel`.
@@ -83,7 +120,11 @@ class BinaryDDK(BinaryDD):
 
         self.add_param(
             floatParameter(
-                name="KIN", value=0.0, units="deg", description="Inclination angle"
+                name="KIN",
+                value=0.0,
+                units="deg",
+                description="Inclination angle",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -92,6 +133,7 @@ class BinaryDDK(BinaryDD):
                 value=0.0,
                 units="deg",
                 description="The longitude of the ascending node",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -103,6 +145,34 @@ class BinaryDDK(BinaryDD):
         )
         self.remove_param("SINI")
         self.internal_params += ["PMLONG_DDK", "PMLAT_DDK"]
+
+        self.add_param(
+            funcParameter(
+                name="KINIAU",
+                description="Inclination angle in the IAU convention",
+                params=("KIN",),
+                func=_convert_kin,
+                units="deg",
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="KOMIAU",
+                description="The longitude of the ascending node in the IAU convention",
+                params=("KOM",),
+                func=_convert_kom,
+                units="deg",
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="SINI",
+                description="Sine of inclination angle",
+                params=("KIN",),
+                func=np.sin,
+                units="",
+            )
+        )
 
     @property
     def PMLONG_DDK(self):
@@ -151,26 +221,25 @@ class BinaryDDK(BinaryDD):
                 "No valid AstrometryEcliptic or AstrometryEquatorial component found"
             )
 
-        if hasattr(self._parent, "PX"):
-            if self._parent.PX.value <= 0.0 or self._parent.PX.value is None:
-                raise TimingModelError("DDK model needs a valid `PX` value.")
-        else:
+        if not hasattr(self._parent, "PX"):
             raise MissingParameter(
                 "Binary_DDK", "PX", "DDK model needs PX from" "Astrometry."
             )
 
+        if self._parent.PX.value <= 0.0 or self._parent.PX.value is None:
+            raise TimingModelError("DDK model needs a valid `PX` value.")
         if "A1DOT" in self.params and self.A1DOT.value != 0:
             warnings.warn("Using A1DOT with a DDK model is not advised.")
 
     def alternative_solutions(self):
-        """Alternative Kopeikin solutions (potential local minima)
+        r"""Alternative Kopeikin solutions (potential local minima)
 
         There are 4 potential local minima for a DDK model where a1dot is the same
         These are given by where Eqn. 8 in Kopeikin (1996) is equal to the best-fit value.
 
         We first define the symmetry point where a1dot is zero (in equatorial coordinates):
 
-        :math:`KOM_0 = \\tan^{-1} (\mu_{\delta} / \mu_{\\alpha})`
+        :math:`KOM_0 = \tan^{-1} (\mu_{\delta} / \mu_{\alpha})`
 
         The solutions are then:
 

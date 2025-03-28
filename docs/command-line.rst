@@ -21,6 +21,23 @@ pintk
 
    pintk NGC6440E.par NGC6440E.tim
 
+convert_parfile
+---------------
+
+``convert_parfile`` allows a user to convert a par file between various formats and among various binary models.  For instance:
+
+::
+
+   convert_parfile -f tempo input.par -o output.par
+
+will convert ``input.par`` to ``output.par`` in the ``tempo`` format.  Or:
+
+::
+
+   convert_parfile -b DD ell1.par -o dd.par
+
+will convert the model in ``ell1.par`` to the DD binary model.
+
 
 pintbary
 --------
@@ -111,3 +128,11 @@ the examples subdirectory of the PINT distro.
 
    event_optimize J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_wt.gt.0.4.fits PSRJ0030+0451_psrcat.par templateJ0030.3gauss --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=100 --nsteps=500
 
+tcb2tdb
+-------
+
+A command line tool that converts par files from TCB timescale to TDB timescale.
+
+::
+
+   tcb2tdb J0030+0451_tcb.par J0030+0451_tdb.par

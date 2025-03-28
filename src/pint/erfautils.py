@@ -1,14 +1,12 @@
 """Observatory position and velocity calculation."""
 
 import erfa
-
 import numpy as np
 from astropy import table
-from loguru import logger as log
+from astropy.coordinates import EarthLocation
 
 from pint.pulsar_mjd import Time
 from pint.utils import PosVel
-
 
 __all__ = ["gcrs_posvel_from_itrf"]
 
@@ -25,7 +23,9 @@ OM = 1.00273781191135448 * 2.0 * np.pi / SECS_PER_DAY
 asec2rad = 4.84813681109536e-06
 
 
-def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
+def gcrs_posvel_from_itrf(
+    loc: EarthLocation, toas: "pint.toa.TOAs", obsname: str = "obs"
+) -> PosVel:
     """Return a list of PosVel instances for the observatory at the TOA times.
 
     Observatory location should be given in the loc argument as an astropy
@@ -46,6 +46,17 @@ def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
     This version uses astropy's internal routines, which use IERS A data
     rather than the final IERS B values. These do differ, and yield results
     that are different by ~20 m.
+
+    Parameters
+    ----------
+    loc : astropy.coordinates.EarthLocation
+    toas : pint.toa.TOAs
+    obsname : str
+
+    Returns
+    -------
+    `pint.utils.PosVel`
+
     """
     unpack = False
     # If the input is a single TOA (i.e. a row from the table),
@@ -61,17 +72,13 @@ def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
             unpack = True
         else:
             ttoas = toas
+    elif np.isscalar(toas):
+        ttoas = Time([toas], format="mjd")
+        unpack = True
     else:
-        if np.isscalar(toas):
-            ttoas = Time([toas], format="mjd")
-            unpack = True
-        else:
-            ttoas = toas
+        ttoas = toas
     t = ttoas
 
     pos, vel = loc.get_gcrs_posvel(t)
     r = PosVel(pos.xyz, vel.xyz, obj=obsname, origin="earth")
-    if unpack:
-        return r[0]
-    else:
-        return r
+    return r[0] if unpack else r

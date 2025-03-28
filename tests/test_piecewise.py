@@ -1,6 +1,5 @@
-#! /usr/bin/env python
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 import pytest
@@ -18,9 +17,9 @@ parfile2 = os.path.join(datadir, "piecewise_twocomps.par")
 timfile = os.path.join(datadir, "piecewise.tim")
 
 
-class TestPiecewise(unittest.TestCase):
+class TestPiecewise:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.m = pint.models.get_model(parfile)
         cls.m2 = pint.models.get_model(parfile2)
         cls.t = pint.toa.get_TOAs(timfile)

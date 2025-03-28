@@ -68,8 +68,10 @@ communicate to them.
    explanation
    reference
    howto
-   authors
    history
+   authors
+   dependent-packages
+
 
 Indices and tables
 ==================

@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 import os
-import unittest
+import pytest
 
 import numpy as np
 from pint.pulsar_mjd import Time
@@ -8,9 +7,9 @@ from pint.pulsar_mjd import Time
 from pinttestdata import datadir
 
 
-class TestPsrMjd(unittest.TestCase):
+class TestPsrMjd:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.leap_second_days = ["2016-12-31T12:00:00", "2015-06-30T12:00:00"]
         cls.normal_days = ["2016-12-11T12:00:00", "2015-06-02T12:00:00"]

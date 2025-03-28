@@ -1,7 +1,8 @@
 """Tests for jump model component """
+
 import logging
 import os
-import unittest
+import pytest
 import pytest
 
 import astropy.units as u
@@ -14,6 +15,7 @@ from pinttestdata import datadir
 from pint.models import parameter as p
 from pint.models import PhaseJump
 import pint.models.timing_model
+import pint.fitter
 
 
 class SimpleSetup:
@@ -83,12 +85,14 @@ def test_remove_jump_and_flags(setup_NGC6440E):
     # test delete_jump_and_flags
     setup_NGC6440E.m.delete_jump_and_flags(setup_NGC6440E.t.table["flags"], 1)
     assert len(cp.jumps) == 1
+    f = pint.fitter.Fitter.auto(setup_NGC6440E.t, setup_NGC6440E.m)
 
     # delete last jump
     setup_NGC6440E.m.delete_jump_and_flags(setup_NGC6440E.t.table["flags"], 2)
     for d in setup_NGC6440E.t.table["flags"][selected_toa_ind2]:
         assert "jump" not in d
     assert "PhaseJump" not in setup_NGC6440E.m.components
+    f = pint.fitter.Fitter.auto(setup_NGC6440E.t, setup_NGC6440E.m)
 
 
 def test_jump_params_to_flags(setup_NGC6440E):
@@ -97,7 +101,12 @@ def test_jump_params_to_flags(setup_NGC6440E):
     cp = setup_NGC6440E.m.components["PhaseJump"]
 
     par = p.maskParameter(
-        name="JUMP", key="freq", value=0.2, key_value=[1440, 1700], units=u.s
+        name="JUMP",
+        key="freq",
+        value=0.2,
+        key_value=[1440, 1700],
+        units=u.s,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
     cp.add_param(par, setup=True)
 
@@ -125,7 +134,12 @@ def test_jump_params_to_flags(setup_NGC6440E):
 
     # check that adding overlapping jump works
     par2 = p.maskParameter(
-        name="JUMP", key="freq", value=0.2, key_value=[1600, 1900], units=u.s
+        name="JUMP",
+        key="freq",
+        value=0.2,
+        key_value=[1600, 1900],
+        units=u.s,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )  # frequency range overlaps with par, 2nd jump will have common TOAs w/ 1st
     cp.add_param(par2, setup=True)
     # add flags based off jumps added to model
@@ -143,7 +157,12 @@ def test_multijump_toa(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     cp = setup_NGC6440E.m.components["PhaseJump"]
     par = p.maskParameter(
-        name="JUMP", key="freq", value=0.2, key_value=[1440, 1700], units=u.s
+        name="JUMP",
+        key="freq",
+        value=0.2,
+        key_value=[1440, 1700],
+        units=u.s,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
     selected_toa_ind = [48, 49, 54]
     cp.add_param(par, setup=True)
@@ -168,7 +187,12 @@ def test_unfrozen_jump(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     # this has no TOAs
     par = p.maskParameter(
-        name="JUMP", key="freq", value=0.2, key_value=[3000, 3200], units=u.s
+        name="JUMP",
+        key="freq",
+        value=0.2,
+        key_value=[3000, 3200],
+        units=u.s,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     setup_NGC6440E.m.components["PhaseJump"].add_param(par, setup=True)
     setup_NGC6440E.m.JUMP1.frozen = False
@@ -180,7 +204,12 @@ def test_find_empty_masks(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     # this has no TOAs
     par = p.maskParameter(
-        name="JUMP", key="freq", value=0.2, key_value=[3000, 3200], units=u.s
+        name="JUMP",
+        key="freq",
+        value=0.2,
+        key_value=[3000, 3200],
+        units=u.s,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     setup_NGC6440E.m.components["PhaseJump"].add_param(par, setup=True)
     setup_NGC6440E.m.JUMP1.frozen = False
@@ -190,9 +219,9 @@ def test_find_empty_masks(setup_NGC6440E):
     setup_NGC6440E.m.validate_toas(setup_NGC6440E.t)
 
 
-class TestJUMP(unittest.TestCase):
+class TestJUMP:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.parf = "B1855+09_NANOGrav_dfg+12_TAI.par"
         cls.timf = "B1855+09_NANOGrav_dfg+12.tim"
@@ -202,7 +231,7 @@ class TestJUMP(unittest.TestCase):
         )
         # libstempo calculation
         cls.ltres = np.genfromtxt(
-            cls.parf + ".tempo_test", unpack=False, names=True, dtype=np.longdouble
+            f"{cls.parf}.tempo_test", unpack=False, names=True, dtype=np.longdouble
         )
 
     def test_jump(self):
@@ -216,11 +245,11 @@ class TestJUMP(unittest.TestCase):
     def test_derivative(self):
         log = logging.getLogger("Jump phase test")
         p = "JUMP2"
-        log.debug("Runing derivative for %s", "d_delay_d_" + p)
+        log.debug("Runing derivative for %s", f"d_delay_d_{p}")
         ndf = self.JUMPm.d_phase_d_param_num(self.toas, p)
         adf = self.JUMPm.d_phase_d_param(self.toas, self.JUMPm.delay(self.toas), p)
         diff = adf - ndf
-        if not np.all(diff.value) == 0.0:
+        if np.all(diff.value) != 0.0:
             mean_der = (adf + ndf) / 2.0
             relative_diff = np.abs(diff) / np.abs(mean_der)
             # print "Diff Max is :", np.abs(diff).max()
@@ -229,7 +258,3 @@ class TestJUMP(unittest.TestCase):
                 % (p, np.nanmax(relative_diff).value)
             )
             assert np.nanmax(relative_diff) < 0.001, msg
-
-
-if __name__ == "__main__":
-    pass

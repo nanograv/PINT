@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 import sys
-import unittest
+import pytest
 
 import numpy as np
 from io import StringIO
@@ -8,14 +7,14 @@ from io import StringIO
 import pint.scripts.pintbary as pintbary
 
 
-class TestPintBary(unittest.TestCase):
+class TestPintBary:
     def test_result(self):
         saved_stdout, sys.stdout = sys.stdout, StringIO("_")
         cmd = "56000.0 --ra 12h22m33.2s --dec 19d21m44.2s --obs gbt --ephem DE405"
         pintbary.main(cmd.split())
         v = sys.stdout.getvalue()
         # Check that last value printed is the barycentered time
-        self.assertTrue(np.isclose(float(v.split()[-1]), 56000.0061691189))
+        assert np.isclose(float(v.split()[-1]), 56000.0061691189)
         sys.stdout = saved_stdout
 
 
@@ -41,6 +40,3 @@ class TestPintBary(unittest.TestCase):
 #        pintbary.output('some_text')
 #        self.assertEquals(plus_one.sys.stdout.getvalue(), 'some_text\n')
 #        plus_one.sys.stdout = saved_stdout
-
-if __name__ == "__main__":
-    unittest.main()

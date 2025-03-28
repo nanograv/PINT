@@ -1,5 +1,5 @@
 import os
-import unittest
+import pytest
 
 import numpy as np
 
@@ -8,23 +8,23 @@ from erfa import DJM0
 import pint.toa as toa
 from pint.models import model_builder as mb
 from pint.polycos import Polycos
-from pinttestdata import datadir, testdir
+from pinttestdata import datadir
 
 
-class TestD_phase_d_toa(unittest.TestCase):
+class TestD_phase_d_toa:
     @classmethod
-    def setUpClass(self):
+    def setup_class(cls):
         os.chdir(datadir)
-        self.parfileB1855 = "B1855+09_polycos.par"
-        self.timB1855 = "B1855_polyco.tim"
-        self.toasB1855 = toa.get_TOAs(
-            self.timB1855, ephem="DE405", planets=False, include_bipm=False
+        cls.parfileB1855 = "B1855+09_polycos.par"
+        cls.timB1855 = "B1855_polyco.tim"
+        cls.toasB1855 = toa.get_TOAs(
+            cls.timB1855, ephem="DE405", planets=False, include_bipm=False
         )
-        self.modelB1855 = mb.get_model(self.parfileB1855)
+        cls.modelB1855 = mb.get_model(cls.parfileB1855)
         # Read tempo style polycos.
-        self.plc = Polycos().read("B1855_polyco.dat", "tempo")
+        cls.plc = Polycos().read("B1855_polyco.dat", "tempo")
 
-    def testD_phase_d_toa(self):
+    def test_d_phase_d_toa(self):
         pint_d_phase_d_toa = self.modelB1855.d_phase_d_toa(self.toasB1855)
         mjd = np.array(
             [
@@ -36,7 +36,3 @@ class TestD_phase_d_toa(unittest.TestCase):
         diff = pint_d_phase_d_toa.value - tempo_d_phase_d_toa
         relative_diff = diff / tempo_d_phase_d_toa
         assert np.all(np.abs(relative_diff) < 1e-7), "d_phase_d_toa test failed."
-
-
-if __name__ == "__main__":
-    pass

@@ -65,3 +65,13 @@ def test_fit_summary(tmp_path, capsys):
     assert not re.search(r"Post-Fit Chi2:\s*[0-9.]+ +us", captured_fit_summary.out)
     assert re.search(r"Post-Fit Weighted RMS:\s*[0-9.]+ +us", captured_fit_summary.out)
     assert re.search(r"\s*JUMP", captured_fit_summary.out)
+
+    p.reset_model()
+    p.reset_TOAs()
+    p.resetAll()
+    p.update_resids()
+    p.add_model_params()
+
+    assert all(np.isfinite(p.orbitalphase()))
+    assert all(np.isfinite(p.dayofyear()))
+    assert all(np.isfinite(p.year()))

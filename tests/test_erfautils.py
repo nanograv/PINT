@@ -16,30 +16,28 @@ def test_simpler_erfa_import():
     erfa
 
 
-# The old_ function was removed, but has Astropy fixed the problem?
-# @pytest.mark.xfail(
-#     reason="astropy doesn't include up-to-date IERS B - "
-#     "if this starts passing we can ditch the "
-#     "implementation in erfautils",
-#     raises=AssertionError,
-# )
-# def test_compare_erfautils_astropy():
-#     o = "Arecibo"
-#     loc = Observatory.get(o).earth_location_itrf()
-#     mjds = np.linspace(50000, 58000, 512)
-#     t = Time(mjds, scale="tdb", format="mjd")
-#     posvel = erfautils.old_gcrs_posvel_from_itrf(loc, t, obsname=o)
-#     astropy_posvel = erfautils.astropy_gcrs_posvel_from_itrf(loc, t, obsname=o)
-#     dopv = astropy_posvel - posvel
-#     dpos = np.sqrt((dopv.pos**2).sum(axis=0))
-#     dvel = np.sqrt((dopv.vel**2).sum(axis=0))
-#     assert len(dpos) == len(mjds)
-#     # This is just above the level of observed difference
-#     assert dpos.max() < 0.05 * u.m, "position difference of %s" % dpos.max().to(u.m)
-#     # This level is what is permitted as a velocity difference from tempo2 in test_times.py
-#     assert dvel.max() < 0.02 * u.mm / u.s, "velocity difference of %s" % dvel.max().to(
-#         u.mm / u.s
-#     )
+@pytest.mark.xfail(
+    reason="astropy doesn't include up-to-date IERS B - "
+    "if this starts passing we can ditch the "
+    "implementation in erfautils"
+)
+def test_compare_erfautils_astropy():
+    o = "Arecibo"
+    loc = Observatory.get(o).earth_location_itrf()
+    mjds = np.linspace(50000, 58000, 512)
+    t = Time(mjds, scale="tdb", format="mjd")
+    posvel = erfautils.old_gcrs_posvel_from_itrf(loc, t, obsname=o)
+    astropy_posvel = erfautils.astropy_gcrs_posvel_from_itrf(loc, t, obsname=o)
+    dopv = astropy_posvel - posvel
+    dpos = np.sqrt((dopv.pos**2).sum(axis=0))
+    dvel = np.sqrt((dopv.vel**2).sum(axis=0))
+    assert len(dpos) == len(mjds)
+    # This is just above the level of observed difference
+    assert dpos.max() < 0.05 * u.m, f"position difference of {dpos.max().to(u.m)}"
+    # This level is what is permitted as a velocity difference from tempo2 in test_times.py
+    assert dvel.max() < 0.02 * u.mm / u.s, "velocity difference of %s" % dvel.max().to(
+        u.mm / u.s
+    )
 
 
 def test_iers_discrepancies():
@@ -103,13 +101,11 @@ def test_IERS_B_agree_with_IERS_Auto_dX():
     assert_equal(A["MJD"][ok_A], B["MJD"][i_B], "MJDs don't make sense")
     for tag in ["dX_2000A", "dY_2000A"]:
         assert_allclose(
-            A[tag + "_B"][ok_A].to(u.marcsec).value,
+            A[f"{tag}_B"][ok_A].to(u.marcsec).value,
             B[tag][i_B].to(u.marcsec).value,
             atol=1e-5,
             rtol=1e-3,
-            err_msg="IERS A-derived IERS B {} values don't match current IERS B values".format(
-                tag
-            ),
+            err_msg=f"IERS A-derived IERS B {tag} values don't match current IERS B values",
         )
 
 
@@ -143,10 +139,8 @@ def test_IERS_B_agree_with_IERS_Auto():
             A[atag][ok_A].to(unit).value,
             B[btag][i_B].to(unit).value,
             atol=1e-5,
-            rtol=1e-5,  # should be "close enough"
-            err_msg="Inserted IERS B {} values don't match IERS_B_URL {} values".format(
-                atag, btag
-            ),
+            rtol=1e-5,
+            err_msg=f"Inserted IERS B {atag} values don't match IERS_B_URL {btag} values",
         )
 
 
@@ -215,10 +209,8 @@ def test_IERS_B_builtin_agree_with_IERS_Auto():
             A[atag][ok_A].to(unit).value,
             B[btag][i_B].to(unit).value,
             atol=1e-5,
-            rtol=1e-5,  # should be exactly equal
-            err_msg="Inserted IERS B {} values don't match IERS_B_FILE {} values".format(
-                atag, btag
-            ),
+            rtol=1e-5,
+            err_msg=f"Inserted IERS B {atag} values don't match IERS_B_FILE {btag} values",
         )
 
 
@@ -255,7 +247,5 @@ def test_IERS_B_parameters_loaded_into_IERS_Auto(b_name, a_name):
     assert_equal(
         A[a_name][ok_A],
         B[b_name][i_B],
-        err_msg="IERS B parameter {} not copied over IERS A parameter {}".format(
-            b_name, a_name
-        ),
+        err_msg=f"IERS B parameter {b_name} not copied over IERS A parameter {a_name}",
     )

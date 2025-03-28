@@ -16,7 +16,7 @@ curl -O https://data.nanograv.org/static/data/J0740+6620.cfr+19.tim
 python high_level_benchmark.py
 
 # To get useful output on an individual benchmarking script, do this to get
-# a list of the top 100 calls by execution time, as well as a PDF shwoing a tree of all the execution times.
+# a list of the top 100 calls by execution time, as well as a PDF showing a tree of all the execution times.
 run_profile.py bench_MCMC.py
 
 # The available benchmarks are (though more can be added!)

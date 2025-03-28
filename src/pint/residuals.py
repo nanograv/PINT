@@ -1,23 +1,33 @@
 """Objects for comparing models to data.
 
 These objects can be constructed directly, as ``Residuals(toas, model)``, or
-they are contructed during fitting operations with :class:`pint.fitter.Fitter`
+they are constructed during fitting operations with :class:`pint.fitter.Fitter`
 objects, as ``fitter.residual``. Variants exist for arrival-time-only data
 (:class:`pint.residuals.Residuals`) and for arrival times that come paired with
 dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 """
+
 import collections
 import copy
+from typing import Dict, Literal, Optional, Union
 import warnings
 
 import astropy.units as u
 import numpy as np
-from scipy.linalg import LinAlgError
 from loguru import logger as log
+from scipy.linalg import LinAlgError
 
 from pint.models.dispersion_model import Dispersion
+from pint.models.parameter import maskParameter
+from pint.models.timing_model import TimingModel
 from pint.phase import Phase
-from pint.utils import weighted_mean, taylor_horner_deriv
+from pint.toa import TOAs
+from pint.utils import (
+    sherman_morrison_dot,
+    taylor_horner_deriv,
+    weighted_mean,
+    woodbury_dot,
+)
 
 __all__ = [
     "Residuals",
@@ -54,16 +64,17 @@ class Residuals:
     ----------
     toas: :class:`pint.toa.TOAs`, optional
         The input TOAs object. Default: None
-    model: :class:`pint.models.timing_model.TimingModel`, optinonal
+    model: :class:`pint.models.timing_model.TimingModel`, optional
         Input model object. Default: None
     residual_type: str, optional
-        The type of the resiudals. Default: 'toa'
+        The type of the residuals. Default: 'toa'
     unit: :class:`astropy.units.Unit`, optional
-        The defualt unit of the residuals. Default: u.s
+        The default unit of the residuals. Default: u.s
     subtract_mean : bool
-        Controls whether mean will be subtracted from the residuals
+        Controls whether mean will be subtracted from the residuals.
+        This option will be ignored if a `PhaseOffset` is present in the timing model.
     use_weighted_mean : bool
-        Controls whether mean compution is weighted (by errors) or not.
+        Controls whether mean computation is weighted (by errors) or not.
     track_mode : None, "nearest", "use_pulse_numbers"
         Controls how pulse numbers are assigned. ``"nearest"`` assigns
         each TOA to the nearest integer pulse. ``"use_pulse_numbers"`` uses the
@@ -76,41 +87,48 @@ class Residuals:
 
     def __new__(
         cls,
-        toas=None,
-        model=None,
-        residual_type="toa",
-        unit=u.s,
-        subtract_mean=True,
-        use_weighted_mean=True,
-        track_mode=None,
+        toas: Optional[TOAs] = None,
+        model: Optional[TimingModel] = None,
+        residual_type: Literal["toa", "dm"] = "toa",
+        unit: Union[u.Unit, str] = u.s,
+        subtract_mean: bool = True,
+        use_weighted_mean: bool = True,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        use_abs_phase: bool = True,
     ):
         if cls is Residuals:
             try:
                 cls = residual_map[residual_type.lower()]
-            except KeyError:
+            except KeyError as e:
                 raise ValueError(
-                    "'{}' is not a PINT supported residual. Currently "
-                    "supported data types are {}".format(
-                        residual_type, list(residual_map.keys())
-                    )
-                )
+                    f"'{residual_type}' is not a PINT supported residual. Currently supported data types are {list(residual_map.keys())}"
+                ) from e
 
         return super().__new__(cls)
 
     def __init__(
         self,
-        toas=None,
-        model=None,
-        residual_type="toa",
-        unit=u.s,
-        subtract_mean=True,
-        use_weighted_mean=True,
-        track_mode=None,
+        toas: Optional[TOAs] = None,
+        model: Optional[TimingModel] = None,
+        residual_type: Literal["toa", "dm"] = "toa",
+        unit: Union[u.Unit, str] = u.s,
+        subtract_mean: bool = True,
+        use_weighted_mean: bool = True,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        use_abs_phase: bool = True,
     ):
         self.toas = toas
         self.model = model
         self.residual_type = residual_type
-        self.subtract_mean = subtract_mean
+
+        if "PhaseOffset" in model.components and subtract_mean:
+            log.debug(
+                "Disabling implicit `subtract_mean` because `PhaseOffset` is present in the timing model."
+            )
+        self.subtract_mean = subtract_mean and "PhaseOffset" not in model.components
+
+        self.use_abs_phase = use_abs_phase
+
         self.use_weighted_mean = use_weighted_mean
         if track_mode is None:
             if getattr(self.model, "TRACK").value == "-2":
@@ -135,32 +153,50 @@ class Residuals:
         else:
             self.phase_resids = None
             self.time_resids = None
+
         # delay chi-squared computation until needed to avoid infinite recursion
         # also it's expensive
         # only relevant if there are correlated errors
         self._chi2 = None
-        self.noise_resids = {}
         # For residual debugging
         self.debug_info = {}
         # We should be carefully for the other type of residuals
         self.unit = unit
-        # A flag to indentify if this residual object is combined with residual
+        # A flag to identify if this residual object is combined with residual
         # class.
         self._is_combined = False
 
+        self.noise_ampls: Dict[str, u.Quantity] = {}
+        for component in model.NoiseComponent_list:
+            if component.introduces_correlated_errors:
+                self.noise_ampls[component.category] = (
+                    np.zeros_like(component.get_noise_weights(toas)) << u.s
+                )
+
     @property
-    def resids(self):
+    def resids(self) -> u.Quantity:
         """Residuals in time units."""
         if self.time_resids is None:
             self.update()
         return self.time_resids
 
     @property
-    def resids_value(self):
+    def resids_value(self) -> np.ndarray:
         """Residuals in seconds, with the units stripped."""
         return self.resids.to_value(self.unit)
 
-    def update(self):
+    @property
+    def noise_resids(self) -> Dict[str, u.Quantity]:
+        return {
+            component.category: (
+                component.get_noise_basis(self.toas)
+                @ self.noise_ampls[component.category]
+            )
+            for component in self.model.NoiseComponent_list
+            if component.introduces_correlated_errors
+        }
+
+    def update(self) -> None:
         """Recalculate everything in residuals class after changing model or TOAs"""
         if self.toas is None or self.model is None:
             self.phase_resids = None
@@ -175,7 +211,7 @@ class Residuals:
         self._chi2 = None  # trigger chi2 recalculation when needed
 
     @property
-    def chi2(self):
+    def chi2(self) -> float:
         """Compute chi-squared as needed and cache the result."""
         if self._chi2 is None:
             self._chi2 = self.calc_chi2()
@@ -183,7 +219,7 @@ class Residuals:
         return self._chi2
 
     @property
-    def dof(self):
+    def dof(self) -> int:
         """Return number of degrees of freedom for the model."""
         if self._is_combined:
             raise AttributeError(
@@ -199,12 +235,12 @@ class Residuals:
         return dof
 
     @property
-    def reduced_chi2(self):
+    def reduced_chi2(self) -> float:
         """Return the weighted reduced chi-squared for the model and toas."""
         return self.chi2 / self.dof
 
     @property
-    def chi2_reduced(self):
+    def chi2_reduced(self) -> float:
         """Reduced chi-squared."""
         warnings.warn(
             "Do not use 'residuals.chi2_reduced'. Please use 'residuals.reduced_chi2' instead.",
@@ -213,7 +249,7 @@ class Residuals:
 
         return self.chi2 / self.dof
 
-    def get_data_error(self, scaled=True):
+    def get_data_error(self, scaled: bool = True) -> u.Quantity:
         """Get errors on time residuals.
 
         This returns the uncertainties on the time residuals, optionally scaled
@@ -224,13 +260,14 @@ class Residuals:
         scaled: bool, optional
             If errors get scaled by the noise model.
         """
-        if not scaled:
-            return self.toas.get_errors()
-        else:
-            return self.model.scaled_toa_uncertainty(self.toas)
+        return (
+            self.model.scaled_toa_uncertainty(self.toas)
+            if scaled
+            else self.toas.get_errors()
+        )
 
-    def rms_weighted(self):
-        """Compute weighted RMS of the residals in time."""
+    def rms_weighted(self) -> u.Quantity:
+        """Compute weighted RMS of the residuals in time."""
         # Use scaled errors, if the noise model is not presented, it will
         # return the raw errors
         scaled_errors = self.get_data_error()
@@ -243,7 +280,7 @@ class Residuals:
         wmean, werr, wsdev = weighted_mean(self.time_resids, w, sdev=True)
         return wsdev.to(u.us)
 
-    def get_PSR_freq(self, calctype="modelF0"):
+    def get_PSR_freq(self, calctype="modelF0") -> u.Quantity:
         """Return pulsar rotational frequency in Hz.
 
         Parameters
@@ -262,7 +299,7 @@ class Residuals:
         assert calctype.lower() in ["modelf0", "taylor", "numerical"]
         if calctype.lower() == "modelf0":
             # TODO this function will be re-write and move to timing model soon.
-            # The following is a temproary patch.
+            # The following is a temporary patch.
             if "Spindown" in self.model.components:
                 F0 = self.model.F0.quantity
             elif "P0" in self.model.params:
@@ -291,17 +328,58 @@ class Residuals:
         elif calctype.lower() == "numerical":
             return self.model.d_phase_d_toa(self.toas)
 
-    def calc_phase_resids(self):
-        """Compute timing model residuals in pulse phase."""
+    def calc_phase_resids(
+        self,
+        subtract_mean: Optional[bool] = None,
+        use_weighted_mean: Optional[bool] = None,
+        use_abs_phase: Optional[bool] = None,
+    ) -> u.Quantity:
+        """Compute timing model residuals in pulse phase.
+
+        if ``subtract_mean`` or ``use_weighted_mean`` is None, will use the values set for the object itself
+
+        Parameters
+        ----------
+        subtract_mean : bool or None, optional
+            Subtract the mean of the residuals. This is ignored if the `PhaseOffset` component
+            is present in the model. Default is to use the class attribute.
+        use_weighted_mean : bool or None, optional
+            Whether to use weighted mean for mean subtraction. Default is to use the class attribute.
+        use_abs_phase : bool or None, optional
+            Whether to use absolute phase (w.r.t. the TZR TOA). Default is to use the class attribute.
+
+        Returns
+        -------
+        Phase
+
+        See Also
+        --------
+        :meth:`pint.residuals.Residuals.get_PSR_freq`
+        :meth:`pint.residuals.Residuals.calc_time_resids`
+        :meth:`pint.residuals.Residuals.calc_whitened_resids`
+        """
+
+        if subtract_mean is None:
+            subtract_mean = self.subtract_mean
+
+        if "PhaseOffset" in self.model.components and subtract_mean:
+            log.debug(
+                "Ignoring `subtract_mean` because `PhaseOffset` is present in the timing model."
+            )
+        subtract_mean = subtract_mean and "PhaseOffset" not in self.model.components
+
+        if use_weighted_mean is None:
+            use_weighted_mean = self.use_weighted_mean
+
+        if use_abs_phase is None:
+            use_abs_phase = self.use_abs_phase
 
         # Read any delta_pulse_numbers that are in the TOAs table.
         # These are for PHASE statements, -padd flags, as well as user-inserted phase jumps
         # Check for the column, and if not there then create it as zeros
-        try:
-            delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
-        except IndexError:
+        if "delta_pulse_number" not in self.toas.table.colnames:
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
-            delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
+        delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
 
         # Track on pulse numbers, if requested
         if self.track_mode == "use_pulse_numbers":
@@ -314,41 +392,42 @@ class Residuals:
             # we need absolute phases, since TZRMJD serves as the pulse
             # number reference.
             modelphase = (
-                self.model.phase(self.toas, abs_phase=True) + delta_pulse_numbers
+                self.model.phase(self.toas, abs_phase=use_abs_phase)
+                + delta_pulse_numbers
             )
             # First assign each TOA to the correct relative pulse number, including
             # and delta_pulse_numbers (from PHASE lines or adding phase jumps in GUI)
             i = pulse_num.copy()
             f = np.zeros_like(pulse_num)
+
             c = np.isnan(pulse_num)
             if np.any(c):
+                # i[c] = 0
                 raise ValueError("Pulse numbers are missing on some TOAs")
-                i[c] = 0
             residualphase = modelphase - Phase(i, f)
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
-            if np.any(c):
-                full[c] -= np.round(full[c])
-        # If not tracking then do the usual nearest pulse number calculation
+
         elif self.track_mode == "nearest":
             # Compute model phase
             modelphase = self.model.phase(self.toas) + delta_pulse_numbers
             # Here it subtracts the first phase, so making the first TOA be the
             # reference. Not sure this is a good idea.
-            if self.subtract_mean:
+            if subtract_mean:
                 modelphase -= Phase(modelphase.int[0], modelphase.frac[0])
 
             # Here we discard the integer portion of the residual and replace it with 0
-            # This is effectively selecting the nearst pulse to compute the residual to.
+            # This is effectively selecting the nearest pulse to compute the residual to.
             residualphase = Phase(np.zeros_like(modelphase.frac), modelphase.frac)
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
         else:
-            raise ValueError("Invalid track_mode '{}'".format(self.track_mode))
+            raise ValueError(f"Invalid track_mode '{self.track_mode}'")
+
         # If we are using pulse numbers, do we really want to subtract any kind of mean?
-        if not self.subtract_mean:
+        if not subtract_mean:
             return full
-        if not self.use_weighted_mean:
+        if not use_weighted_mean:
             mean = full.mean()
         else:
             # Errs for weighted sum.  Units don't matter since they will
@@ -359,13 +438,78 @@ class Residuals:
                 )
             w = 1.0 / (self.get_data_error().value ** 2)
             mean, err = weighted_mean(full, w)
+
         return full - mean
 
-    def calc_time_resids(self, calctype="taylor"):
+    def _calc_mean(
+        self,
+        weighted: bool,
+        type: Literal["time", "phase"],
+        calctype: Optional[Literal["taylor", "modelF0", "numerical"]] = None,
+    ) -> u.Quantity:
+        assert type in ["time", "phase"]
+
+        r = (
+            self.calc_phase_resids(subtract_mean=False)
+            if type == "phase"
+            else self.calc_time_resids(subtract_mean=False, calctype=calctype)
+        )
+
+        if not weighted:
+            return r.mean()
+
+        if np.any(self.get_data_error() == 0):
+            raise ValueError("Some TOA errors are zero - cannot calculate residuals")
+
+        w = 1.0 / (self.get_data_error().value ** 2)
+        mean, _ = weighted_mean(r, w)
+        return mean
+
+    def calc_phase_mean(self, weighted: bool = True) -> u.Quantity:
+        """Calculate mean phase of residuals, optionally weighted
+
+        Parameters
+        ----------
+        weighted : bool, optional
+
+        Returns
+        -------
+        astropy.units.Quantity
+        """
+        return self._calc_mean(weighted, "phase")
+
+    def calc_time_mean(
+        self,
+        calctype: Literal["taylor", "modelF0", "numerical"] = "taylor",
+        weighted: bool = True,
+    ) -> u.Quantity:
+        """Calculate mean time of residuals, optionally weighted
+
+        Parameters
+        ----------
+        calctype : str, optional
+            Calculation time for phase to time conversion.  See :meth:`pint.residuals.Residuals.calc_time_resids` for details.
+        weighted : bool, optional
+
+        Returns
+        -------
+        astropy.units.Quantity
+        """
+        return self._calc_mean(weighted, "time", calctype=calctype)
+
+    def calc_time_resids(
+        self,
+        calctype: Literal["taylor", "modelF0", "numerical"] = "taylor",
+        subtract_mean: Optional[bool] = None,
+        use_weighted_mean: Optional[bool] = None,
+        use_abs_phase: Optional[bool] = None,
+    ) -> u.Quantity:
         """Compute timing model residuals in time (seconds).
 
         Converts from phase residuals to time residuals using several possible ways
         to calculate the frequency.
+
+        If ``subtract_mean`` or ``use_weighted_mean`` is None, will use the values set for the object itself
 
         Parameters
         ----------
@@ -374,6 +518,13 @@ class Residuals:
             parameter from the model.
             If `calctype` == "numerical", then try a numerical derivative
             If `calctype` == "taylor", evaluate the frequency with a Taylor series
+        subtract_mean : bool or None, optional
+            Subtract the mean of the residuals. This is ignored if the `PhaseOffset` component
+            is present in the model. Default is to use the class attribute.
+        use_weighted_mean : bool or None, optional
+            Whether to use weighted mean for mean subtraction. Default is to use the class attribute.
+        use_abs_phase : bool or None, optional
+            Whether to use absolute phase (w.r.t. the TZR TOA). Default is to use the class attribute.
 
         Returns
         -------
@@ -382,20 +533,164 @@ class Residuals:
         See Also
         --------
         :meth:`pint.residuals.Residuals.get_PSR_freq`
+        :meth:`pint.residuals.Residuals.calc_phase_resids`
+        :meth:`pint.residuals.Residuals.calc_whitened_resids`
         """
         assert calctype.lower() in ["modelf0", "taylor", "numerical"]
-        if self.phase_resids is None:
-            self.phase_resids = self.calc_phase_resids()
-        return (self.phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
+        if subtract_mean is None and use_weighted_mean is None:
+            # if we are using the defaults, save the calculation
+            if self.phase_resids is None:
+                self.phase_resids = self.calc_phase_resids(
+                    subtract_mean=subtract_mean,
+                    use_weighted_mean=use_weighted_mean,
+                    use_abs_phase=use_abs_phase,
+                )
+            phase_resids = self.phase_resids
+        else:
+            phase_resids = self.calc_phase_resids(
+                subtract_mean=subtract_mean,
+                use_weighted_mean=use_weighted_mean,
+                use_abs_phase=use_abs_phase,
+            )
+        return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 
-    def calc_chi2(self, full_cov=False):
+    def calc_whitened_resids(self) -> u.Quantity:
+        """Compute whitened timing residuals (dimensionless).
+
+        Whitened residuals are computed by subtracting the correlated
+        noise realization from the time residuals and normalizes the
+        result using scaled TOA uncertainties.
+
+        This requires the `noise_resids` attribute to be set. This is
+        usually available in a post-fit residuals object.
+
+        Example usage::
+
+            >>> ftr = Fitter.auto(toas, model)
+            >>> ftr.fit_toas()
+            >>> res = ftr.resids
+            >>> white_res = res.calc_whitened_resids()
+
+        See Also
+        --------
+        :meth:`pint.residuals.Residuals.calc_time_resids`
+        :meth:`pint.residuals.Residuals.calc_phase_resids`
+        """
+        r = self.calc_time_resids()
+        nr = sum(self.noise_resids.values())
+        sigma = self.get_data_error()
+        return ((r - nr) / sigma).to(u.dimensionless_unscaled)
+
+    def _calc_gls_chi2(self, lognorm: bool = False) -> float:
+        """Compute the chi2 when correlated noise is present in the timing model.
+        If the system is not singular, it uses Cholesky factorization to evaluate this.
+        If the system is singular, it uses singular value decomposition instead.
+
+        If `lognorm=True` is given, the log-normalization-factor of the likelihood
+        function will also be returned.
+        """
+
+        assert self.model.has_correlated_errors
+
+        s = self.time_resids.to_value(u.s)
+        Ndiag = self.get_data_error().to_value(u.s) ** 2
+        U = self.model.noise_model_designmatrix(self.toas)
+        Phidiag = self.model.noise_model_basis_weight(self.toas)
+
+        if "PHOFF" not in self.model.free_params:
+            U = np.append(U, np.ones((len(self.toas), 1)), axis=1)
+            Phidiag = np.append(Phidiag, [1e40])
+
+        chi2, logdet_C = woodbury_dot(Ndiag, U, Phidiag, s, s)
+
+        return (chi2, logdet_C / 2) if lognorm else chi2
+
+    def _calc_ecorr_chi2(self, lognorm: bool = False) -> float:
+        """Compute the chi2 when ECORR is present in the timing
+        model without any other correlated noise components."""
+
+        assert (
+            self.model.has_correlated_errors
+            and not self.model.has_time_correlated_errors
+            and "PHOFF" in self.model.free_params
+        )
+
+        m, t = self.model, self.toas
+
+        ecorr_masks = m.components["EcorrNoise"].get_noise_basis(t).T.astype(bool)
+        ecorr_weights = m.components["EcorrNoise"].get_noise_weights(t)
+
+        r = self.time_resids
+        sigma = self.get_data_error()
+
+        # For TOAs which don't belong to any ECORR group.
+        noecmask = np.logical_not(np.any(ecorr_masks, axis=0))
+        Ndiag = sigma[noecmask] ** 2
+        s = r[noecmask]
+        chisq = (
+            np.dot(s, s / Ndiag)
+            if len(s) > 0
+            else u.Quantity(0, u.dimensionless_unscaled)
+        )
+        logdet_C = np.sum(np.log(Ndiag.to_value(u.s**2)))
+
+        # For TOAs which belong to an ECORR group.
+        for ecmask, ecw in zip(ecorr_masks, ecorr_weights):
+            Ndiag = sigma[ecmask] ** 2
+            s = r[ecmask]
+
+            v = np.ones(len(s)) << u.s
+
+            chisq_sm, logdet_sm = sherman_morrison_dot(Ndiag, v, ecw, s, s)
+
+            chisq += chisq_sm
+            logdet_C += logdet_sm
+
+        return (
+            (chisq.to_value(u.dimensionless_unscaled), 0.5 * logdet_C)
+            if lognorm
+            else chisq.to_value(u.dimensionless_unscaled)
+        )
+
+    def _calc_wls_chi2(self, lognorm: bool = False) -> float:
+        """Compute the chi2 when no correlated noise components are present."""
+
+        assert not self.model.has_correlated_errors
+
+        # Residual units are in seconds. Error units are in microseconds.
+        toa_errors = self.get_data_error()
+        if (toa_errors == 0.0).any():
+            return np.inf
+
+        # The self.time_resids is in the unit of "s", the error "us".
+        # This is more correct way, but it is the slowest.
+        # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
+
+        # This method is faster then the method above but not the most correct way
+        # return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
+
+        # This the fastest way, but highly depend on the assumption of time_resids and
+        # error units. Ensure only a pure number is returned.
+
+        r = self.time_resids
+        err = toa_errors.to(u.s)
+
+        chi2 = ((r / err) ** 2.0).sum().value
+
+        if not lognorm:
+            return chi2
+
+        log_norm = np.sum(np.log(err.value))
+        return chi2, log_norm
+
+    def calc_chi2(self, lognorm: bool = False) -> float:
         """Return the weighted chi-squared for the model and toas.
 
         If the errors on the TOAs are independent this is a straightforward
         calculation, but if the noise model introduces correlated errors then
         obtaining a meaningful chi-squared value requires a Cholesky
-        decomposition. This is carried out, here, by constructing a GLSFitter
-        and asking it to do the chi-squared computation but not a fit.
+        decomposition. This is carried out using the :method:`~pint.residuals.Residuals._calc_gls_chi2`
+        helper function.
 
         The return value here is available as self.chi2, which will not
         redo the computation unless necessary.
@@ -406,44 +701,162 @@ class Residuals:
         Handling of problematic results - degenerate conditions explored by
         a minimizer for example - may need to be checked to confirm that they
         correctly return infinity.
+
+        If `lognorm=True` is given, the log-normalization-factor of the likelihood
+        function will also be returned.
+
+        Parameters
+        ----------
+        lognorm: bool
+            If True, return the the log-normalization-factor of the likelihood
+            function along with the chi2 value.
+
+        Returns
+        -------
+        chi2                   if lognorm is False
+        (chi2, log_norm)       if lognorm is True
         """
-        if self.model.has_correlated_errors:
-            log.trace("Using GLS fitter to compute residual chi2")
-            # Use GLS but don't actually fit
-            from pint.fitter import GLSFitter
 
-            m = copy.deepcopy(self.model)
-            m.free_params = []
-            f = GLSFitter(self.toas, m, residuals=self)
-            try:
-                return f.fit_toas(maxiter=1, full_cov=full_cov)
-            except LinAlgError as e:
-                log.warning(
-                    "Degenerate conditions encountered when "
-                    "computing chi-squared: %s" % (e,)
-                )
-                return np.inf
+        if not self.model.has_correlated_errors:
+            return self._calc_wls_chi2(lognorm=lognorm)
+        elif (
+            not self.model.has_time_correlated_errors
+            and "PhaseOffset" in self.model.components
+        ):
+            return self._calc_ecorr_chi2(lognorm=lognorm)
         else:
-            # Residual units are in seconds. Error units are in microseconds.
-            toa_errors = self.get_data_error()
-            if (toa_errors == 0.0).any():
-                return np.inf
-            else:
-                # The self.time_resids is in the unit of "s", the error "us".
-                # This is more correct way, but it is the slowest.
-                # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
+            return self._calc_gls_chi2(lognorm=lognorm)
 
-                # This method is faster then the method above but not the most correct way
-                # return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
+    def lnlikelihood(self) -> float:
+        """Compute the log-likelihood for the model and TOAs."""
+        chi2, log_norm = self.calc_chi2(lognorm=True)
+        return -(chi2 / 2 + log_norm)
 
-                # This the fastest way, but highly depend on the assumption of time_resids and
-                # error units. Ensure only a pure number is returned.
-                try:
-                    return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum().value
-                except ValueError:
-                    return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum()
+    def d_lnlikelihood_d_Ndiag(self) -> u.Quantity:
+        r = self.time_resids
+        sigma = self.get_data_error()
 
-    def ecorr_average(self, use_noise_model=True):
+        if not self.model.has_correlated_errors:
+            Ndiag = sigma**2
+
+            term1 = -(r**2) / Ndiag**2
+            term2 = 1 / Ndiag
+
+            return -0.5 * (term1 + term2)
+        else:
+            if (
+                self.model.has_time_correlated_errors
+                or "PHOFF" not in self.model.free_params
+            ):
+                raise NotImplementedError
+
+            ecorr_masks = (
+                self.model.components["EcorrNoise"]
+                .get_noise_basis(self.toas)
+                .T.astype(bool)
+            )
+            ecorr_weights = self.model.components["EcorrNoise"].get_noise_weights(
+                self.toas
+            )
+
+            # For TOAs which don't belong to any ECORR group.
+            noecmask = np.logical_not(np.any(ecorr_masks, axis=0))
+            Ndiag = sigma[noecmask] ** 2
+            s = r[noecmask]
+            term1 = -(s**2) / Ndiag**2
+            term2 = 1 / Ndiag
+            term3 = term4 = 0
+
+            # For TOAs which belong to an ECORR group.
+            for ecmask, c in zip(ecorr_masks, ecorr_weights):
+                Ndiag = sigma[ecmask] ** 2
+                s = r[ecmask]
+                v = np.ones(len(s)) << u.s
+
+                s_Ninv_v = np.sum(s * v / Ndiag)
+                v_Ninv_v = np.sum(v**2 / Ndiag)
+                denom = 1 + c**2 * v_Ninv_v
+
+                term1 += -(s**2) / Ndiag**2
+                term2 += 1 / Ndiag
+                term3 += 2 * c**2 * (
+                    s_Ninv_v / denom * (s * v / Ndiag**2)
+                ) - c**4 * (s_Ninv_v**2 / denom**2 * (v**2 / Ndiag**2))
+                term4 += -(c**2) * (v**2 / Ndiag**2) / denom
+
+            return -0.5 * (term1 + term2 + term3 + term4)
+
+    def d_Ndiag_d_param(self, param: str) -> u.Quantity:
+        """Derivative of the white noise covariance matrix diagonal elements
+        w.r.t. a white noise parameter (EFAC or EQUAD)."""
+        sigma = self.get_data_error()
+        d_sigma_d_param = self.model.d_toasigma_d_param(self.toas, param)
+        return 2 * sigma * d_sigma_d_param
+
+    def d_lnlikelihood_d_ECORR(self, param: str) -> u.Quantity:
+        par = self.model[param]
+
+        fullmask = par.select_toa_mask(self.toas)
+        t = self.toas[fullmask]
+
+        sigma = self.get_data_error()
+        r = self.time_resids
+        c = par.quantity
+
+        ecorr_masks = (
+            self.model.components["EcorrNoise"].get_noise_basis(t).T.astype(bool)
+        )
+
+        result = 0
+
+        # For TOAs which belong to an ECORR group.
+        for ecmask in ecorr_masks:
+            Ndiag = sigma[ecmask] ** 2
+            s = r[ecmask]
+            v = np.ones_like(s)
+
+            s_Ninv_v = np.sum(s * v / Ndiag)
+            v_Ninv_v = np.sum(v**2 / Ndiag)
+            denom = 1 + c**2 * v_Ninv_v
+
+            result += c * (s_Ninv_v**2 - v_Ninv_v - c**2 * v_Ninv_v**2) / denom**2
+
+        return result
+
+    def d_lnlikelihood_d_param(self, param: str) -> u.Quantity:
+        par = self.model[param]
+
+        if self.model.has_correlated_errors and (
+            self.model.has_time_correlated_errors
+            or "PHOFF" not in self.model.free_params
+        ):
+            raise NotImplementedError
+
+        if isinstance(par, maskParameter):
+            if par.prefix in ["EFAC", "EQUAD"]:
+                return np.sum(
+                    self.d_lnlikelihood_d_Ndiag() * self.d_Ndiag_d_param(param)
+                ).to(1 / par.units)
+            elif par.prefix == "ECORR":
+                return self.d_lnlikelihood_d_ECORR(param).to(1 / par.units)
+
+        raise NotImplementedError(
+            f"d_lnlikelihood_d_param is not defined for parameter {param}."
+        )
+
+    # def d_lnlikelihood_d_whitenoise_param(self, param):
+    #     if self.model.has_correlated_errors:
+    #         raise NotImplementedError(
+    #             "d_lnlikelihood_d_whitenoise_param is not implemented "
+    #             "for the case when correlated noise is present."
+    #         )
+
+    #     r = self.time_resids
+    #     sigma = self.get_data_error()
+    #     d_sigma_d_param = self.model.d_toasigma_d_param(self.toas, param)
+    #     return np.sum(((r / sigma) ** 2 - 1) / sigma * d_sigma_d_param).to(1/self.model[param].units)
+
+    def ecorr_average(self, use_noise_model: bool = True) -> u.Quantity:
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
 
         Requires ECORR be used in the timing model.  If
@@ -537,14 +950,13 @@ class WidebandDMResiduals(Residuals):
 
     def __init__(
         self,
-        toas=None,
-        model=None,
-        residual_type="dm",
-        unit=u.pc / u.cm**3,
-        subtract_mean=False,
-        use_weighted_mean=True,
+        toas: Optional[TOAs] = None,
+        model: Optional[TimingModel] = None,
+        residual_type: Literal["toa", "dm"] = "dm",
+        unit: Union[u.Unit, str] = u.pc / u.cm**3,
+        subtract_mean: bool = False,
+        use_weighted_mean: bool = True,
     ):
-
         self.toas = toas
         self.model = model
         self.residual_type = residual_type
@@ -560,16 +972,16 @@ class WidebandDMResiduals(Residuals):
         self.debug_info = {}
 
     @property
-    def resids(self):
+    def resids(self) -> u.Quantity:
         return self.calc_resids()
 
     @property
-    def resids_value(self):
+    def resids_value(self) -> np.ndarray:
         """Get pure value of the residuals use the given base unit."""
         return self.resids.to_value(self.unit)
 
     @property
-    def dof(self):
+    def dof(self) -> int:
         """Return number of degrees of freedom for the DM model."""
         if self._is_combined:
             raise AttributeError(
@@ -577,16 +989,18 @@ class WidebandDMResiduals(Residuals):
                 " class. The individual residual's dof is not "
                 "calculated correctly in the combined residuals."
             )
-        dof = len(self.dm_data)
+
         # only get dm type of model component
         # TODO provide a function in the timing model to get one type of component
-        for cp in self.model.components.values():
-            if Dispersion in cp.__class__.__bases__:
-                dof -= len(cp.free_params_component)
+        dof = len(self.dm_data) - sum(
+            len(cp.free_params_component)
+            for cp in self.model.components.values()
+            if Dispersion in cp.__class__.__bases__
+        )
         dof -= 1
         return dof
 
-    def get_data_error(self, scaled=True):
+    def get_data_error(self, scaled=True) -> u.Quantity:
         """Get data errors.
 
         Parameters
@@ -594,18 +1008,13 @@ class WidebandDMResiduals(Residuals):
         scaled: bool, optional
             If errors get scaled by the noise model.
         """
-        if not scaled:
-            return self.dm_error
-        else:
-            return self.model.scaled_dm_uncertainty(self.toas)
+        return self.model.scaled_dm_uncertainty(self.toas) if scaled else self.dm_error
 
-    def calc_resids(self):
+    def calc_resids(self) -> u.Quantity:
         model_value = self.get_model_value(self.toas)[self.relevant_toas]
         resids = self.dm_data - model_value
         if self.subtract_mean:
-            if not self.use_weighted_mean:
-                resids -= resids.mean()
-            else:
+            if self.use_weighted_mean:
                 # Errs for weighted sum.  Units don't matter since they will
                 # cancel out in the weighted sum.
                 if self.dm_error is None or np.any(self.dm_error == 0):
@@ -615,20 +1024,21 @@ class WidebandDMResiduals(Residuals):
                     )
                 wm = np.average(resids, weights=1.0 / (self.dm_error**2))
                 resids -= wm
+            else:
+                resids -= resids.mean()
         return resids
 
-    def calc_chi2(self):
+    def calc_chi2(self) -> float:
         data_errors = self.get_data_error()
         if (data_errors == 0.0).any():
             return np.inf
-        else:
-            try:
-                return ((self.resids / data_errors) ** 2.0).sum().decompose().value
-            except ValueError:
-                return ((self.resids / data_errors) ** 2.0).sum().decompose()
+        try:
+            return ((self.resids / data_errors) ** 2.0).sum().decompose().value
+        except ValueError:
+            return ((self.resids / data_errors) ** 2.0).sum().decompose()
 
-    def rms_weighted(self):
-        """Compute weighted RMS of the residals in time."""
+    def rms_weighted(self) -> u.Quantity:
+        """Compute weighted RMS of the residuals in time."""
         scaled_errors = self.get_data_error()
         if np.any(scaled_errors.value == 0):
             raise ValueError(
@@ -639,7 +1049,7 @@ class WidebandDMResiduals(Residuals):
         wmean, werr, wsdev = weighted_mean(self.resids, w, sdev=True)
         return wsdev
 
-    def get_dm_data(self):
+    def get_dm_data(self) -> u.Quantity:
         """Get the independent measured DM data from TOA flags.
 
         This is to extract DM and uncertainty data from its representation in
@@ -668,7 +1078,7 @@ class WidebandDMResiduals(Residuals):
         valid_error = np.array(dm_error)[valid_error]
         return valid_dm * self.unit, valid_error * self.unit, valid_data
 
-    def update_model(self, new_model, **kwargs):
+    def update_model(self, new_model: TimingModel, **kwargs) -> None:
         """Up date DM models from a new PINT timing model
 
         Parameters
@@ -689,7 +1099,7 @@ class CombinedResiduals:
     Parameters
     ----------
     residuals: List of residual objects
-        A list of different typs of residual objects
+        A list of different types of residual objects
 
     Note
     ----
@@ -697,7 +1107,7 @@ class CombinedResiduals:
     residuals will have no units.
     """
 
-    def __init__(self, residuals):
+    def __init__(self, residuals: Residuals):
         self.residual_objs = collections.OrderedDict()
         for res in residuals:
             res._is_combined = True
@@ -709,48 +1119,41 @@ class CombinedResiduals:
     def model(self):
         """Return the single timing model object."""
         raise AttributeError(
-            "Combined redisuals object does not provide a "
-            "single timing model object. Pleaes use the "
+            "Combined residuals object does not provide a "
+            "single timing model object. Please use the "
             "dedicated subclass."
         )
 
     @property
-    def _combined_resids(self):
+    def _combined_resids(self) -> np.ndarray:
         """Residuals from all of the residual types."""
-        all_resids = []
-        for res in self.residual_objs.values():
-            all_resids.append(res.resids_value)
+        all_resids = [res.resids_value for res in self.residual_objs.values()]
         return np.hstack(all_resids)
 
     @property
-    def _combined_data_error(self):
-        # Since it is the combinde residual, the units are removed.
+    def _combined_data_error(self) -> np.ndarray:
+        # Since it is the combined residual, the units are removed.
         dr = self.data_error
         return np.hstack([rv.value for rv in dr.values()])
 
     @property
-    def unit(self):
-        units = {}
-        for k, v in self.residual_objs.items():
-            units[k] = v.unit
-        return units
+    def unit(self) -> dict:
+        return {k: v.unit for k, v in self.residual_objs.items()}
 
     @property
-    def chi2(self):
-        chi2 = 0
-        for res in self.residual_objs.values():
-            chi2 += res.chi2
-        return chi2
+    def chi2(self) -> float:
+        return sum(res.chi2 for res in self.residual_objs.values())
 
     @property
-    def data_error(self):
-        errors = []
-        for rs in self.residual_objs.values():
-            errors.append((rs.residual_type, rs.get_data_error()))
+    def data_error(self) -> collections.OrderedDict:
+        errors = [
+            (rs.residual_type, rs.get_data_error())
+            for rs in self.residual_objs.values()
+        ]
         return collections.OrderedDict(errors)
 
-    def rms_weighted(self):
-        """Compute weighted RMS of the residals in time."""
+    def rms_weighted(self) -> np.ndarray:
+        """Compute weighted RMS of the residuals in time."""
 
         if np.any(self._combined_data_error == 0):
             raise ValueError(
@@ -791,7 +1194,13 @@ class WidebandTOAResiduals(CombinedResiduals):
         Default: {}
     """
 
-    def __init__(self, toas, model, toa_resid_args={}, dm_resid_args={}):
+    def __init__(
+        self,
+        toas: TOAs,
+        model: TimingModel,
+        toa_resid_args: dict = {},
+        dm_resid_args: dict = {},
+    ):
         self.toas = toas
         self._model = model
         toa_resid = Residuals(
@@ -803,24 +1212,24 @@ class WidebandTOAResiduals(CombinedResiduals):
         super().__init__([toa_resid, dm_resid])
 
     @property
-    def toa(self):
+    def toa(self) -> Residuals:
         """Residuals object containing the TOA residuals."""
         return self.residual_objs["toa"]
 
     @property
-    def dm(self):
+    def dm(self) -> WidebandDMResiduals:
         """WidebandDMResiduals object containing the DM residuals."""
         return self.residual_objs["dm"]
 
     @property
-    def chi2(self):
+    def chi2(self) -> float:
         """Compute chi-squared as needed and cache the result."""
         if self._chi2 is None:
             self._chi2 = self.calc_chi2()
         assert self._chi2 is not None
         return self._chi2
 
-    def calc_chi2(self, full_cov=False):
+    def calc_chi2(self, full_cov=False) -> float:
         """Return the weighted chi-squared for the model and toas.
 
         If the errors on the TOAs are independent this is a straightforward
@@ -858,7 +1267,7 @@ class WidebandTOAResiduals(CombinedResiduals):
             return np.inf
 
     @property
-    def model(self):
+    def model(self) -> TimingModel:
         """The model used to construct the residuals.
 
         Modifying this model, even changing its parameters, may have confusing
@@ -868,13 +1277,13 @@ class WidebandTOAResiduals(CombinedResiduals):
         return self._model
 
     @property
-    def dof(self):
+    def dof(self) -> int:
         """The number of degrees of freedom for the wideband residuals."""
         dof = len(self._combined_resids)
         dof -= len(self.model.free_params) + 1
         return dof
 
     @property
-    def reduced_chi2(self):
+    def reduced_chi2(self) -> float:
         """Return the weighted reduced chi-squared."""
         return self.chi2 / self.dof

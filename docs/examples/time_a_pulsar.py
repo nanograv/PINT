@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -25,7 +25,6 @@ import matplotlib.pyplot as plt
 import pint.fitter
 from pint.models import get_model_and_toas
 from pint.residuals import Residuals
-from pint.toa import get_TOAs
 import pint.logging
 
 pint.logging.setup(level="INFO")

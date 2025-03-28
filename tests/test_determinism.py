@@ -8,7 +8,6 @@ from numpy.testing import assert_array_equal
 
 import pint.fermi_toas as fermi
 import pint.models
-import pint.toa as toa
 from pint.mcmc_fitter import MCMCFitterBinnedTemplate
 from pint.sampler import EmceeSampler
 from pint.scripts.event_optimize import read_gaussfitfile
@@ -17,7 +16,7 @@ from pinttestdata import datadir
 
 def test_sampler():
     r = []
-    for i in range(2):
+    for _ in range(2):
         random.seed(0)
         numpy.random.seed(0)
         s = numpy.random.mtrand.RandomState(0)
@@ -37,10 +36,13 @@ def test_sampler():
         phs = 0.0
 
         model = pint.models.get_model(parfile)
-        tl = fermi.load_Fermi_TOAs(
-            eventfile, weightcolumn=weightcol, minweight=minWeight
+        ts = fermi.get_Fermi_TOAs(
+            eventfile,
+            weightcolumn=weightcol,
+            minweight=minWeight,
+            ephem="DE421",
+            planets=False,
         )
-        ts = toa.get_TOAs_list(tl, ephem="DE421", planets=False)
         # Introduce a small error so that residuals can be calculated
         ts.table["error"] = 1.0
         ts.filename = eventfile
@@ -80,9 +82,11 @@ def test_sampler():
 
         # fitter.phaseogram()
         # samples = sampler.sampler.chain[:, 10:, :].reshape((-1, fitter.n_fit_params))
+        samples = np.transpose(sampler.get_chain(), (1, 0, 2))
 
         # r.append(np.random.randn())
-        r.append(sampler.sampler.chain[0])
+        # r.append(sampler.sampler.chain[0])
+        r.append(samples[0])
     assert_array_equal(r[0], r[1])
 
 
@@ -106,6 +110,7 @@ def test_raw_emcee():
         sampler.random_state = s
         sampler.run_mcmc(p0, 100)
 
-        samples = sampler.chain.reshape((-1, ndim))
+        # samples = sampler.chain.reshape((-1, ndim))
+        samples = np.transpose(sampler.get_chain(), (1, 0, 2)).reshape((-1, ndim))
         r.append(samples[0, 0])
     assert r[0] == r[1]

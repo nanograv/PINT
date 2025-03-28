@@ -2,8 +2,9 @@
 
 author: M. Kerr <matthew.kerr@gmail.com>
 """
+
 import numpy as np
-from numpy import exp, arange, log
+from numpy import arange, exp, log
 from scipy.special import erfc, gamma
 from scipy.stats import chi2, norm
 
@@ -39,15 +40,11 @@ def vec(func):
 
 def to_array(x, dtype=None):
     x = np.asarray(x, dtype=dtype)
-    if len(x.shape) == 0:
-        return np.asarray([x])
-    return x
+    return np.asarray([x]) if len(x.shape) == 0 else x
 
 
 def from_array(x):
-    if (len(x.shape) == 1) and (x.shape[0] == 1):
-        return x[0]
-    return x
+    return x[0] if (len(x.shape) == 1) and (x.shape[0] == 1) else x
 
 
 def sig2sigma(sig, two_tailed=True, logprob=False):
@@ -86,9 +83,8 @@ def sig2sigma(sig, two_tailed=True, logprob=False):
     if logprob:
         if np.any(logsig > 0):
             raise ValueError("Probability must be between 0 and 1.")
-    else:
-        if np.any((sig > 1) | (sig <= 0)):
-            raise ValueError("Probability must be between 0 and 1.")
+    elif np.any((sig > 1) | (sig <= 0)):
+        raise ValueError("Probability must be between 0 and 1.")
 
     if not two_tailed:
         sig *= 2
@@ -123,21 +119,16 @@ def sigma2sig(sigma, two_tailed=True):
     """
     # this appears to handle up to machine precision with no problem
 
-    if two_tailed:
-        return erfc(sigma / 2**0.5)
-    return 1 - 0.5 * erfc(-sigma / 2**0.5)
+    return erfc(sigma / 2**0.5) if two_tailed else 1 - 0.5 * erfc(-sigma / 2**0.5)
 
 
 def sigma_trials(sigma, trials):
     # correct a sigmal value for a trials factor
-    if sigma < 20:
-        p = sigma2sig(sigma) * trials
-        if p >= 1:
-            return 0
-        return sig2sigma(p)
-    else:
-        # use an asymptotic expansion -- this needs to be checked!
+    # use an asymptotic expansion -- this needs to be checked!
+    if sigma >= 20:
         return (sigma**2 - 2 * np.log(trials)) ** 0.5
+    p = sigma2sig(sigma) * trials
+    return 0 if p >= 1 else sig2sigma(p)
 
 
 def z2m(phases, m=2):
@@ -151,13 +142,11 @@ def z2m(phases, m=2):
     if (
         n < 5e3
     ):  # faster for 100s to 1000s of phases, but requires ~20x memory of alternative
-
         s = (np.cos(np.outer(np.arange(1, m + 1), phases))).sum(axis=1) ** 2 + (
             np.sin(np.outer(np.arange(1, m + 1), phases))
         ).sum(axis=1) ** 2
 
     else:
-
         s = (np.asarray([(np.cos(k * phases)).sum() for k in range(1, m + 1)])) ** 2 + (
             np.asarray([(np.sin(k * phases)).sum() for k in range(1, m + 1)])
         ) ** 2
@@ -314,11 +303,11 @@ def sf_hm(h, m=20, c=4, logprob=False):
 
     # next, develop the integrals in the power series
     alpha = 0.5 * exp(-0.5 * c)
-    if not logprob:
-        return exp(-0.5 * h) * (alpha ** arange(0, m) * ints).sum()
-    else:
-        # NB -- this has NOT been tested for partial underflow
-        return -0.5 * h + np.log((alpha ** arange(0, m) * ints).sum())
+    return (
+        -0.5 * h + np.log((alpha ** arange(0, m) * ints).sum())
+        if logprob
+        else exp(-0.5 * h) * (alpha ** arange(0, m) * ints).sum()
+    )
 
 
 def h2sig(h):
@@ -332,9 +321,7 @@ def sf_h20_dj1989(h):
     formula of de Jager et al. 1989 -- NB the quadratic term is NOT correct."""
     if h <= 23:
         return 0.9999755 * np.exp(-0.39802 * h)
-    if h > 50:
-        return 4e-8
-    return 1.210597 * np.exp(-0.45901 * h + 0.0022900 * h**2)
+    return 4e-8 if h > 50 else 1.210597 * np.exp(-0.45901 * h + 0.0022900 * h**2)
 
 
 def sf_h20_dj2010(h):
@@ -354,8 +341,6 @@ def sf_stackedh(k, h, l=0.398405):
     de Jager & Busching 2010."""
 
     fact = lambda x: gamma(x + 1)
-    p = 0
     c = l * h
-    for i in range(k):
-        p += c**i / fact(i)
+    p = sum(c**i / fact(i) for i in range(k))
     return p * np.exp(-c)

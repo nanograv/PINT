@@ -12,7 +12,7 @@ pint.logging.setup(level=pint.logging.script_level)
 import pint.models
 import pint.residuals
 import pint.toa as toa
-from pint.event_toas import load_event_TOAs
+from pint.event_toas import get_event_TOAs
 from pint.eventstats import h2sig, hm
 from pint.fits_utils import read_fits_event_mjds
 from pint.observatory.satellite_obs import get_satellite_observatory
@@ -107,10 +107,23 @@ def main(argv=None):
         dest="loglevel",
     )
     parser.add_argument(
+        "--nbin", help="Number of phase bins in the phaseogram", default=100, type=int
+    )
+    parser.add_argument(
         "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
     )
     parser.add_argument(
         "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
+    )
+    parser.add_argument(
+        "--allow_tcb",
+        action="store_true",
+        help="Convert TCB par files to TDB automatically",
+    )
+    parser.add_argument(
+        "--allow_T2",
+        action="store_true",
+        help="Guess the underlying binary model when T2 is given",
     )
 
     args = parser.parse_args(argv)
@@ -152,11 +165,35 @@ def main(argv=None):
                 "The orbit file is not recognized. It is likely that this mission is not supported. "
                 "Please barycenter the event file using the official mission tools before processing with PINT"
             )
+    # Read in model
+    modelin = pint.models.get_model(
+        args.parfile, allow_T2=args.allow_T2, allow_tcb=args.allow_tcb
+    )
+
+    use_planets = False
+    if "PLANET_SHAPIRO" in modelin.params and modelin.PLANET_SHAPIRO.value:
+        use_planets = True
+    if "AbsPhase" not in modelin.components:
+        log.error(
+            "TimingModel does not include AbsPhase component, which is required "
+            "for computing phases. Make sure you have TZR* parameters in your par file!"
+        )
+        raise ValueError("Model missing AbsPhase component.")
+
     # Read event file and return list of TOA objects, if not using polycos
     if args.polycos == False:
         try:
-            tl = load_event_TOAs(
-                args.eventfile, telescope, minmjd=minmjd, maxmjd=maxmjd
+            # tl = load_event_TOAs(
+            #     args.eventfile, telescope, minmjd=minmjd, maxmjd=maxmjd
+            # )
+            ts = get_event_TOAs(
+                args.eventfile,
+                telescope,
+                minmjd=minmjd,
+                maxmjd=maxmjd,
+                ephem=args.ephem,
+                include_bipm=args.use_bipm,
+                planets=use_planets,
             )
         except KeyError:
             log.error(
@@ -165,22 +202,9 @@ def main(argv=None):
             sys.exit(1)
 
         # Now convert to TOAs object and compute TDBs and posvels
-        if len(tl) == 0:
+        if len(ts) == 0:
             log.error("No TOAs, exiting!")
             sys.exit(0)
-
-    # Read in model
-    modelin = pint.models.get_model(args.parfile)
-    use_planets = False
-    if "PLANET_SHAPIRO" in modelin.params:
-        if modelin.PLANET_SHAPIRO.value:
-            use_planets = True
-    if "AbsPhase" not in modelin.components:
-        log.error(
-            "TimingModel does not include AbsPhase component, which is required "
-            "for computing phases. Make sure you have TZR* parameters in your par file!"
-        )
-        raise ValueError("Model missing AbsPhase component.")
 
     if args.addorbphase and (not hasattr(modelin, "binary_model_name")):
         log.error(
@@ -230,14 +254,6 @@ def main(argv=None):
         h = float(hm(phases))
         print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
     else:  # Normal mode, not polycos
-        ts = toa.get_TOAs_list(
-            tl,
-            ephem=args.ephem,
-            include_bipm=args.use_bipm,
-            include_gps=args.use_gps,
-            planets=use_planets,
-            tdb_method=args.tdbmethod,
-        )
         ts.filename = args.eventfile
         #    if args.fix:
         #        ts.adjust_TOAs(TimeDelta(np.ones(len(ts.table))*-1.0*u.s,scale='tt'))
@@ -253,7 +269,7 @@ def main(argv=None):
         print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
 
     if args.plot:
-        phaseogram_binned(mjds, phases, bins=100, plotfile=args.plotfile)
+        phaseogram_binned(mjds, phases, bins=args.nbin, plotfile=args.plotfile)
 
     # Compute orbital phases for each photon TOA
     if args.addorbphase:

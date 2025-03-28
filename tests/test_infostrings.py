@@ -1,4 +1,5 @@
 """Tests for adding info strings to parfiles and tim files"""
+
 import os
 import pytest
 import io
@@ -15,9 +16,7 @@ class SimpleSetup:
         self.par = par
         self.tim = tim
         self.m = mb.get_model(self.par)
-        self.t = toa.get_TOAs(
-            self.tim, ephem="DE405", planets=False, include_bipm=False
-        )
+        self.t = toa.get_TOAs(self.tim, model=self.m)
 
 
 @pytest.fixture
@@ -59,7 +58,7 @@ def test_infostring_in_timfile(setup_NGC6440E):
     f = io.StringIO()
     setup_NGC6440E.t.write_TOA_file(f, comment="test timfile writing")
     f.seek(0)
-    newtoas = toa.get_TOAs(f)
+    newtoas = toa.get_TOAs(f, model=setup_NGC6440E.m)
     assert (setup_NGC6440E.t.get_mjds() == newtoas.get_mjds()).all()
 
 

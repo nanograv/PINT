@@ -1,16 +1,24 @@
 """Polynomial pulsar spindown."""
+
 # spindown.py
 # Defines Spindown timing model class
 import astropy.units as u
 import numpy
 
+from pint.exceptions import MissingParameter
 from pint.models.parameter import MJDParameter, prefixParameter
-from pint.models.timing_model import MissingParameter, PhaseComponent
+from pint.models.timing_model import PhaseComponent
 from pint.pulsar_mjd import Time
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
 
-class Spindown(PhaseComponent):
+class SpindownBase(PhaseComponent):
+    """An abstract base class to mark Spindown components."""
+
+    pass
+
+
+class Spindown(SpindownBase):
     """A simple timing model for an isolated pulsar.
 
     This represents the pulsar's spin as a Taylor series,
@@ -50,6 +58,7 @@ class Spindown(PhaseComponent):
                 description_template=self.F_description,
                 type_match="float",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         # self.add_param(
@@ -69,6 +78,7 @@ class Spindown(PhaseComponent):
                 name="PEPOCH",
                 description="Reference epoch for spin-down",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -91,11 +101,10 @@ class Spindown(PhaseComponent):
         # Check continuity
         self._parent.get_prefix_list("F", start_index=0)
         # If F1 is set, we need PEPOCH
-        if hasattr(self, "F1") and self.F1.value != 0.0:
-            if self.PEPOCH.value is None:
-                raise MissingParameter(
-                    "Spindown", "PEPOCH", "PEPOCH is required if F1 or higher are set"
-                )
+        if hasattr(self, "F1") and self.F1.value != 0.0 and self.PEPOCH.value is None:
+            raise MissingParameter(
+                "Spindown", "PEPOCH", "PEPOCH is required if F1 or higher are set"
+            )
 
     @property
     def F_terms(self):
@@ -103,7 +112,7 @@ class Spindown(PhaseComponent):
 
     def F_description(self, n):
         """Template function for description"""
-        return "Spin-frequency %d derivative" % n  # if n else "Spin-frequency"
+        return "Spin-frequency derivative %d" % n if n > 0 else "Spin-frequency"
 
     def F_unit(self, n):
         """Template function for unit"""
@@ -128,8 +137,7 @@ class Spindown(PhaseComponent):
             phsepoch_ld = (tbl["tdb"][0] - delay[0]).tdb.mjd_long
         else:
             phsepoch_ld = self.PEPOCH.quantity.tdb.mjd_long
-        dt = (tbl["tdbld"] - phsepoch_ld) * u.day - delay
-        return dt
+        return (tbl["tdbld"] - phsepoch_ld) * u.day - delay
 
     def spindown_phase(self, toas, delay):
         """Spindown phase function.
@@ -180,7 +188,7 @@ class Spindown(PhaseComponent):
         fterms = [0.0 * u.Unit("")] + self.get_spin_terms()
         # rescale the fterms
         for n in range(len(fterms) - 1):
-            f_par = getattr(self, "F{}".format(n))
+            f_par = getattr(self, f"F{n}")
             f_par.value = taylor_horner_deriv(
                 dt.to(u.second), fterms, deriv_order=n + 1
             )

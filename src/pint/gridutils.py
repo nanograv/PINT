@@ -1,8 +1,11 @@
 """Tools for building chi-squared grids."""
+
 import concurrent.futures
 import copy
 import multiprocessing
 import subprocess
+import sys
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from loguru import logger as log
@@ -12,22 +15,27 @@ try:
 except ModuleNotFoundError:
     tqdm = None
 
+from astropy import units as u
 from astropy.utils.console import ProgressBar
 
 from pint import fitter
 
-
 __all__ = ["doonefit", "grid_chisq", "grid_chisq_derived"]
 
 
-def hostinfo():
+def hostinfo() -> str:
     return subprocess.check_output("uname -a", shell=True)
+
+
+def set_log(logger_: "loguru._logger.Logger") -> None:
+    global log
+    log = logger_
 
 
 class WrappedFitter:
     """Worker class to compute one fit with specified parameters fixed but passing other parameters to fit_toas()"""
 
-    def __init__(self, ftr, **fitargs):
+    def __init__(self, ftr: fitter.Fitter, **fitargs) -> None:
         """Worker class to computes one fit with specified parameters fixed
 
         Parameters
@@ -39,7 +47,9 @@ class WrappedFitter:
         self.ftr = ftr
         self.fitargs = fitargs
 
-    def doonefit(self, parnames, parvalues, extraparnames=[]):
+    def doonefit(
+        self, parnames: List[str], parvalues: List[str], extraparnames: List[str] = []
+    ) -> Tuple[float, List[float]]:
         """Worker process that computes one fit with specified parameters fixed
 
         Parameters
@@ -58,6 +68,12 @@ class WrappedFitter:
         """
         # Make a full copy of the fitter to work with
         myftr = copy.deepcopy(self.ftr)
+        # copy the log to all imported modules
+        # this makes them respect the logger settings
+        for m in sys.modules:
+            if m.startswith("pint") and hasattr(sys.modules[m], "log"):
+                setattr(sys.modules[m], "log", log)
+
         parstrings = []
         for parname, parvalue in zip(parnames, parvalues):
             # Freeze the  params we are going to grid over and set their values
@@ -93,7 +109,12 @@ class WrappedFitter:
         return chi2, extraparvalues
 
 
-def doonefit(ftr, parnames, parvalues, extraparnames=[]):
+def doonefit(
+    ftr: fitter.Fitter,
+    parnames: List[str],
+    parvalues: List[u.Quantity],
+    extraparnames: List[str] = [],
+) -> Tuple[float, List[float]]:
     """Worker process that computes one fit with specified parameters fixed
 
     Parameters
@@ -141,16 +162,16 @@ def doonefit(ftr, parnames, parvalues, extraparnames=[]):
 
 
 def grid_chisq(
-    ftr,
-    parnames,
-    parvalues,
-    extraparnames=[],
-    executor=None,
-    ncpu=None,
-    chunksize=1,
-    printprogress=True,
+    ftr: fitter.Fitter,
+    parnames: List[str],
+    parvalues: List[u.Quantity],
+    extraparnames: List[str] = [],
+    executor: Optional[concurrent.futures.Executor] = None,
+    ncpu: Optional[int] = None,
+    chunksize: int = 1,
+    printprogress: bool = True,
     **fitargs,
-):
+) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
     """Compute chisq over a grid of parameters
 
     Parameters
@@ -281,14 +302,6 @@ def grid_chisq(
     .. [1] https://mpi4py.readthedocs.io/en/stable/mpi4py.futures.html#mpipoolexecutor
     .. [2] https://github.com/sampsyo/clusterfutures
     """
-    if isinstance(executor, concurrent.futures.Executor):
-        # the executor has already been created
-        executor = executor
-    elif executor is None and (ncpu is None or ncpu > 1):
-        # make the default type of Executor
-        if ncpu is None:
-            ncpu = multiprocessing.cpu_count()
-        executor = concurrent.futures.ProcessPoolExecutor(max_workers=ncpu)
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
     savemod = ftr.model
@@ -300,6 +313,17 @@ def grid_chisq(
         getattr(ftr.model, parname).frozen = True
 
     wftr = WrappedFitter(ftr, **fitargs)
+
+    if isinstance(executor, concurrent.futures.Executor):
+        # the executor has already been created
+        executor = executor
+    elif executor is None and (ncpu is None or ncpu > 1):
+        # make the default type of Executor
+        if ncpu is None:
+            ncpu = multiprocessing.cpu_count()
+        executor = concurrent.futures.ProcessPoolExecutor(
+            max_workers=ncpu, initializer=set_log, initargs=(log,)
+        )
 
     # All other unfrozen parameters will be fitted for at each grid point
     out = np.meshgrid(*parvalues)
@@ -364,17 +388,17 @@ def grid_chisq(
 
 
 def grid_chisq_derived(
-    ftr,
-    parnames,
-    parfuncs,
-    gridvalues,
-    extraparnames=[],
-    executor=None,
-    ncpu=None,
-    chunksize=1,
-    printprogress=True,
+    ftr: fitter.Fitter,
+    parnames: List[str],
+    parfuncs: List[callable],
+    gridvalues: List[np.ndarray],
+    extraparnames: List[str] = [],
+    executor: Optional[concurrent.futures.Executor] = None,
+    ncpu: Optional[int] = None,
+    chunksize: int = 1,
+    printprogress: bool = True,
     **fitargs,
-):
+) -> Tuple[np.ndarray, List[np.ndarray], Dict[str, np.ndarray]]:
     """Compute chisq over a grid of derived parameters
 
     Parameters
@@ -560,16 +584,16 @@ def grid_chisq_derived(
 
 
 def tuple_chisq(
-    ftr,
-    parnames,
-    parvalues,
-    extraparnames=[],
-    executor=None,
-    ncpu=None,
-    chunksize=1,
-    printprogress=True,
+    ftr: fitter.Fitter,
+    parnames: List[str],
+    parvalues: List[np.ndarray],
+    extraparnames: List[str] = [],
+    executor: Optional[concurrent.futures.Executor] = None,
+    ncpu: Optional[int] = None,
+    chunksize: int = 1,
+    printprogress: bool = True,
     **fitargs,
-):
+) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
     """Compute chisq over a list of parameter tuples
 
     Parameters
@@ -745,17 +769,17 @@ def tuple_chisq(
 
 
 def tuple_chisq_derived(
-    ftr,
-    parnames,
-    parfuncs,
-    parvalues,
-    extraparnames=[],
-    executor=None,
-    ncpu=None,
-    chunksize=1,
-    printprogress=True,
+    ftr: fitter.Fitter,
+    parnames: List[str],
+    parfuncs: List[callable],
+    parvalues: List[np.ndarray],
+    extraparnames: List[str] = [],
+    executor: Optional[concurrent.futures.Executor] = None,
+    ncpu: Optional[int] = None,
+    chunksize: int = 1,
+    printprogress: bool = True,
     **fitargs,
-):
+) -> Tuple[np.ndarray, List, Dict[str, np.ndarray]]:
     """Compute chisq over a list of derived parameter tuples
 
     Parameters

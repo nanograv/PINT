@@ -16,7 +16,14 @@ author: M. Kerr <matthew.kerr@gmail.com>
 from math import atan, cosh, tan
 
 import numpy as np
-from scipy.integrate import quad, simps
+from scipy.integrate import quad
+
+try:
+    from scipy.integrate import simpson
+except ImportError:
+    # for old versions of scipy that don't have simpson
+    # this change was made in 1.6.0, so if we support older versions we need this
+    from scipy.integrate import simps as simpson
 from scipy.interpolate import interp1d
 from scipy.special import erf, i0, i1, owens_t
 from scipy.stats import cauchy, norm, vonmises, skewnorm
@@ -123,7 +130,7 @@ def approx_derivative(func, phases, log10_ens=None, order=1, eps=1e-7):
     This is "dTemplate/dPhi."
     """
 
-    if not ((order == 1) or (order == 2)):
+    if order not in [1, 2]:
         raise NotImplementedError("Only 1st and 2nd derivs supported.")
 
     phhi = np.mod(phases + eps, 1)
@@ -240,11 +247,11 @@ class LCPrimitive:
         pass
 
     def parse_kwargs(self, kwargs):
-        # acceptable keyword arguments, can be overriden by children
+        # acceptable keyword arguments, can be overridden by children
         recognized_kwargs = ["p", "free"]
         for key in kwargs.keys():
             if key not in recognized_kwargs:
-                raise ValueError("kwarg %s not recognized" % key)
+                raise ValueError(f"kwarg {key} not recognized")
         self.__dict__.update(kwargs)
 
     def __call__(self, phases):
@@ -253,9 +260,7 @@ class LCPrimitive:
         )
 
     def num_parameters(self, free=True):
-        if free:
-            return np.sum(self.free)
-        return len(self.free)
+        return np.sum(self.free) if free else len(self.free)
 
     def get_free_mask(self):
         """Return a mask with True if parameters are free, else False."""
@@ -344,9 +349,7 @@ class LCPrimitive:
         # return np.all(self.p>=self.bounds[:,0]) and np.all(self.p<=self.bounds[:,1])
 
     def get_parameters(self, free=True):
-        if free:
-            return self.p[self.free]
-        return self.p
+        return self.p[self.free] if free else self.p
 
     def get_parameter_names(self, free=True):
         return [p for (p, b) in zip(self.pnames, self.free) if b]
@@ -358,14 +361,10 @@ class LCPrimitive:
         return n
 
     def get_errors(self, free=True):
-        if free:
-            return self.errors[self.free]
-        return self.errors
+        return self.errors[self.free] if free else self.errors
 
     def get_bounds(self, free=True):
-        if free:
-            return np.asarray(self.bounds)[self.free]
-        return self.bounds
+        return np.asarray(self.bounds)[self.free] if free else self.bounds
 
     def check_bounds(self, p=None):
         b = np.asarray(self.bounds)
@@ -392,9 +391,7 @@ class LCPrimitive:
             self.enable_gauss_prior()
 
     def get_location(self, error=False):
-        if error:
-            return np.asarray([self.p[-1], self.errors[-1]])
-        return self.p[-1]
+        return np.asarray([self.p[-1], self.errors[-1]]) if error else self.p[-1]
 
     def set_location(self, loc):
         self.p[-1] = loc
@@ -461,17 +458,16 @@ class LCPrimitive:
                 accept = (
                     rfunc(N) < self(cand_phases, log10_ens=log10_ens[mask]) / M[mask]
                 )
+            elif isvector(log10_ens):
+                accept = rfunc(N) < self(cand_phases, log10_ens=log10_ens[mask]) / M
             else:
-                if isvector(log10_ens):
-                    accept = rfunc(N) < self(cand_phases, log10_ens=log10_ens[mask]) / M
-                else:
-                    accept = rfunc(N) < self(cand_phases, log10_ens=log10_ens) / M
+                accept = rfunc(N) < self(cand_phases, log10_ens=log10_ens) / M
             rvals[indices[mask][accept]] = cand_phases[accept]
             mask[indices[mask][accept]] = False
         return rvals
 
     def __str__(self):
-        m = max([len(n) for n in self.pnames])
+        m = max(len(n) for n in self.pnames)
         l = []
         errors = self.errors if hasattr(self, "errors") else [0] * len(self.pnames)
         for i in range(len(self.pnames)):
@@ -511,7 +507,7 @@ class LCPrimitive:
         # gradient test
         try:
             t4 = self.check_gradient(quiet=True)
-        except:
+        except Exception:
             t4 = False
         # boundary conditions
         t5 = abs(self(0) - self(1 - eps)) < eps
@@ -528,15 +524,9 @@ class LCPrimitive:
         return np.all([t1, t2, t3, t4, t5])
 
     def eval_string(self):
-        """Return a string that can be evaled to instantiate a nearly-
+        """Return a string that can be evaluated to instantiate a nearly-
         identical object."""
-        return "%s(p=%s,free=%s,slope=%s,slope_free=%s)" % (
-            self.__class__.__name__,
-            str(list(self.p)),
-            str(list(self.free)),
-            str(list(self.slope)) if hasattr(self, "slope") else None,
-            str(list(self.slope_free)) if hasattr(self, "slope_free") else None,
-        )
+        return f'{self.__class__.__name__}(p={list(self.p)},free={list(self.free)},slope={str(list(self.slope)) if hasattr(self, "slope") else None},slope_free={str(list(self.slope_free)) if hasattr(self, "slope_free") else None})'
 
     def dict_string(self):
         """Return a string to express the object as a dictionary that can
@@ -545,16 +535,14 @@ class LCPrimitive:
         def pretty_list(l, places=5):
             fmt = "%." + "%d" % places + "f"
             s = ", ".join([fmt % x for x in l])
-            return "[" + s + "]"
+            return f"[{s}]"
 
         t = [
-            "name = %s" % self.__class__.__name__,
-            "p = %s" % (pretty_list(self.p)),
-            "free = %s" % (str(list(self.free))),
-            "slope = %s"
-            % (pretty_list(self.slope) if hasattr(self, "slope") else None),
-            "slope_free = %s"
-            % (str(list(self.slope_free)) if hasattr(self, "slope_free") else None),
+            f"name = {self.__class__.__name__}",
+            f"p = {pretty_list(self.p)}",
+            f"free = {list(self.free)}",
+            f'slope = {pretty_list(self.slope) if hasattr(self, "slope") else None}',
+            f'slope_free = {str(list(self.slope_free)) if hasattr(self, "slope_free") else None}',
         ]
         # return 'dict(\n'+'\n    '.join(t)+'\n
         return t
@@ -637,9 +625,7 @@ class LCWrappedFunction(LCPrimitive):
         if gn is not None:
             for i in range(len(gn)):
                 results[i, :] += gn[i]
-        if free:
-            return results[self.free]
-        return results
+        return results[self.free] if free else results
 
     def gradient_derivative(self, phases, log10_ens=3, free=False):
         """Return the gradient evaluated at a vector of phases.
@@ -658,9 +644,7 @@ class LCWrappedFunction(LCPrimitive):
         if gn is not None:
             for i in range(len(gn)):
                 results[i, :] += gn[i]
-        if free:
-            return results[self.free]
-        return results
+        return results[self.free] if free else results
 
     def hessian(self, phases, log10_ens=3, free=False):
         """Return the hessian evaluated at a vector of phases.
@@ -682,9 +666,7 @@ class LCWrappedFunction(LCPrimitive):
             raise NotImplementedError
             # for i in range(len(gn)):
             # results[i,:] += gn[i]
-        if free:
-            return results[self.free, self.free]
-        return results
+        return results[self.free, self.free] if free else results
 
     def derivative(self, phases, log10_ens=3, order=1):
         """Return the phase gradient (dprim/dphi) at a vector of phases.
@@ -803,7 +785,6 @@ class LCGaussian(LCWrappedFunction):
         return 0.5 * (erf(z2 / ROOT2) - erf(z1 / ROOT2))
 
     def random(self, n, log10_ens=3):
-
         if isvector(log10_ens) and len(log10_ens) != n:
             raise ValueError("Provided log10_ens vector does not match requested n.")
         e, width, x0 = self._make_p(log10_ens)
@@ -930,26 +911,28 @@ class LCSkewGaussian(LCWrappedFunction):
 
     def base_grad_deriv(self, phases, log10_ens=3, index=0):
         raise NotImplementedError
-        e, width, x0 = self._make_p(log10_ens)
-        z = (phases + index - x0) / width
-        f = (1.0 / (width * ROOT2PI)) * np.exp(-0.5 * z**2)
-        q = f / width**2
-        z2 = z**2
-        return np.asarray([q * z * (3 - z2), q * (1 - z2)])
+        # @abhisrkckl: commented out unreachable code.
+        # e, width, x0 = self._make_p(log10_ens)
+        # z = (phases + index - x0) / width
+        # f = (1.0 / (width * ROOT2PI)) * np.exp(-0.5 * z**2)
+        # q = f / width**2
+        # z2 = z**2
+        # return np.asarray([q * z * (3 - z2), q * (1 - z2)])
 
     def base_hess(self, phases, log10_ens=3, index=0):
         raise NotImplementedError
-        e, width, x0 = self._make_p(log10_ens=log10_ens)
-        z = (phases + index - x0) / width
-        f = (1.0 / (width * ROOT2PI)) * np.exp(-0.5 * z**2)
-        q = f / width**2
-        z2 = z**2
-        rvals = np.empty((2, 2, len(z)))
-        rvals[0, 0] = q * (z2**2 - 5 * z2 + 2)
-        rvals[0, 1] = q * (z2 - 3) * z
-        rvals[1, 1] = q * (z2 - 1)
-        rvals[1, 0] = rvals[0, 1]
-        return rvals
+        # @abhisrkckl: commented out unreachable code.
+        # e, width, x0 = self._make_p(log10_ens=log10_ens)
+        # z = (phases + index - x0) / width
+        # f = (1.0 / (width * ROOT2PI)) * np.exp(-0.5 * z**2)
+        # q = f / width**2
+        # z2 = z**2
+        # rvals = np.empty((2, 2, len(z)))
+        # rvals[0, 0] = q * (z2**2 - 5 * z2 + 2)
+        # rvals[0, 1] = q * (z2 - 3) * z
+        # rvals[1, 1] = q * (z2 - 1)
+        # rvals[1, 0] = rvals[0, 1]
+        # return rvals
 
     def base_derivative(self, phases, log10_ens=3, index=0, order=1):
         e, width, shape, x0 = self._make_p(log10_ens)
@@ -981,7 +964,6 @@ class LCSkewGaussian(LCWrappedFunction):
         return (norm_2 - owens_2) - (norm_1 - owens_1)
 
     def random(self, n, log10_ens=3):
-
         if isvector(log10_ens) and len(log10_ens) != n:
             raise ValueError("Provided log10_ens vector does not match requested n.")
         e, width, shape, x0 = self._make_p(log10_ens)
@@ -1056,9 +1038,7 @@ class LCLorentzian(LCPrimitive):
         f2 = f**2
         g1 = f * (c1 / s1) - f2
         g2 = f2 * (TWOPI / s1) * s
-        if free:
-            return np.asarray([g1, g2])[self.free]
-        return np.asarray([g1, g2])
+        return np.asarray([g1, g2])[self.free] if free else np.asarray([g1, g2])
 
     def derivative(self, phases, log10_ens=3, index=0, order=1):
         """Return the phase gradient (dprim/dphi) at a vector of phases.
@@ -1237,9 +1217,7 @@ class LCVonMises(LCPrimitive):
         rvals = np.empty([2, len(phases)])
         rvals[0] = f * kappa**2 * (I1 / I0 - cz)
         rvals[1] = f * (TWOPI * kappa) * sz
-        if free:
-            return rvals[self.free]
-        return rvals
+        return rvals[self.free] if free else rvals
 
     def derivative(self, phases, log10_ens=3, order=1):
         # NB -- same as the (-ve) loc gradient
@@ -1255,7 +1233,6 @@ class LCVonMises(LCPrimitive):
             raise NotImplementedError
 
     def random(self, n, log10_ens=3):
-
         if isvector(log10_ens) and len(log10_ens) != n:
             raise ValueError("Provided log10_ens vector does not match requested n.")
         e, width, x0 = self._make_p(log10_ens)
@@ -1291,7 +1268,8 @@ class LCKing(LCWrappedFunction):
 
     def hwhm(self, right=False):
         raise NotImplementedError()
-        return self.p[0] * (2 * np.log(2)) ** 0.5
+        # @abhisrkckl: commented out unreachable code.
+        # return self.p[0] * (2 * np.log(2)) ** 0.5
 
     def base_func(self, phases, log10_ens=3, index=0):
         e, s, g, x0 = self._make_p(log10_ens)
@@ -1301,10 +1279,11 @@ class LCKing(LCWrappedFunction):
 
     def base_grad(self, phases, log10_ens=3, index=0):
         raise NotImplementedError()
-        e, width, x0 = self._make_p(log10_ens)
-        z = (phases + index - x0) / width
-        f = (1.0 / (width * ROOT2PI)) * np.exp(-0.5 * z**2)
-        return np.asarray([f / width * (z**2 - 1.0), f / width * z])
+        # @abhisrkckl: commented out unreachable code.
+        # e, width, x0 = self._make_p(log10_ens)
+        # z = (phases + index - x0) / width
+        # f = (1.0 / (width * ROOT2PI)) * np.exp(-0.5 * z**2)
+        # return np.asarray([f / width * (z**2 - 1.0), f / width * z])
 
     def base_int(self, x1, x2, log10_ens=3, index=0):
         e, s, g, x0 = self._make_p(log10_ens)
@@ -1316,15 +1295,14 @@ class LCKing(LCWrappedFunction):
         f2 = 1 - (1.0 + u2 / g) ** (1 - g)
         if z1 * z2 < 0:  # span the peak
             return 0.5 * (f1 + f2)
-        if z1 < 0:
-            return 0.5 * (f1 - f2)
-        return 0.5 * (f2 - f1)
+        return 0.5 * (f1 - f2) if z1 < 0 else 0.5 * (f2 - f1)
 
     def random(self, n):
         raise NotImplementedError()
-        if hasattr(n, "__len__"):
-            n = len(n)
-        return np.mod(norm.rvs(loc=self.p[-1], scale=self.p[0], size=n), 1)
+        # @abhisrkckl: commented out unreachable code.
+        # if hasattr(n, "__len__"):
+        #     n = len(n)
+        # return np.mod(norm.rvs(loc=self.p[-1], scale=self.p[0], size=n), 1)
 
 
 class LCTopHat(LCPrimitive):
@@ -1622,7 +1600,7 @@ class LCKernelDensity(LCPrimitive):
         x = self.interpolator.x
         y = self.interpolator.y
         mask = (x >= x1) & (x <= x2)
-        return simps(y[mask], x=x[mask])
+        return simpson(y[mask], x=x[mask])
         # return self.interpolator.y[mask].sum()/len(mask)
 
 

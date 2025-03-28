@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+import pytest
 import os
-import unittest
+import pytest
 
 import numpy as np
 
@@ -9,11 +9,11 @@ import pint.models as m
 from pinttestdata import datadir
 
 
-class TestOrbitPhase(unittest.TestCase):
+class TestOrbitPhase:
     """Test orbital phase calculations"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.pJ1855 = "B1855+09_NANOGrav_dfg+12_modified_DD.par"
         cls.mJ1855 = m.get_model(cls.pJ1855)
@@ -21,10 +21,10 @@ class TestOrbitPhase(unittest.TestCase):
     def test_barytimes(self):
         ts = t.Time([56789.234, 56790.765], format="mjd")
         # Should raise ValueError since not in "tdb"
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             self.mJ1855.orbital_phase(ts)
         # Should raise ValueError since not correct anom
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             self.mJ1855.orbital_phase(ts.tdb, anom="xxx")
         # Should return
         phs = self.mJ1855.orbital_phase(ts.tdb, anom="mean")
@@ -33,7 +33,7 @@ class TestOrbitPhase(unittest.TestCase):
         phs = self.mJ1855.orbital_phase(toas)
         assert len(phs) == toas.ntoas
 
-    def test_J1855_nonzero_ecc(self):
+    def test_j1855_nonzero_ecc(self):
         ts = self.mJ1855.T0.value + np.linspace(0, self.mJ1855.PB.value, 101)
         self.mJ1855.ECC.value = 0.1  # set the eccentricity to nonzero
         phs = self.mJ1855.orbital_phase(ts, anom="mean", radians=False)
@@ -49,7 +49,7 @@ class TestOrbitPhase(unittest.TestCase):
         assert np.isclose(phs3[0].value, phs[0].value), "Eccen anom != True anom"
         assert phs3[1] != phs[49], "Eccen anom == True anom"
 
-    def test_J1855_zero_ecc(self):
+    def test_j1855_zero_ecc(self):
         self.mJ1855.ECC.value = 0.0  # set the eccentricity to zero
         self.mJ1855.OM.value = 0.0  # set omega to zero
         phs1 = self.mJ1855.orbital_phase(self.mJ1855.T0.value, anom="mean")
@@ -61,7 +61,7 @@ class TestOrbitPhase(unittest.TestCase):
         phs3 = self.mJ1855.orbital_phase(self.mJ1855.T0.value + 0.1, anom="true")
         assert np.isclose(phs3.value, phs1.value), "True anom != Mean anom"
 
-    def test_J1855_ell1(self):
+    def test_j1855_ell1(self):
         mJ1855ell1 = m.get_model("B1855+09_NANOGrav_12yv3.wb.gls.par")
         phs1 = mJ1855ell1.orbital_phase(mJ1855ell1.TASC.value, anom="mean")
         assert np.isclose(phs1.value, 0.0), "Mean anom != 0.0 at TASC as value"
@@ -74,7 +74,7 @@ class TestOrbitPhase(unittest.TestCase):
         phs3 = mJ1855ell1.orbital_phase(mJ1855ell1.TASC.value + 0.1, anom="true")
         assert np.isclose(phs3.value, phs1.value), "True anom != Mean anom"
 
-    def test_J0737(self):
+    def test_j0737(self):
         # Find a conjunction which we have confirmed by GBT data and Shapiro delay
         mJ0737 = m.get_model("0737A_latest.par")
         x = mJ0737.conjunction(55586.25)

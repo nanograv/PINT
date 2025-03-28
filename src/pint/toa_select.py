@@ -1,4 +1,5 @@
 """Tool for selecting a subset of TOAs."""
+
 import numpy as np
 
 __all__ = ["TOASelect"]
@@ -81,26 +82,19 @@ class TOASelect:
             False for column has been changed.
         """
         if self.use_hash:
-            if new_column.name not in self.hash_dict.keys():
-                self.hash_dict[new_column.name] = hash(new_column.tobytes())
-                return False
-            else:
-                if self.hash_dict[new_column.name] == hash(new_column.tobytes()):
-                    return True
-                else:
-                    # update hash value to new column
-                    self.hash_dict[new_column.name] = hash(new_column.tobytes())
-                    return False
+            if new_column.name in self.hash_dict.keys() and self.hash_dict[
+                new_column.name
+            ] == hash(new_column.tobytes()):
+                return True
+            # update hash value to new column
+            self.hash_dict[new_column.name] = hash(new_column.tobytes())
+        elif new_column.name not in self.columns_info.keys():
+            self.columns_info[new_column.name] = new_column
+        elif np.array_equal(self.columns_info[new_column.name], new_column):
+            return True
         else:
-            if new_column.name not in self.columns_info.keys():
-                self.columns_info[new_column.name] = new_column
-                return False
-            else:
-                if np.array_equal(self.columns_info[new_column.name], new_column):
-                    return True
-                else:
-                    self.columns_info[new_column.name] = new_column
-                    return False
+            self.columns_info[new_column.name] = new_column
+        return False
 
     def get_select_range(self, condition, column):
         """
@@ -125,9 +119,7 @@ class TOASelect:
     def get_select_index(self, condition, column):
         # Check if condition get changed
         cd_unchg, cd_chg = self.check_condition(condition)
-        # check if column get changed.
-        col_change = self.check_table_column(column)
-        if col_change:
+        if col_change := self.check_table_column(column):
             if self.is_range:
                 new_select = self.get_select_range(cd_chg, column)
             else:

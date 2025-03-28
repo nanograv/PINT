@@ -1,4 +1,4 @@
-import unittest
+import pytest
 
 import astropy.coordinates
 import astropy.time
@@ -6,7 +6,7 @@ import astropy.utils
 from astropy.utils.iers import IERS_A, IERS_A_URL
 
 
-class TestAstroPyTime(unittest.TestCase):
+class TestAstroPyTime:
     """This class contains a sequence of time conversion tests.
 
     From the SOFA manual, these times are all equivalent:
@@ -19,7 +19,7 @@ class TestAstroPyTime(unittest.TestCase):
     TCB 2006/01/15 21:25:56.893952
     """
 
-    def setUp(self):
+    def setup_method(self):
         self.lat = 19.48125
         self.lon = -155.933222
         earthloc = astropy.coordinates.EarthLocation.from_geodetic(
@@ -38,7 +38,7 @@ class TestAstroPyTime(unittest.TestCase):
         y = "2006-01-15 21:24:37.500000"
         assert x == y
 
-    @unittest.skip
+    @pytest.mark.skip
     def test_utc_ut1(self):
         x = self.t.ut1.iso
         y = "2006-01-15 21:24:37.834078"
@@ -70,7 +70,7 @@ class TestAstroPyTime(unittest.TestCase):
         y = "2006-01-15 21:25:56.893952"
         assert x == y
 
-    @unittest.skip
+    @pytest.mark.skip
     def test_iers_a_now():
         # FIXME: might use cached IERS_A_URL?
         # FIXME: what would this actually be testing?

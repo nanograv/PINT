@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -28,19 +28,17 @@
 #   * Add the new component to the `TimingModel` class
 #   * Use the functions in the `TimingModel` class to interact with the new component.
 #
-# We will build a simple model component, pulsar spindow model with spin period as parameters, instead of spin frequency.
+# We will build a simple model component, pulsar spindown model with spin period as parameters, instead of spin frequency.
 
 # %% [markdown]
 # ## Import the necessary modules
 
 # %%
-import numpy as np  # Numpy is a widely used package
-
-# PINT uses astropy units in the internal cacluation and is highly recommended for a new component
+# PINT uses astropy units in the internal calculation and is highly recommended for a new component
 import astropy.units as u
 
 # Import the component classes.
-from pint.models.timing_model import TimingModel, Component, PhaseComponent
+from pint.models.spindown import SpindownBase
 import pint.models.parameter as p
 import pint.config
 import pint.logging
@@ -88,15 +86,17 @@ pint.logging.setup(level="INFO")
 # * Register the analytical derivative functions using the `.register_deriv_funcs(derivative function, parameter name)` if any.
 # * If one wants to access the attribute in the parent `TimingModel` class or from other components, please use `._parent` attribute which is a linker to the `TimingModel` class and other components.
 
+
 # %%
-class PeriodSpindown(PhaseComponent):
-    """This is an example model component of pular spindown but parametrized as period."""
+class PeriodSpindown(SpindownBase):
+    """This is an example model component of pulsar spindown but parametrized as period."""
 
     register = True  # Flags for the model builder to find this component.
+
     # define the init function.
     # Most components do not have a parameter for input.
     def __init__(self):
-        # Get the attruibutes that initilzed in the parent class
+        # Get the attributes that initialized in the parent class
         super().__init__()
         # Add parameters using the add_params in the TimingModel
         # Add spin period as parameter
@@ -107,6 +107,7 @@ class PeriodSpindown(PhaseComponent):
                 units=u.s,
                 description="Spin period",
                 longdouble=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         # Add spin period derivative P1. Since it is not all rquired, we are setting the
@@ -118,6 +119,7 @@ class PeriodSpindown(PhaseComponent):
                 units=u.s / u.s,
                 description="Spin period derivative",
                 longdouble=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         # Add reference epoch time.
@@ -126,6 +128,7 @@ class PeriodSpindown(PhaseComponent):
                 name="PEPOCH_P0",
                 description="Reference epoch for spin-down",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         # Add spindown phase model function to phase functions
@@ -159,6 +162,7 @@ class PeriodSpindown(PhaseComponent):
             units="Hz",
             description="Spin-frequency",
             long_double=True,
+            tcb2tdb_scale_factor=u.Quantity(1),
         )
 
     # Defining the derivatives. In the PINT, a common format of derivative naming is
@@ -175,6 +179,7 @@ class PeriodSpindown(PhaseComponent):
             units=u.Hz / u.s,
             description="Spin down frequency",
             long_double=True,
+            tcb2tdb_scale_factor=u.Quantity(1),
         )
 
     @property
@@ -319,7 +324,7 @@ plt.grid()
 # %% [markdown]
 # ### Print out the summary
 
-# %% tags=[]
+# %%
 f.print_summary()
 
 # %% [markdown]

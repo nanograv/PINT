@@ -95,29 +95,31 @@ To load both::
     m, t = get_model_and_toas(parfile, timfile)
 
 
-Create TOAs from a list of times
+Create TOAs from an array of times
 --------------------------------
 A :class:`pint.toa.TOA` object represents a *single* TOA as an object that contains 
 both a time and a location, along with optional information like frequency, measurement error, etc.  
 So each :class:`~pint.toa.TOA` object should only contain a single time, since otherwise the location information would be ambiguous.
-If you wish to create TOAs from a :class:`astropy.time.Time` object containing multiple times, 
-you should use list comprehension to create a list of :class:`~pint.toa.TOA` objects,
-and then convert them to a :class:`pint.toa.TOAs` object::
+If you wish to create TOAs from a :class:`astropy.time.Time` object containing multiple times,
+you can do::
 
     import numpy as np
     from astropy import units as u, constants as c
     from pint import pulsar_mjd
+    from astropy.time import Time
     from pint import toa
 
-    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    t = Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
     obs = "gbt"
 
-    toalist = [toa.TOA(tt, obs=obs, error=1 * u.us) for tt in t]
-    toas = toa.get_TOAs_list(toalist)
+    toas = toa.get_TOAs_array(t, obs)
 
-Note that we also use ``Time`` from :mod:`pint.pulsar_mjd` rather than :class:`astropy.time.Time` directly to allow the 
-``pulsar_mjd`` format, designed to avoid leap seconds.  But this would work with standard :class:`astropy.time.Time` 
-objects as well.  We use :func:`pint.toa.get_TOAs_list` to make sure clock corrections are applied when constructing the TOAs.
+Note that we import :mod:`pint.pulsar_mjd` to allow the 
+``pulsar_mjd`` format, designed to deal properly with leap seconds.  
+We use :func:`pint.toa.get_TOAs_array` to make sure clock corrections are 
+applied when constructing the TOAs.  
+Other information like ``errors``, ``frequencies``, and ``flags`` can be added.  
+You can also merge multiple data-sets with :func:`pint.toa.merge_TOAs`
 
 
 Get the red noise basis functions and the corresponding coefficients out of a PINT fitter object
@@ -169,6 +171,34 @@ requested epoch. Similarly::
 does the same for :class:`pint.models.astrometry.AstrometryEcliptic` (with an
 optional specification of the obliquity).
 
+Convert between binary models
+-----------------------------
+
+If ``m`` is your initial model, say an ELL1 binary::
+
+    from pint import binaryconvert
+    m2 = binaryconvert.convert_binary(m, "DD")
+
+will convert it to a DD binary.  
+
+Some binary types need additional parameters.  For ELL1H, you can set the number of harmonics and whether to use H4 or STIGMA::
+
+    m2 = binaryconvert.convert_binary(m, "ELL1H", NHARMS=3, useSTIGMA=True)
+
+For DDK, you can set OM (known as ``KOM``)::
+
+    m2 = binaryconvert.convert_binary(mDD, "DDK", KOM=12 * u.deg)
+
+Parameter values and uncertainties will be converted.  It will also make a best-guess as to which parameters should be frozen, but 
+it can still be useful to refit with the new model and check which parameters are fit.
+
+.. note::
+    The T2 model from tempo2 is not implemented, as this is a complex model that actually encapsulates several models.  The best practice is to 
+    change the model to the actual underlying model (ELL1, DD, BT, etc).
+
+These conversions can also be done on the command line using ``convert_parfile``::
+
+    convert_parfile --binary=DD ell1.par -o dd.par
 
 Add a jump programmatically
 ---------------------------

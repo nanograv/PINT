@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import numpy as np
 from astropy.time import Time
 

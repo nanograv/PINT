@@ -1,6 +1,6 @@
 import logging
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 import numpy as np
@@ -13,11 +13,11 @@ from pinttestdata import datadir
 from pint.modelutils import model_equatorial_to_ecliptic, model_ecliptic_to_equatorial
 
 
-class TestEcliptic(unittest.TestCase):
+class TestEcliptic:
     """Test conversion from equatorial <-> ecliptic coordinates, and compare residuals."""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         # J0613 is in equatorial
         cls.parfileJ0613 = os.path.join(
             datadir, "J0613-0200_NANOGrav_dfg+12_TAI_FB90.par"
@@ -50,8 +50,8 @@ class TestEcliptic(unittest.TestCase):
         assert (
             "AstrometryEcliptic" in ECLmodelJ0613.components
         ), "Creation of ecliptic model failed"
-        assert not (
-            "AstrometryEquatorial" in ECLmodelJ0613.components
+        assert (
+            "AstrometryEquatorial" not in ECLmodelJ0613.components
         ), "Equatorial model still present"
         self.log.debug("Ecliptic model created")
 
@@ -78,8 +78,8 @@ class TestEcliptic(unittest.TestCase):
         assert (
             "AstrometryEquatorial" in EQUmodelB1855.components
         ), "Creation of equatorial model failed"
-        assert not (
-            "AstrometryEcliptic" in EQUmodelB1855.components
+        assert (
+            "AstrometryEcliptic" not in EQUmodelB1855.components
         ), "Ecliptic model still present"
         self.log.debug("Equatorial model created")
 
@@ -93,7 +93,3 @@ class TestEcliptic(unittest.TestCase):
             % np.nanmax(np.abs(pint_resids - EQUpint_resids)).value
         )
         assert np.all(np.abs(pint_resids - EQUpint_resids) < 1e-10 * u.s), msg
-
-
-if __name__ == "__main__":
-    pass

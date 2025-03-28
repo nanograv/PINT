@@ -2,12 +2,14 @@
 """Tkinter interactive interface for PINT pulsar timing tool"""
 import argparse
 
+import os
 import sys
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
 import matplotlib as mpl
+from loguru import logger as log
 
 import pint.logging
 
@@ -31,7 +33,7 @@ class PINTk:
         master,
         parfile=None,
         timfile=None,
-        fitter="auto",
+        fitter="downhill",
         ephem=None,
         loglevel=None,
         **kwargs,
@@ -149,7 +151,7 @@ class PINTk:
                 self.mainFrame.grid_columnconfigure(col, weight=1)
                 visible += 1
 
-    def openPulsar(self, parfile, timfile, fitter="auto", ephem=None):
+    def openPulsar(self, parfile, timfile, fitter="downhill", ephem=None):
         self.psr = Pulsar(parfile, timfile, ephem, fitter=fitter)
         self.widgets["plk"].setPulsar(
             self.psr,
@@ -221,7 +223,7 @@ def main(argv=None):
         "--fitter",
         type=str,
         choices=(
-            "auto",
+            "notdownhill",
             "downhill",
             "WLSFitter",
             "GLSFitter",
@@ -232,8 +234,8 @@ def main(argv=None):
             "WidebandDownhillFitter",
             "WidebandLMFitter",
         ),
-        default="auto",
-        help="PINT Fitter to use [default='auto'].  'auto' will choose WLS/GLS/WidebandTOA depending on TOA/model properties.  'downhill' will do the same for Downhill versions.",
+        default="downhill",
+        help="PINT Fitter to use [default='downhill'].  'notdownhill' will choose WLS/GLS/WidebandTOA depending on TOA/model properties.  'downhill' will do the same for Downhill versions.",
     )
     parser.add_argument(
         "--version",
@@ -260,6 +262,24 @@ def main(argv=None):
     pint.logging.setup(
         level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet)
     )
+    # see if the arguments were flipped
+    if (
+        os.path.splitext(args.parfile)[1] == ".tim"
+        and os.path.splitext(args.timfile)[1] == ".par"
+    ):
+        log.debug(
+            f"Swapping inputs: parfile='{args.timfile}' and timfile='{args.parfile}'"
+        )
+        args.parfile, args.timfile = args.timfile, args.parfile
+    else:
+        if os.path.splitext(args.timfile)[1] != ".tim":
+            log.info(
+                f"Input timfile '{args.timfile}' has unusual extension '{os.path.splitext(args.timfile)[1]}': is this intended?"
+            )
+        if os.path.splitext(args.parfile)[1] != ".par":
+            log.info(
+                f"Input parfile '{args.parfile}' has unusual extension '{os.path.splitext(args.parfile)[1]}': is this intended?"
+            )
 
     root = tk.Tk()
     root.minsize(1000, 800)
@@ -270,7 +290,7 @@ def main(argv=None):
             timfile=args.timfile,
             fitter=args.fitter,
             ephem=args.ephem,
-            loglevel=args.loglevel,
+            loglevel=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet),
         )
         root.protocol("WM_DELETE_WINDOW", root.destroy)
         img = tk.Image("photo", file=pint.pintk.plk.icon_img)

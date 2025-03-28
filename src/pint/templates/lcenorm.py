@@ -53,8 +53,8 @@ class ENormAngles(NormAngles):
 
     def get_bounds(self, free=True):
         PI2 = np.pi * 0.5
-        b1 = np.asarray([[0, PI2] for i in range(self.dim)])
-        b2 = np.asarray([[-PI2, PI2] for i in range(self.dim)])
+        b1 = np.asarray([[0, PI2] for _ in range(self.dim)])
+        b2 = np.asarray([[-PI2, PI2] for _ in range(self.dim)])
         if free:
             return np.concatenate((b1[self.free], b2[self.slope_free]))
         else:
@@ -111,6 +111,4 @@ class ENormAngles(NormAngles):
             rvals = np.empty((self.dim, 2 * self.dim, p.shape[1]))
         rvals[:, : self.dim] = g0
         rvals[:, self.dim :] = g0 * e
-        if free:
-            return rvals[:, np.append(self.free, self.slope_free)]
-        return rvals
+        return rvals[:, np.append(self.free, self.slope_free)] if free else rvals

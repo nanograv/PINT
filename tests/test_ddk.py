@@ -1,8 +1,9 @@
 """Various tests to assess the performance of the DD model."""
+
 import copy
 import logging
 import os
-import unittest
+import pytest
 from io import StringIO
 import warnings
 
@@ -43,11 +44,11 @@ temp_par_str = """
 """
 
 
-class TestDDK(unittest.TestCase):
+class TestDDK:
     """Compare delays from the ddk model with libstempo and PINT"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.parfileJ1713 = "J1713+0747_NANOGrav_11yv0_short.gls.par"
         cls.ICRSparfileJ1713 = "J1713+0747_NANOGrav_11yv0_short.gls.ICRS.par"
         cls.timJ1713 = "J1713+0747_NANOGrav_11yv0_short.tim"
@@ -67,7 +68,7 @@ class TestDDK(unittest.TestCase):
             cls.ECLltres,
             cls.ECLltbindelay,
         ) = np.genfromtxt(
-            os.path.join(datadir, cls.parfileJ1713 + ".libstempo"), unpack=True
+            os.path.join(datadir, f"{cls.parfileJ1713}.libstempo"), unpack=True
         )[
             :, index
         ]
@@ -78,12 +79,12 @@ class TestDDK(unittest.TestCase):
             cls.ICRSltres,
             cls.ICRSltbindelay,
         ) = np.genfromtxt(
-            os.path.join(datadir, cls.ICRSparfileJ1713 + ".libstempo"), unpack=True
+            os.path.join(datadir, f"{cls.ICRSparfileJ1713}.libstempo"), unpack=True
         )[
             :, index
         ]
 
-    def test_J1713_ECL_binary_delay(self):
+    def test_j1713_ecl_binary_delay(self):
         # Calculate delays with PINT
         pint_binary_delay = self.ECLmodelJ1713.binarymodel_delay(self.toasJ1713, None)
         print(f"{np.abs(pint_binary_delay.value + self.ECLltbindelay).max()}")
@@ -92,7 +93,7 @@ class TestDDK(unittest.TestCase):
             % np.abs(pint_binary_delay.value + self.ECLltbindelay).max()
         )
 
-    def test_J1713_ICRS_binary_delay(self):
+    def test_j1713_icrs_binary_delay(self):
         # Calculate delays with PINT
         pint_binary_delay = self.ICRSmodelJ1713.binarymodel_delay(self.toasJ1713, None)
         print(f"{np.abs(pint_binary_delay.value + self.ECLltbindelay).max()}")
@@ -101,7 +102,7 @@ class TestDDK(unittest.TestCase):
             % np.abs(pint_binary_delay.value + self.ICRSltbindelay).max()
         )
 
-    def test_J1713_ECL(self):
+    def test_j1713_ecl(self):
         pint_resids_us = Residuals(
             self.toasJ1713, self.ECLmodelJ1713, use_weighted_mean=False
         ).time_resids.to(u.s)
@@ -112,7 +113,7 @@ class TestDDK(unittest.TestCase):
             % np.abs(diff - diff.mean()).max()
         )
 
-    def test_J1713_ICRS(self):
+    def test_j1713_icrs(self):
         pint_resids_us = Residuals(
             self.toasJ1713, self.ICRSmodelJ1713, use_weighted_mean=False
         ).time_resids.to(u.s)
@@ -142,7 +143,7 @@ class TestDDK(unittest.TestCase):
         diff = bdelay0 - bdelay1
         assert np.all(diff != 0)
 
-    def test_J1713_deriv(self):
+    def test_j1713_deriv(self):
         testp = tdu.get_derivative_params(self.ECLmodelJ1713)
         delay = self.ECLmodelJ1713.delay(self.toasJ1713)
         for p in testp.keys():
@@ -154,11 +155,11 @@ class TestDDK(unittest.TestCase):
             par = getattr(self.ECLmodelJ1713, p)
             if isinstance(par, boolParameter):
                 continue
-            print("Runing derivative for %s" % ("d_phase_d_" + p))
+            print(f"Runing derivative for d_phase_d_{p}")
             ndf = self.ECLmodelJ1713.d_phase_d_param_num(self.toasJ1713, p, testp[p])
             adf = self.ECLmodelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
             diff = adf - ndf
-            if not np.all(diff.value) == 0.0:
+            if np.all(diff.value) != 0.0:
                 mean_der = (adf + ndf) / 2.0
                 relative_diff = np.abs(diff) / np.abs(mean_der)
                 # print "Diff Max is :", np.abs(diff).max()
@@ -173,14 +174,16 @@ class TestDDK(unittest.TestCase):
                 else:
                     tol = 1e-3
                 print(
-                    "derivative relative diff for %s, %lf"
-                    % ("d_phase_d_" + p, np.nanmax(relative_diff).value)
+                    (
+                        "derivative relative diff for %s, %lf"
+                        % (f"d_phase_d_{p}", np.nanmax(relative_diff).value)
+                    )
                 )
                 assert np.nanmax(relative_diff) < tol, msg
             else:
                 continue
 
-    def test_K96(self):
+    def test_k96(self):
         modelJ1713 = copy.deepcopy(self.ECLmodelJ1713)
         log = logging.getLogger("TestJ1713 Switch of K96")
         modelJ1713.K96.value = False
@@ -238,13 +241,6 @@ def test_ddk_ECL_ICRS():
     assert np.isclose(mECL_transformed.KOM.quantity, mECL.KOM.quantity)
 
 
-def test_sini_raises():
-    # SINI is not an allowed parameter for DDK
-    test_par_str = temp_par_str + "\n SINI  0.8     1  0.562"
-    with pytest.raises(ValueError):
-        mb.get_model(StringIO(test_par_str))
-
-
 def test_stand_alone_model_params_updates():
     test_par_str = temp_par_str + "\n KIN  71.969  1  0.562"
     m = mb.get_model(StringIO(test_par_str))
@@ -285,7 +281,3 @@ def test_A1dot_warning():
 def test_alternative_solutions():
     mECL = get_model(StringIO(temp_par_str + "\n KIN  71.969  1               0.562"))
     assert len(mECL.components["BinaryDDK"].alternative_solutions()) == 4
-
-
-if __name__ == "__main__":
-    pass

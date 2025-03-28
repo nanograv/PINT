@@ -1,4 +1,5 @@
 """ Test for pint design matrix"""
+
 import os
 import numpy as np
 
@@ -14,7 +15,7 @@ from pinttestdata import datadir
 
 
 class TestDesignMatrix:
-    def setup(self):
+    def setup_method(self):
         os.chdir(datadir)
         self.par_file = "J1614-2230_NANOGrav_12yv3.wb.gls.par"
         self.tim_file = "J1614-2230_NANOGrav_12yv3.wb.tim"
@@ -110,3 +111,8 @@ class TestDesignMatrix:
             ]
             == 0.0
         )
+
+    def test_param_order(self):
+        params_dm = self.model.designmatrix(self.toas, incoffset=False)[1]
+        params_free = self.model.free_params
+        assert params_dm == params_free

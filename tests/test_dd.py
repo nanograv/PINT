@@ -1,6 +1,7 @@
 """Various tests to assess the performance of the DD model."""
+
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 import numpy as np
@@ -12,11 +13,11 @@ from pinttestdata import datadir
 from copy import deepcopy
 
 
-class TestDD(unittest.TestCase):
+class TestDD:
     """Compare delays from the dd model with libstempo and PINT"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.parfileB1855 = "B1855+09_NANOGrav_dfg+12_modified_DD.par"
         cls.timB1855 = "B1855+09_NANOGrav_dfg+12.tim"
@@ -29,7 +30,7 @@ class TestDD(unittest.TestCase):
             f"{cls.parfileB1855}.tempo_test", unpack=True
         )
 
-    def test_J1855_binary_delay(self):
+    def test_j1855_binary_delay(self):
         # Calculate delays with PINT
         pint_binary_delay = self.modelB1855.binarymodel_delay(self.toasB1855, None)
         assert np.all(
@@ -37,7 +38,7 @@ class TestDD(unittest.TestCase):
         ), "DD B1855 TEST FAILED"
 
     # TODO: PINT can still increase the precision by adding more components
-    def test_B1855(self):
+    def test_b1855(self):
         pint_resids_us = Residuals(
             self.toasB1855, self.modelB1855, use_weighted_mean=False
         ).time_resids.to(u.s)

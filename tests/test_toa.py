@@ -1,6 +1,9 @@
+import pytest
+import io
 import os
 import re
-import unittest
+import pytest
+import numpy as np
 
 import astropy.units as u
 from astropy.time import Time
@@ -10,41 +13,42 @@ from pinttestdata import datadir
 from pint.models import get_model
 from pint.observatory import get_observatory
 from pint.toa import TOA, TOAs
+import pint.toa
 from pint.simulation import make_fake_toas_uniform
 
 
-class TestTOA(unittest.TestCase):
+class TestTOA:
     """Test of TOA class"""
 
-    def setUp(self):
+    def setup_method(self):
         self.MJD = 57000
 
     def test_units(self):
-        with self.assertRaises(u.UnitConversionError):
+        with pytest.raises(u.UnitConversionError):
             t = TOA(self.MJD * u.m)
-        with self.assertRaises(u.UnitConversionError):
+        with pytest.raises(u.UnitConversionError):
             t = TOA((self.MJD * u.m, 0))
         t = TOA((self.MJD * u.day).to(u.s))
-        with self.assertRaises(u.UnitConversionError):
+        with pytest.raises(u.UnitConversionError):
             t = TOA((self.MJD * u.day, 0))
         t = TOA((self.MJD * u.day, 0 * u.day))
-        with self.assertRaises(u.UnitConversionError):
+        with pytest.raises(u.UnitConversionError):
             t = TOA(self.MJD, error=1 * u.m)
         t = TOA(self.MJD, freq=100 * u.kHz)
-        with self.assertRaises(u.UnitConversionError):
+        with pytest.raises(u.UnitConversionError):
             t = TOA(self.MJD, freq=100 * u.s)
 
     def test_precision_mjd(self):
         t = TOA(self.MJD)
-        self.assertEqual(t.mjd.precision, 9)
+        assert t.mjd.precision == 9
 
     def test_precision_time(self):
         t = TOA(Time("2008-08-19", format="iso", precision=1))
-        self.assertEqual(t.mjd.precision, 9)
+        assert t.mjd.precision == 9
 
     def test_typo(self):
         TOA(self.MJD, errror="1")
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             TOA(self.MJD, errror=1, flags={})
 
     def test_toa_object(self):
@@ -54,21 +58,21 @@ class TestTOA(unittest.TestCase):
         obs = "ao"
 
         # scale should be None when MJD is a Time
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, scale="utc")
 
         # flags should be stored without their leading -
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             toa = TOA(
                 MJD=toatime, error=toaerr, freq=freq, obs=obs, flags={"-foo": "foo1"}
             )
 
         # Invalid flag
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             toa = TOA(
                 MJD=toatime, error=toaerr, freq=freq, obs=obs, flags={"$": "foo1"}
             )
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, flags={"foo": 1})
 
         toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, foo="foo1")
@@ -77,23 +81,23 @@ class TestTOA(unittest.TestCase):
         assert len(toa.flags) > 0
 
         # Missing name
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             toa.as_line()
 
         toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, foo="foo1", name="bla")
         assert "bla" in toa.as_line()
 
 
-class TestTOAs(unittest.TestCase):
+class TestTOAs:
     """Test of TOAs class"""
 
-    def setUp(self):
+    def setup_method(self):
         self.freq = 1440.012345678 * u.MHz
         self.obs = "gbt"
         self.MJD = 57000
         self.error = 3.0
 
-    def test_make_TOAs(self):
+    def test_make_toas(self):
         t = TOA(self.MJD, freq=self.freq, obs=self.obs, error=self.error)
         t_list = [t, t]
         assert t_list[0].mjd.precision == 9
@@ -109,6 +113,7 @@ class TestTOAs(unittest.TestCase):
         assert toas.table["error"].unit == u.us
         assert toas.table["mjd"][0].precision == 9
         assert toas.table["mjd"][0].location is not None
+        assert toas.get_Tspan() == toas.table["mjd"].max() - toas.table["mjd"].min()
 
     def test_multiple_observatories_stay_attached(self):
         obs1 = "gbt"
@@ -154,3 +159,39 @@ def test_toa_summary():
     assert re.search(r" *Min error: *1 us", s)
     assert re.search(r" *Max error: *1 us", s)
     assert re.search(r" *Median error: *1 us", s)
+
+
+def test_merge_toas():
+    model = get_model(
+        io.StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(
+        57000, 58000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    toas2 = make_fake_toas_uniform(
+        59000, 60000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    toas_out = pint.toa.merge_TOAs([toas, toas2])
+    toas_outb = toas + toas2
+    assert np.all(toas_out.table == toas_outb.table)
+
+
+def test_mix_nb_wb():
+    with pytest.raises(ValueError):
+        t1 = pint.toa.get_TOAs(
+            io.StringIO(
+                """
+                fake.ff 1430.000000 53393.561383615118386   0.178  ao  -fe L-wide -be ASP -pp_dm 10.0
+                fake.ff 1430.000000 53394.561383615118386   0.178  ao  -fe L-wide -be ASP
+                """
+            )
+        )

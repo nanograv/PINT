@@ -1,8 +1,9 @@
 """Kopeikin corrected DD model."""
 
+import warnings
+
 import astropy.units as u
 import numpy as np
-import warnings
 
 from .DD_model import DDmodel
 
@@ -78,6 +79,8 @@ class DDKmodel(DDmodel):
         # Remove unused parameter SINI
         del self.param_default_value["SINI"]
         self.set_param_values()
+        if input_params is not None:
+            self.update_input(param_dict=input_params)
 
     @property
     def KOM(self):
@@ -136,10 +139,7 @@ class DDKmodel(DDmodel):
 
     @property
     def SINI(self):
-        if hasattr(self, "_tt0"):
-            return np.sin(self.kin())
-        else:
-            return np.sin(self.KIN)
+        return np.sin(self.kin()) if hasattr(self, "_tt0") else np.sin(self.KIN)
 
     @SINI.setter
     def SINI(self, val):
@@ -172,41 +172,34 @@ class DDKmodel(DDmodel):
         return d_KIN.to(self.KIN.unit)
 
     def kin(self):
-        if self.K96:
-            return self.KIN + self.delta_kin_proper_motion()
-        else:
-            return self.KIN
+        return self.KIN + self.delta_kin_proper_motion() if self.K96 else self.KIN
 
     def d_SINI_d_KIN(self):
         # with u.set_enabled_equivalencies(u.dimensionless_angles()):
         return np.cos(self.kin()).to(u.Unit("") / self.KIN.unit)
 
     def d_SINI_d_KOM(self):
-        if self.K96:
-            d_si_d_kom = (
-                (-self.PMLONG_DDK * self.cos_KOM - self.PMLAT_DDK * self.sin_KOM)
-                * self.tt0
-                * np.cos(self.kin())
-            )
-            # with u.set_enabled_equivalencies(u.dimensionless_angles()):
-            return d_si_d_kom.to(u.Unit("") / self.KOM.unit)
-        else:
+        if not self.K96:
             return np.cos(self.kin()) * u.Unit("") / self.KOM.unit
+        d_si_d_kom = (
+            (-self.PMLONG_DDK * self.cos_KOM - self.PMLAT_DDK * self.sin_KOM)
+            * self.tt0
+            * np.cos(self.kin())
+        )
+        # with u.set_enabled_equivalencies(u.dimensionless_angles()):
+        return d_si_d_kom.to(u.Unit("") / self.KOM.unit)
 
     def d_SINI_d_T0(self):
-        if self.K96:
-            d_si_d_kom = -(
-                -self.PMLONG_DDK * self.sin_KOM + self.PMLAT_DDK * self.cos_KOM
-            )
-            return d_si_d_kom.to(u.Unit("") / self.T0.unit)
-        else:
+        if not self.K96:
             return np.ones(len(self.tt0)) * u.Unit("") / self.T0.unit
+        d_si_d_kom = -(-self.PMLONG_DDK * self.sin_KOM + self.PMLAT_DDK * self.cos_KOM)
+        return d_si_d_kom.to(u.Unit("") / self.T0.unit)
 
     def d_SINI_d_par(self, par):
         par_obj = getattr(self, par)
         try:
-            ko_func = getattr(self, "d_SINI_d_" + par)
-        except:
+            ko_func = getattr(self, f"d_SINI_d_{par}")
+        except Exception:
             ko_func = lambda: np.zeros(len(self.tt0)) * u.Unit("") / par_obj.unit
         return ko_func()
 
@@ -230,14 +223,13 @@ class DDKmodel(DDmodel):
         if par == "KIN":
             return np.ones_like(self.tt0)
         par_obj = getattr(self, par)
-        if self.K96:
-            try:
-                func = getattr(self, "d_kin_proper_motion_d_" + par)
-            except:
-                func = lambda: np.zeros(len(self.tt0)) * self.KIN / par_obj.unit
-            return func()
-        else:
+        if not self.K96:
             return np.zeros(len(self.tt0)) * self.KIN / par_obj.unit
+        try:
+            func = getattr(self, f"d_kin_proper_motion_d_{par}")
+        except Exception:
+            func = lambda: np.zeros(len(self.tt0)) * self.KIN / par_obj.unit
+        return func()
 
     def delta_a1_proper_motion(self):
         """The correction on a1 (projected semi-major axis)
@@ -409,10 +401,7 @@ class DDKmodel(DDmodel):
         """
         Reference: (Kopeikin 1995 Eq 18)
         """
-        if self.K96:
-            p_motion = True
-        else:
-            p_motion = False
+        p_motion = bool(self.K96)
         a1 = self.a1_k(proper_motion=p_motion, parallax=False)
         kin = self.kin()
         tan_kin = np.tan(kin)
@@ -426,10 +415,7 @@ class DDKmodel(DDmodel):
         return delta_a1.to(a1.unit)
 
     def d_delta_a1_parallax_d_KIN(self):
-        if self.K96:
-            p_motion = True
-        else:
-            p_motion = False
+        p_motion = bool(self.K96)
         a1 = self.a1_k(proper_motion=p_motion, parallax=False)
         d_a1_d_kin = self.d_a1_k_d_par("KIN", proper_motion=p_motion, parallax=False)
         kin = self.kin()
@@ -444,10 +430,7 @@ class DDKmodel(DDmodel):
         return d_delta_a1_d_KIN.to(a1.unit / kin.unit)
 
     def d_delta_a1_parallax_d_KOM(self):
-        if self.K96:
-            p_motion = True
-        else:
-            p_motion = False
+        p_motion = bool(self.K96)
         a1 = self.a1_k(proper_motion=p_motion, parallax=False)
         d_a1_d_kom = self.d_a1_k_d_par("KOM", proper_motion=p_motion, parallax=False)
         kin = self.kin()
@@ -469,10 +452,7 @@ class DDKmodel(DDmodel):
         return d_delta_a1_d_KOM.to(a1.unit / self.KOM.unit)
 
     def d_delta_a1_parallax_d_T0(self):
-        if self.K96:
-            p_motion = True
-        else:
-            p_motion = False
+        p_motion = bool(self.K96)
         a1 = self.a1_k(proper_motion=p_motion, parallax=False)
         d_a1_d_T0 = self.d_a1_k_d_par("T0", proper_motion=p_motion, parallax=False)
         kin = self.kin()
@@ -539,9 +519,7 @@ class DDKmodel(DDmodel):
         PX_kpc = self.PX.to(u.kpc, equivalencies=u.parallax())
         kom_projection = self.delta_I0() * self.cos_KOM + self.delta_J0() * self.sin_KOM
         d_kin_d_T0 = self.d_kin_d_par("T0")
-        d_delta_omega_d_T0 = (
-            cos_kin / sin_kin**2 / PX_kpc * d_kin_d_T0 * kom_projection
-        )
+        d_delta_omega_d_T0 = cos_kin / sin_kin**2 / PX_kpc * d_kin_d_T0 * kom_projection
         return d_delta_omega_d_T0.to(
             self.OM.unit / self.T0.unit, equivalencies=u.dimensionless_angles()
         )
@@ -565,10 +543,7 @@ class DDKmodel(DDmodel):
         return a1
 
     def a1(self):
-        if self.K96:
-            return self.a1_k()
-        else:
-            return self.a1_k(proper_motion=False)
+        return self.a1_k() if self.K96 else self.a1_k(proper_motion=False)
 
     def d_a1_k_d_par(self, par, proper_motion=True, parallax=True):
         result = super().d_a1_d_par(par)
@@ -577,7 +552,7 @@ class DDKmodel(DDmodel):
             if flag:
                 try:
                     ko_func = getattr(self, ko_func_name[ii] + par)
-                except:
+                except Exception:
                     ko_func = lambda: np.zeros(len(self.tt0)) * result.unit
                 result += ko_func()
         return result
@@ -607,10 +582,7 @@ class DDKmodel(DDmodel):
         return omega
 
     def omega(self):
-        if self.K96:
-            return self.omega_k()
-        else:
-            return self.omega_k(proper_motion=False)
+        return self.omega_k() if self.K96 else self.omega_k(proper_motion=False)
 
     def d_omega_k_d_par(self, par, proper_motion=True, parallax=True):
         result = super().d_omega_d_par(par)

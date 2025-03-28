@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -41,6 +41,7 @@ pint.logging.setup(level="INFO")
 
 # %% [markdown]
 # Some helper functions for plotting
+
 
 # %%
 def plot_contour(mp, mc, quantity, target, uncertainty, color, nsigma=3, **kwargs):

@@ -1,9 +1,11 @@
 """Tabulated extra delays."""
+
 import astropy.units as u
 import numpy as np
 
+from pint.exceptions import MissingParameter
 from pint.models.parameter import floatParameter, prefixParameter
-from pint.models.timing_model import PhaseComponent, MissingParameter
+from pint.models.timing_model import PhaseComponent
 
 
 class IFunc(PhaseComponent):
@@ -56,7 +58,12 @@ class IFunc(PhaseComponent):
         super().__init__()
 
         self.add_param(
-            floatParameter(name="SIFUNC", description="Type of interpolation", units="")
+            floatParameter(
+                name="SIFUNC",
+                description="Type of interpolation",
+                units="",
+                convert_tcb2tdb=False,
+            )
         )
         self.add_param(
             prefixParameter(
@@ -66,6 +73,7 @@ class IFunc(PhaseComponent):
                 type_match="pair",
                 long_double=True,
                 parameter_type="pair",
+                convert_tcb2tdb=False,
             )
         )
         self.phase_funcs_component += [self.ifunc_phase]
@@ -138,5 +146,4 @@ class IFunc(PhaseComponent):
         else:
             raise ValueError(f"Interpolation type {itype} not supported.")
 
-        phase = ((times * u.s) * self._parent.F0.quantity).to(u.dimensionless_unscaled)
-        return phase
+        return ((times * u.s) * self._parent.F0.quantity).to(u.dimensionless_unscaled)

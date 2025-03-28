@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -27,7 +27,7 @@ import astropy.units as u
 
 import pint.fitter, pint.toa, pint.simulation
 from pint.models import get_model_and_toas
-from pint import utils, simulation
+from pint import simulation
 import pint.config
 import pint.logging
 

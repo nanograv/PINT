@@ -6,6 +6,7 @@ n-dimensional ball of unit radius.
 
 author: M. Kerr <matthew.kerr@gmail.com>
 """
+
 import numpy as np
 
 # can some of the code be reduced with inheritance here?
@@ -154,9 +155,7 @@ class NormAngles:
             self.p[:] = p
 
     def get_parameters(self, free=True):
-        if free:
-            return self.p[self.free]
-        return self.p
+        return self.p[self.free] if free else self.p
 
     def get_parameter_names(self, free=True):
         return [p for (p, b) in zip(self.pnames, self.free) if b]
@@ -182,12 +181,11 @@ class NormAngles:
         """Angles are always [0,pi/2)."""
         PI2 = np.pi * 0.5
         if free:
-            return [[0, PI2] for ix, x in enumerate(self.free) if x]
-        return [[0, PI2] for ix, x in enumerate(self.free)]
+            return [[0, PI2] for x in self.free if x]
+        return [[0, PI2] for _ in self.free]
 
     def sanity_checks(self, eps=1e-6):
-        t1 = np.abs(self().sum() - np.sin(self.p[0]) ** 2) < eps
-        return t1
+        return np.abs(self().sum() - np.sin(self.p[0]) ** 2) < eps
 
     def __call__(self, log10_ens=3):
         """Return the squared value of the Cartesian coordinates.
@@ -252,16 +250,11 @@ class NormAngles:
             for j in range(self.dim):
                 if j > i + 1:
                     break
-                if j <= i:
-                    # these will always be sin^2 terms
-                    m[i, j] = n[i] * sp[j]
-                else:
-                    # last term is cosine for all but last norm, but we won't
-                    # get to it here because j==i is the last term then
-                    m[i, j] = n[i] * cp[j]
-        if free:
-            return m[:, self.free]
-        return m
+                # these will always be sin^2 terms if j<=i
+                # else, the last term is cosine for all but last norm, but we won't
+                # get to it here because j==i is the last term then
+                m[i, j] = n[i] * sp[j] if j <= i else n[i] * cp[j]
+        return m[:, self.free] if free else m
 
     def gradient(self, log10_ens=3, free=False):
         """Return a matrix giving the value of the partial derivative
@@ -317,26 +310,20 @@ class NormAngles:
                     if k > i + 1:
                         break
                     if (j <= i) and (k <= i):
-                        if j != k:
-                            # two separate sines replacing sin^2
-                            m[i, j, k] = n[i] * sp[j] * sp[k]
-                        else:
-                            # diff same sine twice, getting a 2*cos
-                            m[i, j, k] = n[i] * 2 * c2p[j] / np.sin(p[j]) ** 2
+                        m[i, j, k] = (
+                            n[i] * sp[j] * sp[k]
+                            if j != k
+                            else n[i] * 2 * c2p[j] / np.sin(p[j]) ** 2
+                        )
+                    elif j != k:
+                        if j == i + 1:
+                            m[i, j, k] = n[i] * cp[j] * sp[k]
+                        elif k == i + 1:
+                            m[i, j, k] = n[i] * sp[j] * cp[k]
                     else:
-                        # at least one of j, k is a cos^2 term, so we pick up
-                        # a negative and need to divide by cos^2
-                        if j != k:
-                            if j == i + 1:
-                                m[i, j, k] = n[i] * cp[j] * sp[k]
-                            elif k == i + 1:
-                                m[i, j, k] = n[i] * sp[j] * cp[k]
-                        else:
-                            # both are the cos^2 term, so we get a -2*cos
-                            m[i, j, k] = n[i] * (-2) * c2p[j] / np.cos(p[j]) ** 2
-        if free:
-            return m[:, self.free, self.free]
-        return m
+                        # both are the cos^2 term, so we get a -2*cos
+                        m[i, j, k] = n[i] * (-2) * c2p[j] / np.cos(p[j]) ** 2
+        return m[:, self.free, self.free] if free else m
 
     def get_total(self):
         """Return the amplitude of all norms."""
@@ -433,18 +420,12 @@ class NormAngles:
         # slopes, probably need to use the gradient to convert!
 
     def eval_string(self):
-        """Return a string that can be evaled to instantiate a nearly-
+        """Return a string that can be evaluated to instantiate a nearly-
         identical object."""
         t = self()
         if len(t.shape) > 1:
             t = t[:, 0]  # handle e-dep
-        return "%s(%s,free=%s,slope=%s,slope_free=%s)" % (
-            self.__class__.__name__,
-            str(list(t)),
-            str(list(self.free)),
-            str(list(self.slope)) if hasattr(self, "slope") else None,
-            str(list(self.slope_free)) if hasattr(self, "slope_free") else None,
-        )
+        return f'{self.__class__.__name__}({list(t)},free={list(self.free)},slope={str(list(self.slope)) if hasattr(self, "slope") else None},slope_free={str(list(self.slope_free)) if hasattr(self, "slope_free") else None})'
 
     def dict_string(self):
         """Round down to avoid input errors w/ normalization."""
@@ -460,20 +441,19 @@ class NormAngles:
                 r = l
             fmt = "%." + "%d" % places + "f"
             s = ", ".join([fmt % x for x in r])
-            return "[" + s + "]"
+            return f"[{s}]"
 
         return [
-            "name = %s" % self.__class__.__name__,
-            "norms = %s" % (pretty_list(t)),
-            "free = %s" % (str(list(self.free))),
+            f"name = {self.__class__.__name__}",
+            f"norms = {pretty_list(t)}",
+            f"free = {list(self.free)}",
             "slope = %s"
             % (
                 pretty_list(self.slope, round_down=False)
                 if hasattr(self, "slope")
                 else None
             ),
-            "slope_free = %s"
-            % (str(list(self.slope_free)) if hasattr(self, "slope_free") else None),
+            f'slope_free = {str(list(self.slope_free)) if hasattr(self, "slope_free") else None}',
         ]
 
 
@@ -496,7 +476,6 @@ def numerical_hessian(norms, delta=1e-3):
     p = norms.p.copy()
     for i in range(norms.dim):
         for j in range(i, norms.dim):
-
             norms.p[i] += delta
             norms.p[j] += delta
             hihi = norms()

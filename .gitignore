@@ -13,6 +13,8 @@
 # pickle files
 *.pickle.gz
 
+*.npy
+
 # Packages
 *.egg
 *.egg-info
@@ -115,9 +117,26 @@ docs/_autosummary
 # Jupyter notebooks should not be in git; they are built from md files
 docs/examples/*.ipynb
 
+# Actual tests are supposed to be python scripts.
+# These notebooks are used for interactive testing during development.
+# They should be converted to scripts before committing.
+tests/*.ipynb
+
 # Rendered examples are turned into .py files for convenience but it's the notebook that's in git
 docs/examples-rendered/*.py
 
 # VSCode wants to put virtualenvs here
 .env
 .venv
+
+# pintpublish output
+*.tex
+*.aux
+*.log
+*.pdf
+
+# test output
+tests/datafile/par_*.par
+tests/datafile/fake_toas.tim
+tests/datafile/*.converted.par
+tests/datafile/_test_pintempo.out

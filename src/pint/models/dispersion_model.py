@@ -1,27 +1,24 @@
 """A simple model of a base dispersion delay and DMX dispersion."""
+
 from warnings import warn
 
-import numpy as np
 import astropy.units as u
+import numpy as np
 from astropy.table import Table
 from astropy.time import Time
 from loguru import logger as log
 
+from pint import DMconst, dmu
+from pint.exceptions import MissingParameter, MissingTOAs
 from pint.models.parameter import (
     MJDParameter,
     floatParameter,
-    prefixParameter,
     maskParameter,
+    prefixParameter,
 )
-from pint.models.timing_model import DelayComponent, MissingParameter, MissingTOAs
+from pint.models.timing_model import DelayComponent
 from pint.toa_select import TOASelect
-from pint.utils import (
-    split_prefixed_name,
-    taylor_horner,
-    taylor_horner_deriv,
-    get_prefix_timeranges,
-)
-from pint import DMconst
+from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
 # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
 # Astronomy, Second edition, Page 86, Note 1
@@ -40,9 +37,9 @@ class Dispersion(DelayComponent):
         self.dm_deriv_funcs = {}
 
     def dispersion_time_delay(self, DM, freq):
-        """Return the dispersion time delay for a set of frequency.
+        """Return the dispersion time delay for a set of frequencies.
 
-        This equation if cited from Duncan Lorimer, Michael Kramer,
+        This equation is taken from Duncan Lorimer, Michael Kramer,
         Handbook of Pulsar Astronomy, Second edition, Page 86, Equation [4.7]
         Here we assume the reference frequency is at infinity and the EM wave
         frequency is much larger than plasma frequency.
@@ -74,12 +71,8 @@ class Dispersion(DelayComponent):
         ------
             DM values at given TOAs in the unit of DM.
         """
-        if isinstance(toas, Table):
-            toas_table = toas
-        else:
-            toas_table = toas.table
-
-        dm = np.zeros(len(toas_table)) * self._parent.DM.units
+        toas_table = toas if isinstance(toas, Table) else toas.table
+        dm = np.zeros(len(toas_table)) * dmu
 
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
@@ -105,7 +98,7 @@ class Dispersion(DelayComponent):
             bfreq = self._parent.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
-            bfreq = toas.table["freq"]
+            bfreq = toas.table["freq"].quantity
         param_unit = getattr(self, param_name).units
         d_dm_d_dmparam = np.zeros(toas.ntoas) * u.pc / u.cm**3 / param_unit
         for df in self.dm_deriv_funcs[param_name]:
@@ -127,15 +120,10 @@ class Dispersion(DelayComponent):
 
         if pn not in list(self.dm_deriv_funcs.keys()):
             self.dm_deriv_funcs[pn] = [func]
+        elif func in self.dm_deriv_funcs[pn]:
+            return
         else:
-            # TODO:
-            # Running setup() multiple times can lead to adding derivative
-            # function multiple times. This prevent it from happening now. But
-            # in the future, we should think a better way to do so.
-            if func in self.dm_deriv_funcs[pn]:
-                return
-            else:
-                self.dm_deriv_funcs[pn] += [func]
+            self.dm_deriv_funcs[pn] += [func]
 
 
 class DispersionDM(Dispersion):
@@ -162,6 +150,7 @@ class DispersionDM(Dispersion):
                 value=0.0,
                 description="Dispersion measure",
                 long_double=True,
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
@@ -169,15 +158,19 @@ class DispersionDM(Dispersion):
                 name="DM1",
                 units="pc cm^-3/yr^1",
                 description="First order time derivative of the dispersion measure",
-                unit_template=self.DM_dervative_unit,
-                description_template=self.DM_dervative_description,
+                unit_template=self.DM_derivative_unit,
+                description_template=self.DM_derivative_description,
                 type_match="float",
                 long_double=True,
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
             MJDParameter(
-                name="DMEPOCH", description="Epoch of DM measurement", time_scale="tdb"
+                name="DMEPOCH",
+                description="Epoch of DM measurement",
+                time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -186,8 +179,8 @@ class DispersionDM(Dispersion):
 
     def setup(self):
         super().setup()
-        base_dms = list(self.get_prefix_mapping_component("DM").values())
-        base_dms += ["DM"]
+
+        base_dms = ["DM"] + list(self.get_prefix_mapping_component("DM").values())
 
         for dm_name in base_dms:
             self.register_deriv_funcs(self.d_delay_d_dmparam, dm_name)
@@ -201,18 +194,18 @@ class DispersionDM(Dispersion):
             if self.DMEPOCH.value is None:
                 # Copy PEPOCH (PEPOCH must be set!)
                 self.DMEPOCH.value = self._parent.PEPOCH.value
-                if self.DMEPOCH.value is None:
-                    raise MissingParameter(
-                        "Dispersion",
-                        "DMEPOCH",
-                        "DMEPOCH or PEPOCH is required if DM1 or higher are set",
-                    )
+            if self.DMEPOCH.value is None:
+                raise MissingParameter(
+                    "Dispersion",
+                    "DMEPOCH",
+                    "DMEPOCH or PEPOCH is required if DM1 or higher are set",
+                )
 
-    def DM_dervative_unit(self, n):
-        return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
+    def DM_derivative_unit(self, n):
+        return f"pc cm^-3/yr^{n}" if n != 0 else "pc cm^-3"
 
-    def DM_dervative_description(self, n):
-        return "%d'th time derivative of the dispersion measure" % n
+    def DM_derivative_description(self, n):
+        return f"{n}'th time derivative of the dispersion measure"
 
     def get_DM_terms(self):
         """Return a list of the DM term values in the model: [DM, DM1, ..., DMn]"""
@@ -226,7 +219,7 @@ class DispersionDM(Dispersion):
             if DMEPOCH is None:
                 # Should be ruled out by validate()
                 raise ValueError(
-                    f"DMEPOCH not set but some derivatives are not zero: {dm_terms}"
+                    f"DMEPOCH not set but some DM derivatives are not zero: {dm_terms}"
                 )
             else:
                 dt = (toas["tdbld"] - DMEPOCH) * u.day
@@ -242,13 +235,9 @@ class DispersionDM(Dispersion):
         return self.dispersion_type_delay(toas)
 
     def print_par(self, format="pint"):
-        # TODO we need to have a better design for print out the parameters in
-        # an inheritance class.
-        result = ""
         prefix_dm = list(self.get_prefix_mapping_component("DM").values())
         dms = ["DM"] + prefix_dm
-        for dm in dms:
-            result += getattr(self, dm).as_parfile_line(format=format)
+        result = "".join(getattr(self, dm).as_parfile_line(format=format) for dm in dms)
         if hasattr(self, "components"):
             all_params = self.components["DispersionDM"].params
         else:
@@ -280,11 +269,7 @@ class DispersionDM(Dispersion):
             DMEPOCH = self.DMEPOCH.value
         dt = (toas["tdbld"] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
-        d_dm_d_dm_param = taylor_horner(dt_value, dm_terms) * (
-            self.DM.units / par.units
-        )
-
-        return d_dm_d_dm_param
+        return taylor_horner(dt_value, dm_terms) * (self.DM.units / par.units)
 
     def change_dmepoch(self, new_epoch):
         """Change DMEPOCH to a new value and update DM accordingly.
@@ -312,7 +297,7 @@ class DispersionDM(Dispersion):
         dt = (new_epoch.tdb.mjd_long - dmepoch_ld) * u.day
 
         for n in range(len(dmterms) - 1):
-            cur_deriv = self.DM if n == 0 else getattr(self, "DM{}".format(n))
+            cur_deriv = self.DM if n == 0 else getattr(self, f"DM{n}")
             cur_deriv.value = taylor_horner_deriv(
                 dt.to(u.yr), dmterms, deriv_order=n + 1
             )
@@ -320,7 +305,7 @@ class DispersionDM(Dispersion):
 
 
 class DispersionDMX(Dispersion):
-    """This class provides a DMX model - multiple DM values.
+    """This class provides a DMX model - piecewise-constant DM variations.
 
     This model lets the user specify time ranges and fit for a different
     DM value in each time range.
@@ -336,13 +321,16 @@ class DispersionDMX(Dispersion):
 
     def __init__(self):
         super().__init__()
+
         # DMX is for info output right now
+        # @abhisrkckl: What exactly is the use of this parameter?
         self.add_param(
             floatParameter(
                 name="DMX",
                 units="pc cm^-3",
                 value=0.0,
                 description="Dispersion measure",
+                convert_tcb2tdb=False,
             )
         )
 
@@ -353,7 +341,7 @@ class DispersionDMX(Dispersion):
         self.delay_funcs_component += [self.DMX_dispersion_delay]
 
     def add_DMX_range(self, mjd_start, mjd_end, index=None, dmx=0, frozen=True):
-        """Add DMX range to a dispersion model with specified start/end MJDs and DMX.
+        """Add DMX range to a dispersion model with specified start/end MJDs and DMX value.
 
         Parameters
         ----------
@@ -391,8 +379,7 @@ class DispersionDMX(Dispersion):
 
         if int(index) in self.get_prefix_mapping_component("DMX_"):
             raise ValueError(
-                "Index '%s' is already in use in this model. Please choose another."
-                % index
+                f"Index '{index}' is already in use in this model. Please choose another."
             )
 
         if isinstance(dmx, u.quantity.Quantity):
@@ -407,32 +394,35 @@ class DispersionDMX(Dispersion):
             mjd_end = mjd_end.value
         self.add_param(
             prefixParameter(
-                name="DMX_" + i,
+                name=f"DMX_{i}",
                 units="pc cm^-3",
                 value=dmx,
                 description="Dispersion measure variation",
                 parameter_type="float",
                 frozen=frozen,
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
             prefixParameter(
-                name="DMXR1_" + i,
+                name=f"DMXR1_{i}",
                 units="MJD",
                 description="Beginning of DMX interval",
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_start,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
             prefixParameter(
-                name="DMXR2_" + i,
+                name=f"DMXR2_{i}",
                 units="MJD",
                 description="End of DMX interval",
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_end,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.setup()
@@ -508,8 +498,7 @@ class DispersionDMX(Dispersion):
                 raise ValueError("Only one MJD bound is set.")
             if int(index) in dct:
                 raise ValueError(
-                    "Index '%s' is already in use in this model. Please choose another."
-                    % index
+                    f"Index '{index}' is already in use in this model. Please choose another."
                 )
             if isinstance(dmx, u.quantity.Quantity):
                 dmx = dmx.to_value(u.pc / u.cm**3)
@@ -524,32 +513,35 @@ class DispersionDMX(Dispersion):
             log.trace(f"Adding DMX_{i} from MJD {mjd_start} to MJD {mjd_end}")
             self.add_param(
                 prefixParameter(
-                    name="DMX_" + i,
+                    name=f"DMX_{i}",
                     units="pc cm^-3",
                     value=dmx,
                     description="Dispersion measure variation",
                     parameter_type="float",
                     frozen=frozen,
+                    tcb2tdb_scale_factor=DMconst,
                 )
             )
             self.add_param(
                 prefixParameter(
-                    name="DMXR1_" + i,
+                    name=f"DMXR1_{i}",
                     units="MJD",
                     description="Beginning of DMX interval",
                     parameter_type="MJD",
                     time_scale="utc",
                     value=mjd_start,
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
             self.add_param(
                 prefixParameter(
-                    name="DMXR2_" + i,
+                    name=f"DMXR2_{i}",
                     units="MJD",
                     description="End of DMX interval",
                     parameter_type="MJD",
                     time_scale="utc",
                     value=mjd_end,
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
         self.setup()
@@ -631,6 +623,10 @@ class DispersionDMX(Dispersion):
                 r2[j] = getattr(self, f"DMXR2_{index:04d}").quantity.mjd
                 indices[j] = index
         for j, index in enumerate(DMXR1_mapping):
+            if (r1[j] == r2[j]) and (r1[j] > 0):
+                log.warning(
+                    f"Start of DMX_{index:04d} ({r1[j]}) equal to end of DMX_{index:04d} ({r2[j]})"
+                )
             if np.any((r1[j] > r1) & (r1[j] < r2)):
                 k = np.where((r1[j] > r1) & (r1[j] < r2))[0]
                 for kk in k.flatten():
@@ -643,6 +639,8 @@ class DispersionDMX(Dispersion):
                     log.warning(
                         f"End of DMX_{index:04d} ({r1[j]}-{r2[j]}) overlaps with DMX_{indices[kk]:04d} ({r1[kk]}-{r2[kk]})"
                     )
+        if not hasattr(self, "dmx_toas_selector"):
+            self.dmx_toas_selector = TOASelect(is_range=True)
 
     def validate_toas(self, toas):
         DMX_mapping = self.get_prefix_mapping_component("DMX_")
@@ -655,7 +653,7 @@ class DispersionDMX(Dispersion):
             b = self._parent[DMXR1_mapping[k]].quantity.mjd * u.d
             e = self._parent[DMXR2_mapping[k]].quantity.mjd * u.d
             mjds = toas.get_mjds()
-            n = np.sum((b <= mjds) & (mjds < e))
+            n = np.sum((b <= mjds) & (mjds <= e))
             if n == 0:
                 bad_parameters.append(DMX_mapping[k])
         if bad_parameters:
@@ -677,7 +675,7 @@ class DispersionDMX(Dispersion):
             condition, tbl["mjd_float"]
         )
         # Get DMX delays
-        dm = np.zeros(len(tbl)) * self._parent.DM.units
+        dm = np.zeros(len(tbl)) * dmu
         for k, v in select_idx.items():
             dm[v] += getattr(self, k).quantity
         return dm
@@ -732,7 +730,7 @@ class DispersionJump(Dispersion):
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.dispersion_model.DispersionDMX
+        :class: pint.models.dispersion_model.DispersionJump
 
     Notes
     -----
@@ -753,7 +751,8 @@ class DispersionJump(Dispersion):
                 name="DMJUMP",
                 units="pc cm^-3",
                 value=None,
-                description="DM value offset.",
+                description="Wideband DM value offset.",
+                convert_tcb2tdb=False,
             )
         )
 
@@ -768,14 +767,14 @@ class DispersionJump(Dispersion):
             # Note we can not use the derivative function 'd_delay_d_dmparam',
             # Since dmjump does not effect delay.
             # The function 'd_delay_d_dmparam' applies d_dm_d_dmparam first and
-            # than applys the time delay part.
+            # than applies the time delay part.
             self.register_deriv_funcs(self.d_delay_d_dmjump, j)
 
     def validate(self):
         super().validate()
 
     def jump_dm(self, toas):
-        """Return the DM jump for each dm section collected by dmjump parameters.
+        """Return the DM jump for each DM section collected by DMJUMP parameters.
 
         The delay value is determined by DMJUMP parameter
         value in the unit of pc / cm ** 3.
@@ -789,18 +788,100 @@ class DispersionJump(Dispersion):
         return jdm * dm_jump_par.units
 
     def d_dm_d_dmjump(self, toas, jump_param):
-        """Derivative of dm values wrt dm jumps."""
+        """Derivative of the DM values w.r.t DM jumps."""
         tbl = toas.table
         d_dm_d_j = np.zeros(len(tbl))
         jpar = getattr(self, jump_param)
         mask = jpar.select_toa_mask(toas)
         d_dm_d_j[mask] = -1.0
-        return d_dm_d_j * jpar.units / jpar.units
+        return d_dm_d_j * u.dimensionless_unscaled
 
     def d_delay_d_dmjump(self, toas, param_name, acc_delay=None):
-        """Derivative for delay wrt to dm jumps.
+        """Derivative of the delay w.r.t DM jumps.
 
-        Since DMJUMPS does not affect delay, this would be zero.
+        Since DMJUMPs do not affect the delay, this should be zero.
         """
         dmjump = getattr(self, param_name)
         return np.zeros(toas.ntoas) * (u.s / dmjump.units)
+
+
+class FDJumpDM(Dispersion):
+    """This class provides system-dependent DM offsets for narrow-band
+    datasets. Such offsets can arise if different fiducial DMs are used
+    to dedisperse the template profiles used to derive the TOAs for different
+    systems. They can also arise while combining TOAs obtained using frequency-
+    collapsed templates with those obtained using frequency-resolved templates.
+
+    FDJumpDM is not to be confused with DMJump, which provides a DM offset
+    without providing the corresponding DM delay. DMJump is specific to
+    wideband datasets whereas FDJumpDM is intended to be used with narrowband
+    datasets.
+
+    This component is called FDJumpDM because the name DMJump was already taken,
+    and because this is often used in conjunction with FDJumps which account for
+    the fact that the templates may not adequately model the frequency-dependent
+    profile evolution.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.dispersion_model.FDJumpDM
+    """
+
+    register = True
+    category = "fdjumpdm"
+
+    def __init__(self):
+        super().__init__()
+        self.dm_value_funcs += [self.fdjump_dm]
+        self.delay_funcs_component += [self.fdjump_dm_delay]
+
+        self.add_param(
+            maskParameter(
+                name="FDJUMPDM",
+                units="pc cm^-3",
+                value=None,
+                description="System-dependent DM offset.",
+                tcb2tdb_scale_factor=DMconst,
+            )
+        )
+
+    def setup(self):
+        super().setup()
+        self.fdjump_dms = []
+        for mask_par in self.get_params_of_type("maskParameter"):
+            if mask_par.startswith("FDJUMPDM"):
+                self.fdjump_dms.append(mask_par)
+        for j in self.fdjump_dms:
+            self.register_dm_deriv_funcs(self.d_dm_d_fdjumpdm, j)
+            self.register_deriv_funcs(self.d_delay_d_dmparam, j)
+
+    def validate(self):
+        super().validate()
+
+    def fdjump_dm(self, toas):
+        """Return the system-dependent DM offset.
+
+        The delay value is determined by FDJUMPDM parameter
+        value in the unit of pc / cm ** 3.
+        """
+        tbl = toas.table
+        jdm = np.zeros(len(tbl))
+        for fdjumpdm in self.fdjump_dms:
+            fdjumpdm_par = getattr(self, fdjumpdm)
+            mask = fdjumpdm_par.select_toa_mask(toas)
+            jdm[mask] += -fdjumpdm_par.value
+        return jdm * fdjumpdm_par.units
+
+    def fdjump_dm_delay(self, toas, acc_delay=None):
+        """This is a wrapper function for interacting with the TimingModel class"""
+        return self.dispersion_type_delay(toas)
+
+    def d_dm_d_fdjumpdm(self, toas, jump_param):
+        """Derivative of DM values w.r.t FDJUMPDM parameters."""
+        tbl = toas.table
+        d_dm_d_j = np.zeros(len(tbl))
+        jpar = getattr(self, jump_param)
+        mask = jpar.select_toa_mask(toas)
+        d_dm_d_j[mask] = -1.0
+        return d_dm_d_j * u.dimensionless_unscaled

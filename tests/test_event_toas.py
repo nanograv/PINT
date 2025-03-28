@@ -1,8 +1,11 @@
 import os
 import pytest
+import numpy as np
+
+from astropy import units as u
 
 from pint.event_toas import read_mission_info_from_heasoft, create_mission_config
-from pint.event_toas import load_fits_TOAs
+from pint.event_toas import get_fits_TOAs, get_NICER_TOAs, _default_uncertainty
 from pinttestdata import datadir
 
 
@@ -48,7 +51,7 @@ def test_load_events_wrongext_raises():
     with pytest.raises(ValueError) as excinfo:
         # Not sure how to test that the warning is raised, with Astropy's log system
         # Anyway, here I'm testing another error
-        load_fits_TOAs(eventfile_nicer_topo, mission="xdsgse", extension=2)
+        get_fits_TOAs(eventfile_nicer_topo, mission="xdsgse", extension=2)
     assert msg in str(excinfo.value)
 
 
@@ -58,5 +61,25 @@ def test_load_events_wrongext_text_raises():
     with pytest.raises(RuntimeError) as excinfo:
         # Not sure how to test that the warning is raised, with Astropy's log system
         # Anyway, here I'm testing another error
-        load_fits_TOAs(eventfile_nicer_topo, mission="xdsgse", extension="dafasdfa")
+        get_fits_TOAs(eventfile_nicer_topo, mission="xdsgse", extension="dafasdfa")
     assert msg in str(excinfo.value)
+
+
+def test_for_toa_errors_default():
+    eventfile_nicer = datadir / "ngc300nicer_bary.evt"
+
+    ts = get_NICER_TOAs(
+        eventfile_nicer,
+    )
+    assert np.all(ts.get_errors() == _default_uncertainty["NICER"])
+
+
+@pytest.mark.parametrize("errors", [2, 2 * u.us])
+def test_for_toa_errors_manual(errors):
+    eventfile_nicer = datadir / "ngc300nicer_bary.evt"
+
+    ts = get_NICER_TOAs(
+        eventfile_nicer,
+        errors=errors,
+    )
+    assert np.all(ts.get_errors() == 2 * u.us)

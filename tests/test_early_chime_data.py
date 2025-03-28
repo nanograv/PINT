@@ -1,6 +1,7 @@
 """Various tests to assess the performance of early CHIME data."""
+
 import os
-import unittest
+import pytest
 
 import pint.models.model_builder as mb
 import pint.toa as toa
@@ -8,14 +9,14 @@ from pint.residuals import Residuals
 from pinttestdata import datadir
 
 
-class Test_CHIME_data(unittest.TestCase):
+class Test_CHIME_data:
     """Compare delays from the dd model with tempo and PINT"""
 
     @classmethod
-    def setUpClass(self):
+    def setup_class(cls):
         os.chdir(datadir)
-        self.parfile = "B1937+21.basic.par"
-        self.tim = "B1937+21.CHIME.CHIME.NG.N.tim"
+        cls.parfile = "B1937+21.basic.par"
+        cls.tim = "B1937+21.CHIME.CHIME.NG.N.tim"
 
     def test_toa_read(self):
         toas = toa.get_TOAs(self.tim, ephem="DE436", planets=False, include_bipm=True)

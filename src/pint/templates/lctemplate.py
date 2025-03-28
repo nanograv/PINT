@@ -5,6 +5,8 @@ Implements a mixture model of LCPrimitives to form a normalized template represe
 author: M. Kerr <matthew.kerr@gmail.com>
 
 """
+
+import contextlib
 import logging
 from collections import defaultdict
 from copy import deepcopy
@@ -40,10 +42,7 @@ class LCTemplate:
         self.shift_mode = np.any([p.shift_mode for p in self.primitives])
         if norms is None:
             norms = np.ones(len(primitives)) / len(primitives)
-        if hasattr(norms, "_make_p"):
-            self.norms = norms
-        else:
-            self.norms = NormAngles(norms)
+        self.norms = norms if hasattr(norms, "_make_p") else NormAngles(norms)
         self._sanity_checks()
         self._cache = defaultdict(None)
         self._cache_dirty = defaultdict(lambda: True)
@@ -57,11 +56,10 @@ class LCTemplate:
         _cache_dirty = defaultdict(lambda: True)
         if not hasattr(self, "_cache_dirty"):
             self._cache = defaultdict(None)
-            self._cache_dirty = _cache_dirty
         else:
             # make _cache_dirty a defaultdict from a normal dict
             _cache_dirty.update(self._cache_dirty)
-            self._cache_dirty = _cache_dirty
+        self._cache_dirty = _cache_dirty
         if not hasattr(self, "ncache"):
             self.ncache = 1000
         if not hasattr(self, "ph_edges"):
@@ -91,9 +89,7 @@ class LCTemplate:
     def __getitem__(self, index):
         if index < 0:
             index += len(self.primitives) + 1
-        if index == len(self.primitives):
-            return self.norms
-        return self.primitives[index]
+        return self.norms if index == len(self.primitives) else self.primitives[index]
 
     def __setitem__(self, index, value):
         if index < 0:
@@ -104,6 +100,7 @@ class LCTemplate:
             self.primitives[index] = value
 
     def __len__(self):
+        # sourcery skip: remove-unreachable-code
         raise DeprecationWarning("I'd like to see if this is used.")
         return len(self.primitives)
 
@@ -283,7 +280,7 @@ class LCTemplate:
             for pname in prim.get_parameter_names(free=free)
         ]
         norm_names = [
-            "Norm_%s" % pname for pname in self.norms.get_parameter_names(free=free)
+            f"Norm_{pname}" for pname in self.norms.get_parameter_names(free=free)
         ]
         return prim_names + norm_names
         # return np.append(np.concatenate( [prim.pnames(free) for prim in self.primitives]) , self.norms.get_parameters(free))
@@ -357,20 +354,15 @@ class LCTemplate:
         phi2 = np.asarray(phi2)
         if isvector(log10_ens):
             assert len(log10_ens) == len(phi1)
-        try:
+        with contextlib.suppress(TypeError):
             assert len(phi1) == len(phi2)
-        except TypeError:
-            pass
         norms = self.norms(log10_ens=log10_ens)
         t = norms.sum(axis=0)
         dphi = phi2 - phi1
         rvals = np.zeros(phi1.shape, dtype=float)
         for n, prim in zip(norms, self.primitives):
             rvals += n * prim.integrate(phi1, phi2, log10_ens=log10_ens)
-        if suppress_bg:
-            return rvals * (1.0 / t)
-        else:
-            return (1 - t) * dphi + rvals
+        return rvals * (1.0 / t) if suppress_bg else (1 - t) * dphi + rvals
 
     def cdf(self, x, log10_ens=3):
         return self.integrate(np.zeros_like(x), x, log10_ens, suppress_bg=False)
@@ -401,9 +393,7 @@ class LCTemplate:
         rvals, norms, norm = self._get_scales(phases, log10_ens)
         for n, prim in zip(norms, self.primitives):
             rvals += n * prim(phases, log10_ens=log10_ens)
-        if suppress_bg:
-            return rvals / norm
-        return (1.0 - norm) + rvals
+        return rvals / norm if suppress_bg else (1.0 - norm) + rvals
 
     def derivative(self, phases, log10_ens=3, order=1, use_cache=False):
         """Return the derivative of the template with respect to pulse
@@ -422,9 +412,7 @@ class LCTemplate:
         """Evaluate a single component of template."""
         n = self.norms(log10_ens=log10_ens)
         rvals = self.primitives[index](phases, log10_ens=log10_ens) * n[index]
-        if add_bg:
-            return rvals + n.sum(axis=0)
-        return rvals
+        return rvals + n.sum(axis=0) if add_bg else rvals
 
     def gradient(self, phases, log10_ens=3, free=True, template_too=False):
         r = np.empty((self.num_parameters(free), len(phases)))
@@ -451,7 +439,7 @@ class LCTemplate:
             np.einsum("ij,ikj->kj", prim_terms, m, out=r[c:])
         if template_too:
             rvals[:] = 1 - norm
-            for i in range(0, len(prim_terms)):
+            for i in range(len(prim_terms)):
                 rvals += (prim_terms[i] + 1) * norms[i]
             return r, rvals
         return r
@@ -460,6 +448,7 @@ class LCTemplate:
         """Return d/dphi(gradient).  This is the derivative with respect
         to pulse phase of the gradient with respect to the parameters.
         """
+        # sourcery skip: remove-unreachable-code
         raise NotImplementedError()  # is this used anymore?
         free_mask = self.get_free_mask()
         nparam = len(free_mask)
@@ -508,7 +497,7 @@ class LCTemplate:
         )
 
     def hessian(self, phases, log10_ens=3, free=True):
-        """Return the hessian of the primitive and normaliation angles.
+        """Return the hessian of the primitive and normalization angles.
 
         The primitives components are not coupled due to the additive form
         of the template.  However, because each normalization depends on
@@ -566,12 +555,10 @@ class LCTemplate:
                     r[c + j, c + k, :] += hnorm[i, j, k] * prim_terms[i]
                 r[c + k, c + j, :] = r[c + j, c + k, :]
 
-        if free:
-            return r[free_mask][:, free_mask]
-        return r
+        return r[free_mask][:, free_mask] if free else r
 
     def delta(self, index=None):
-        """Return radio lag -- reckoned by default as the posittion of the            first peak following phase 0."""
+        """Return radio lag -- reckoned by default as the position of the            first peak following phase 0."""
         if (index is not None) and (index <= (len(self.primitives))):
             return self[index].get_location(error=True)
         return self.Delta(delta=True)
@@ -591,9 +578,7 @@ class LCTemplate:
                 prim1 = p
         p1, e1 = prim0.get_location(error=True)
         p2, e2 = prim1.get_location(error=True)
-        if delta:
-            return p1, e1
-        return (p2 - p1, (e1**2 + e2**2) ** 0.5)
+        return (p1, e1) if delta else (p2 - p1, (e1**2 + e2**2) ** 0.5)
 
     def _sorted_prims(self):
         def cmp(p1, p2):
@@ -668,16 +653,13 @@ class LCTemplate:
         n = int(round(n))
 
         if len(self.primitives) == 0:
-            if return_partition:
-                return np.random.rand(n), [n]
-            return np.random.rand(n)
+            return (np.random.rand(n), [n]) if return_partition else np.random.rand(n)
 
         # check weights
         if weights is None:
             weights = np.ones(n)
-        else:
-            if len(weights) != n:
-                raise ValueError("Provided weight vector does not match requested n.")
+        elif len(weights) != n:
+            raise ValueError("Provided weight vector does not match requested n.")
 
         # check energies
         if isvector(log10_ens):
@@ -719,9 +701,7 @@ class LCTemplate:
 
         assert not np.any(np.isnan(rvals))  # TMP
 
-        if return_partition:
-            return rvals, comps
-        return rvals
+        return (rvals, comps) if return_partition else rvals
 
     def swap_primitive(self, index, ptype=LCLorentzian):
         """Swap the specified primitive for a new one with the parameters
@@ -739,13 +719,12 @@ class LCTemplate:
             raise ValueError("Template only has a single primitive.")
         if index < 0:
             index += len(prims)
-        newprims = [deepcopy(p) for ip, p in enumerate(prims) if not index == ip]
+        newprims = [deepcopy(p) for ip, p in enumerate(prims) if index != ip]
         newnorms = self.norms.delete_component(index)
-        if inplace:
-            self.primitives = newprims
-            self.norms = newnorms
-        else:
+        if not inplace:
             return LCTemplate(newprims, newnorms)
+        self.primitives = newprims
+        self.norms = newnorms
 
     def add_primitive(self, prim, norm=0.1, inplace=False):
         """[Convenience] -- return a new LCTemplate with the specified
@@ -756,11 +735,10 @@ class LCTemplate:
             return LCTemplate([prim], [1])
         nprims = [deepcopy(prims[i]) for i in range(len(prims))] + [prim]
         nnorms = self.norms.add_component(norm)
-        if inplace:
-            self.norms = nnorms
-            self.primitives = nprims
-        else:
+        if not inplace:
             return LCTemplate(nprims, nnorms)
+        self.norms = nnorms
+        self.primitives = nprims
 
     def order_primitives(self, order=0):
         """Re-order components in place.
@@ -797,7 +775,7 @@ class LCTemplate:
             elif comp.name == "VonMises":
                 constructor = LCEVonMises
             else:
-                raise NotImplementedError("%s not supported." % comp.name)
+                raise NotImplementedError(f"{comp.name} not supported.")
             newcomp = constructor(p=comp.p)
         newcomp.free[:] = comp.free
         newcomp.slope_free[:] = slope_free
@@ -809,10 +787,9 @@ class LCTemplate:
         ps = "\n".join(
             ("p%d = %s" % (i, p.eval_string()) for i, p in enumerate(self.primitives))
         )
-        prims = "[%s]" % (",".join(("p%d" % i for i in range(len(self.primitives)))))
-        ns = "norms = %s" % (self.norms.eval_string())
-        s = "%s(%s,norms)" % (self.__class__.__name__, prims)
-        return s
+        prims = f'[{",".join("p%d" % i for i in range(len(self.primitives)))}]'
+        ns = f"norms = {self.norms.eval_string()}"
+        return f"{self.__class__.__name__}({prims},norms)"
 
     def closest_to_peak(self, phases):
         return min((p.closest_to_peak(phases) for p in self.primitives))
@@ -901,9 +878,9 @@ class LCTemplate:
             phases = np.linspace(0, 1, 2 * nbin + 1)
             values = self(phases, suppress_bg=suppress_bg)
             hi = values[2::2]
-            lo = values[0:-1:2]
+            lo = values[:-1:2]
             mid = values[1::2]
-            bin_phases = phases[0:-1:2]
+            bin_phases = phases[:-1:2]
             bin_values = 1.0 / (6 * nbin) * (hi + 4 * mid + lo)
 
         bin_values *= 1.0 / bin_values.mean()
@@ -1062,7 +1039,7 @@ def prim_io(template, bound_eps=1e-5):
         # check norms
         norms = np.asarray(norms)
         n = norms.sum()
-        if (n > 1) and (abs(n - 1) < bounds_eps):
+        if (n > 1) and (abs(n - 1) < bound_eps):
             norms *= 1.0 / n
         return primitives, list(norms)
 

@@ -1,22 +1,22 @@
-#! /usr/bin/env python
+from copy import deepcopy
 import json
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 import numpy as np
 
 import pint.models.model_builder as mb
 from pint import toa
-from pint.fitter import GLSFitter
+from pint.fitter import Fitter, GLSFitter
 from pinttestdata import datadir
 
 
-class TestGLS(unittest.TestCase):
+class TestGLS:
     """Compare delays from the dd model with tempo and PINT"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.par = "B1855+09_NANOGrav_9yv1.gls.par"
         cls.tim = "B1855+09_NANOGrav_9yv1.tim"
@@ -53,15 +53,13 @@ class TestGLS(unittest.TestCase):
                         if par not in ["ELONG", "ELAT"]
                         else getattr(self.f.model, par).uncertainty.to(u.rad).value
                     )
-                    msg = "Parameter {} does not match T2 for full_cov={}".format(
-                        par, full_cov
-                    )
+                    msg = f"Parameter {par} does not match T2 for full_cov={full_cov}"
                     assert np.abs(v - val[0]) <= val[1], msg
                     assert np.abs(v - val[0]) <= e, msg
                     assert np.abs(1 - val[1] / e) < 0.1, msg
 
     def test_noise_design_matrix_index(self):
-        self.fit(False, True)  # get the debug infor
+        self.fit(False, True)  # get the debug info
         # Test red noise basis
         pl_rd = self.f.model.pl_rn_basis_weight_pair(self.f.toas)[0]
         p0, p1 = self.f.resids.pl_red_noise_M_index
@@ -94,3 +92,20 @@ class TestGLS(unittest.TestCase):
 
     def test_has_correlated_errors(self):
         assert self.f.resids.model.has_correlated_errors
+
+    @pytest.mark.parametrize("downhill", [True, False])
+    def test_noise_ampl_length(self, downhill):
+        ftr = Fitter.auto(self.t, self.m, downhill=downhill)
+
+        noise_ampls_before = deepcopy(ftr.resids.noise_ampls)
+
+        ftr.fit_toas()
+
+        noise_ampls_after = ftr.resids.noise_ampls
+
+        assert set(noise_ampls_before.keys()) == set(noise_ampls_after.keys())
+
+        assert all(
+            len(noise_ampls_before[comp]) == len(noise_ampls_after[comp])
+            for comp in noise_ampls_before.keys()
+        )

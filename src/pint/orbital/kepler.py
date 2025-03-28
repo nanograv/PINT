@@ -2,6 +2,7 @@
 
 All times are in days, distances in light-seconds, and masses in solar masses.
 """
+
 import collections
 
 import numpy as np
@@ -111,7 +112,7 @@ class Kepler2DParameters(
     Parameters
     ----------
     a : float
-        semimajor axis
+        semi-major axis
     pb : float
         binary period
     eps1 : float
@@ -127,8 +128,8 @@ class Kepler2DParameters(
 def kepler_2d(params, t):
     """Position and velocity of a particle in a Kepler orbit.
 
-    The orbit has semimajor axis a, period pb, and eccentricity
-    paramerized by eps1=e*sin(om) and eps2=e*cos(om), and the
+    The orbit has semi-major axis a, period pb, and eccentricity
+    parametrized by eps1=e*sin(om) and eps2=e*cos(om), and the
     particle is on the x axis at time t0, while the values
     are computed for time t.
 
@@ -246,11 +247,7 @@ def kepler_2d(params, t):
 
     r = a * (1 - e**2) / (1 + e * np.cos(true_anomaly))
     r_prime = (
-        a
-        * e
-        * (1 - e**2)
-        * np.sin(true_anomaly)
-        / (1 + e * np.cos(true_anomaly)) ** 2
+        a * e * (1 - e**2) * np.sin(true_anomaly) / (1 + e * np.cos(true_anomaly)) ** 2
     )
     r_dot = r_prime * true_anomaly_dot
     d_a = np.array([1, 0, 0, 0, 0, 0])
@@ -366,7 +363,7 @@ class Kepler3DParameters(
     Parameters
     ----------
     a : float
-        semimajor axis
+        semi-major axis
     pb : float
         binary period
     eps1 : float

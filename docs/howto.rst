@@ -5,7 +5,8 @@ How-tos
 
 This section is to provide detailed solutions to particular problems.
 Some of these are based on user questions, others are more about how to develop PINT.
-Please feel free to change this by writing more; there are also some entries on the `PINT wiki <https://github.com/nanograv/PINT/wiki/How-To>`_ which you can contribute to more directly.
+Please feel free to change this by writing more; there are also some entries on the 
+`PINT wiki <https://github.com/nanograv/PINT/wiki/How-To>`_ which you can contribute to more directly.
 
 .. toctree::
 
@@ -18,3 +19,4 @@ Please feel free to change this by writing more; there are also some entries on 
    editing-documentation
    working-with-notebooks
    controlling-logging
+   tcb2tdb-factors

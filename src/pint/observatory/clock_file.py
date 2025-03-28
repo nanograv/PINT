@@ -1,11 +1,13 @@
 """Routines for reading and writing various formats of clock file."""
 
 import re
+import warnings
 from pathlib import Path
 from textwrap import dedent
 from warnings import warn
 
 import astropy.units as u
+import erfa
 import numpy as np
 from loguru import logger as log
 
@@ -103,8 +105,9 @@ class ClockFile:
             raise ValueError(f"MJDs have {len(mjd)} entries but clock has {len(clock)}")
         self._time = Time(mjd, format="pulsar_mjd", scale="utc")
         if not np.all(np.diff(self._time.mjd) >= 0):
+            i = np.where(np.diff(self._time.mjd) < 0)[0][0]
             raise ValueError(
-                f"Clock file {self.friendly_name} appears to be out of order"
+                f"Clock file {self.friendly_name} appears to be out of order: {self._time[i]} > {self._time[i+1]}"
             )
         self._clock = clock.to(u.us)
         if comments is None:
@@ -125,7 +128,7 @@ class ClockFile:
         if format in cls._formats:
             return cls._formats[format](filename, **kwargs)
         else:
-            raise ValueError("clock file format '%s' not defined" % format)
+            raise ValueError(f"clock file format '{format}' not defined")
 
     @property
     def time(self):
@@ -144,6 +147,10 @@ class ClockFile:
         in the global repository. Delegates the actual computation to the
         included ClockFile object; anything still not covered is treated
         according to ``limits``.
+
+        Note: The correction is evaluated at `t.mjd` without regard to what the scale of `t`.
+        Generally the times in observatory clock correction files are represented in UTC,
+        but nothing is done here to enforce that.
 
         Parameters
         ----------
@@ -182,10 +189,7 @@ class ClockFile:
 
     def last_correction_mjd(self):
         """Last MJD for which corrections are available."""
-        if len(self.time) == 0:
-            return -np.inf
-        else:
-            return self.time[-1].mjd
+        return -np.inf if len(self.time) == 0 else self.time[-1].mjd
 
     @staticmethod
     def merge(clocks, *, trim=True):
@@ -249,8 +253,8 @@ class ClockFile:
             ]
             corr += this_corr
         if trim:
-            b = max([c._time.mjd[0] for c in clocks])
-            e = min([c._time.mjd[-1] for c in clocks])
+            b = max(c._time.mjd[0] for c in clocks)
+            e = min(c._time.mjd[-1] for c in clocks)
             il = np.searchsorted(times.mjd, b)
             ir = np.searchsorted(times.mjd, e, side="right")
             times = times[il:ir]
@@ -315,21 +319,21 @@ class ClockFile:
             )
         mjds = self.time.mjd
         corr = self.clock.to_value(u.us)
-        comments = self.comments if self.comments else [""] * len(self.clock)
+        comments = self.comments or [""] * len(self.clock)
         # TEMPO writes microseconds
-        if extra_comment is not None:
-            if self.leading_comment is not None:
-                leading_comment = extra_comment.rstrip() + "\n" + self.leading_comment
-            else:
-                leading_comment = extra_comment.rstrip()
-        else:
+        if extra_comment is None:
             leading_comment = self.leading_comment
+        elif self.leading_comment is not None:
+            leading_comment = extra_comment.rstrip() + "\n" + self.leading_comment
+        else:
+            leading_comment = extra_comment.rstrip()
         with open_or_use(filename, "wt") as f:
             f.write(tempo_standard_header)
             if leading_comment is not None:
                 f.write(leading_comment.strip())
                 f.write("\n")
             # Do not use EECO-REF column as TEMPO does a weird subtraction thing
+            # sourcery skip: hoist-statement-from-loop
             for mjd, corr, comment in zip(mjds, corr, comments):
                 # 0:9 for MJD
                 # 9:21 for clkcorr1 (do not use)
@@ -380,20 +384,19 @@ class ClockFile:
             hdrline = self.header
         if not hdrline.startswith("#"):
             raise ValueError(f"Header line must start with #: {hdrline!r}")
-        if extra_comment is not None:
-            if self.leading_comment is not None:
-                leading_comment = extra_comment.rstrip() + "\n" + self.leading_comment
-            else:
-                leading_comment = extra_comment.rstrip()
-        else:
+        if extra_comment is None:
             leading_comment = self.leading_comment
+        elif self.leading_comment is not None:
+            leading_comment = extra_comment.rstrip() + "\n" + self.leading_comment
+        else:
+            leading_comment = extra_comment.rstrip()
         with open_or_use(filename, "wt") as f:
             f.write(hdrline.rstrip())
             f.write("\n")
             if leading_comment is not None:
                 f.write(leading_comment.rstrip())
                 f.write("\n")
-            comments = self.comments if self.comments else [""] * len(self.time)
+            comments = self.comments or [""] * len(self.time)
 
             for mjd, corr, comment in zip(
                 self.time.mjd, self.clock.to_value(u.s), comments
@@ -512,7 +515,7 @@ def read_tempo2_clock_file(
                     # Anything else on the line is a comment too
                     add_comment(m.group(3))
         clk = np.array(clk)
-    except (FileNotFoundError, OSError):
+    except OSError:
         raise NoClockCorrections(
             f"TEMPO2-style clock correction file {filename} not found"
         )
@@ -525,16 +528,22 @@ def read_tempo2_clock_file(
         mjd = mjd[1:]
         clk = clk[1:]
         comments = comments[1:]
-    return ClockFile(
-        mjd,
-        clk * u.s,
-        filename=filename,
-        comments=comments,
-        leading_comment=leading_comment,
-        header=header,
-        friendly_name=friendly_name,
-        valid_beyond_ends=valid_beyond_ends,
-    )
+    with warnings.catch_warnings():
+        # Some clock files have dubious years in them
+        # Most are removed by automatically ignoring MJD 0, or with "bogus_last_correction"
+        # But Parkes incudes a non-zero correction for MJD 0 so it isn't removed
+        # In any case, the user doesn't need a warning about strange years in clock files
+        warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        return ClockFile(
+            mjd,
+            clk * u.s,
+            filename=filename,
+            comments=comments,
+            leading_comment=leading_comment,
+            header=header,
+            friendly_name=friendly_name,
+            valid_beyond_ends=valid_beyond_ends,
+        )
 
 
 ClockFile._formats["tempo2"] = read_tempo2_clock_file
@@ -687,7 +696,7 @@ def read_tempo_clock_file(
 
             # Parse MJD
             try:
-                mjd = float(l[0:9])
+                mjd = float(l[:9])
                 # allow mjd=0 to pass, since that is often used
                 # for effectively null clock files
                 if (mjd < 39000 and mjd != 0) or mjd > 100000:
@@ -741,7 +750,7 @@ def read_tempo_clock_file(
             clkcorrs.append(clkcorr2 - clkcorr1)
             comments.append(None)
             add_comment(l[50:])
-    except (FileNotFoundError, OSError):
+    except OSError:
         raise NoClockCorrections(
             f"TEMPO-style clock correction file {filename} "
             f"for site {obscode} not found"
@@ -830,16 +839,10 @@ class GlobalClockFile(ClockFile):
         f = get_clock_correction_file(
             self.filename, url_base=self.url_base, url_mirrors=self.url_mirrors
         )
-        if f == self.f and f.stat().st_mtime == mtime:
-            # Nothing changed
-            pass
-        else:
+        if f != self.f or f.stat().st_mtime != mtime:
             self.f = f
             h = compute_hash(f)
-            if h == self.hash:
-                # Nothing changed but we got it from the Net
-                pass
-            else:
+            if h != self.hash:
                 # Actual new data (probably)!
                 self.hash = h
                 self.clock_file = ClockFile.read(
@@ -874,7 +877,8 @@ class GlobalClockFile(ClockFile):
         corrections : astropy.units.Quantity
             The corrections in units of microseconds.
         """
-        if np.any(t > self.clock_file.time[-1]):
+        needs_update = np.any(t > self.clock_file.time[-1])
+        if needs_update:
             self.update()
         return self.clock_file.evaluate(t, limits=limits)
 

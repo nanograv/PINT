@@ -6,8 +6,9 @@ in the model class, that implements priors on combinations of parameters,
 such as total proper motion, 2-d sky location, etc.
 
 """
+
 import numpy as np
-from scipy.stats import norm, rv_continuous, rv_discrete, uniform
+from scipy.stats import rv_continuous, uniform
 
 
 class Prior:
@@ -52,7 +53,6 @@ class Prior:
 
     def __init__(self, rv):
         self._rv = rv
-        pass
 
     def pdf(self, value):
         # The astype() calls prevent unsafe cast messages
@@ -113,14 +113,13 @@ def UniformBoundedRV(lower_bound, upper_bound):
     Returns a frozen rv_continuous instance with a uniform probability
     inside the range lower_bound to upper_bound and 0.0 outside
     """
-    uu = uniform(lower_bound, (upper_bound - lower_bound))
-    return uu
+    return uniform(lower_bound, (upper_bound - lower_bound))
 
 
 class GaussianRV_gen(rv_continuous):
     r"""A Gaussian prior between two bounds.
     If you just want a gaussian, use scipy.stats.norm
-    This version is for generating bounded gaussians
+    This version is for generating bounded Gaussians
 
     Parameters
     ----------
@@ -132,8 +131,7 @@ class GaussianRV_gen(rv_continuous):
     """
 
     def _pdf(self, x):
-        ret = np.exp(-(x**2) / 2) / np.sqrt(2 * np.pi)
-        return ret
+        return np.exp(-(x**2) / 2) / np.sqrt(2 * np.pi)
 
 
 def GaussianBoundedRV(loc=0.0, scale=1.0, lower_bound=-np.inf, upper_bound=np.inf):
@@ -153,5 +151,4 @@ def GaussianBoundedRV(loc=0.0, scale=1.0, lower_bound=-np.inf, upper_bound=np.in
     ymin = (lower_bound - loc) / scale
     ymax = (upper_bound - loc) / scale
     n = GaussianRV_gen(name="bounded_gaussian", a=ymin, b=ymax)
-    nn = n(loc=loc, scale=scale)
-    return nn
+    return n(loc=loc, scale=scale)

@@ -1,4 +1,8 @@
 """Various tests to assess the performance of the B1855+09."""
+
+# This example requires `tempo2_utils`. It is available at
+# https://github.com/demorest/tempo_utils.
+
 import pint.models.model_builder as mb
 import pint.toa as toa
 import pint.logging
@@ -11,7 +15,6 @@ pint.logging.setup(level="INFO")
 import matplotlib.pyplot as plt
 import astropy.units as u
 from pint.residuals import Residuals as resids
-import os
 from astropy import log
 
 try:

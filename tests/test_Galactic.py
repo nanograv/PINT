@@ -1,6 +1,6 @@
 import logging
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 
@@ -12,11 +12,11 @@ import astropy.coordinates
 import astropy.time
 
 
-class TestGalactic(unittest.TestCase):
+class TestGalactic:
     """Test conversion from equatorial/ecliptic -> Galactic coordinates as astropy objects"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         # J0613 is in equatorial
         cls.parfileJ0613 = os.path.join(
             datadir, "J0613-0200_NANOGrav_dfg+12_TAI_FB90.par"
@@ -74,13 +74,12 @@ class TestGalactic(unittest.TestCase):
         assert sep < 1e-9 * u.arcsec, msg
 
     def test_proper_motion_identity(self):
-
         # sanity check that evaluation at POSEPOCH returns something very close to 0
         J0613_icrs = self.modelJ0613.coords_as_ICRS()
         J0613_icrs_alt = self.modelJ0613.coords_as_ICRS(
             epoch=self.modelJ0613.POSEPOCH.quantity.mjd
         )
-        sep = J0613_icrs_alt.separation(J0613_icrs)
+        sep = J0613_icrs.separation(J0613_icrs_alt)
         assert sep < 1e-11 * u.arcsec
 
     def test_equatorial_to_galactic(self):
@@ -178,7 +177,3 @@ class TestGalactic(unittest.TestCase):
             % sep.arcsec
         )
         assert sep < 1e-9 * u.arcsec, msg
-
-
-if __name__ == "__main__":
-    unittest.main()

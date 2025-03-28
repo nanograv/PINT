@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -33,7 +33,6 @@
 
 # %%
 import tempfile
-import numpy as np
 import astropy.units as u
 from pprint import pprint
 from glob import glob
@@ -277,5 +276,5 @@ import pint.observatory.topo_obs
 
 d = tempfile.mkdtemp()
 pint.observatory.topo_obs.export_all_clock_files(d)
-for f in sorted(glob(d + "/*")):
+for f in sorted(glob(f"{d}/*")):
     print(f)

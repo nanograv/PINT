@@ -1,3 +1,4 @@
+import contextlib
 import os
 import pytest
 import importlib
@@ -15,10 +16,8 @@ def sandbox(tmp_path):
     o = Sandbox()
     e = os.environ.copy()
 
-    try:
+    with contextlib.suppress(KeyError):
         del os.environ["PINT_OBS_OVERRIDE"]
-    except KeyError:
-        pass
     reg = pint.observatory.Observatory._registry.copy()
     o.override_dir = tmp_path / "override"
     o.override_dir.mkdir()

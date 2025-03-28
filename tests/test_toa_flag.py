@@ -1,8 +1,7 @@
 """Various tests to assess the performance of TOA get_flag_value."""
 
-
 import os
-import unittest
+import pytest
 import io
 import numpy as np
 import pytest
@@ -11,11 +10,11 @@ import pint.toa as toa
 from pinttestdata import datadir
 
 
-class TestToaFlag(unittest.TestCase):
+class TestToaFlag:
     """Compare delays from the dd model with tempo and PINT"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.tim = "B1855+09_NANOGrav_dfg+12.tim"
         cls.toas = toa.get_TOAs(
             os.path.join(datadir, cls.tim),
@@ -100,7 +99,7 @@ def test_flag_set_partialarray():
         if i < 2:
             assert float(t["test", i]) == 1
         else:
-            assert not "test" in t["flags"][i]
+            assert "test" not in t["flags"][i]
 
 
 def test_flag_delete():
@@ -108,7 +107,7 @@ def test_flag_delete():
     t["test"] = "1"
     t["test"] = ""
     for i in range(t.ntoas):
-        assert not "test" in t["flags"][i]
+        assert "test" not in t["flags"][i]
 
 
 def test_flag_partialdelete():
@@ -117,6 +116,6 @@ def test_flag_partialdelete():
     t[:2, "test"] = ""
     for i in range(t.ntoas):
         if i < 2:
-            assert not "test" in t["flags"][i]
+            assert "test" not in t["flags"][i]
         else:
             assert float(t["test", i]) == 1

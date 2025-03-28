@@ -1,4 +1,5 @@
 """Test chi^2 gridding routines"""
+
 import concurrent.futures
 import pytest
 
@@ -10,12 +11,16 @@ import pint.gridutils
 import pint.models.parameter as param
 from pint.fitter import GLSFitter, WLSFitter, DownhillWLSFitter, DownhillGLSFitter
 from pint.models.model_builder import get_model_and_toas
+import pint.logging
+
+pint.logging.setup("INFO")
 
 # for multi-core tests, don't use all available CPUs
 ncpu = 2
 
 
-def test_grid_singleprocessor():
+@pytest.fixture
+def get_data_and_fit():
     parfile = pint.config.examplefile("NGC6440E.par")
     timfile = pint.config.examplefile("NGC6440E.tim")
     m, t = get_model_and_toas(parfile, timfile)
@@ -23,16 +28,21 @@ def test_grid_singleprocessor():
     f = WLSFitter(t, m)
     f.fit_toas()
     bestfit = f.resids.chi2
+    return f, bestfit
+
+
+def test_grid_singleprocessor(get_data_and_fit):
+    f, bestfit = get_data_and_fit
 
     F0 = np.linspace(
-        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
-        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
-        5,
+        f.model.F0.quantity - 1 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 1 * f.model.F0.uncertainty,
+        3,
     )
     F1 = np.linspace(
-        f.model.F1.quantity - 3 * f.model.F1.uncertainty,
-        f.model.F1.quantity + 3 * f.model.F1.uncertainty,
-        7,
+        f.model.F1.quantity - 1 * f.model.F1.uncertainty,
+        f.model.F1.quantity + 1 * f.model.F1.uncertainty,
+        5,
     )
 
     chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0", "F1"), (F0, F1), ncpu=1)
@@ -40,24 +50,18 @@ def test_grid_singleprocessor():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_extraparams_singleprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
-
-    f = WLSFitter(t, m)
-    f.fit_toas()
-    bestfit = f.resids.chi2
+def test_grid_extraparams_singleprocessor(get_data_and_fit):
+    f, bestfit = get_data_and_fit
 
     F0 = np.linspace(
-        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
-        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
-        5,
+        f.model.F0.quantity - 1 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 1 * f.model.F0.uncertainty,
+        3,
     )
     F1 = np.linspace(
-        f.model.F1.quantity - 3 * f.model.F1.uncertainty,
-        f.model.F1.quantity + 3 * f.model.F1.uncertainty,
-        7,
+        f.model.F1.quantity - 1 * f.model.F1.uncertainty,
+        f.model.F1.quantity + 1 * f.model.F1.uncertainty,
+        5,
     )
 
     chi2grid, extraparams = pint.gridutils.grid_chisq(
@@ -67,24 +71,18 @@ def test_grid_extraparams_singleprocessor():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_multiprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
-
-    f = WLSFitter(t, m)
-    f.fit_toas()
-    bestfit = f.resids.chi2
+def test_grid_multiprocessor(get_data_and_fit):
+    f, bestfit = get_data_and_fit
 
     F0 = np.linspace(
-        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
-        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
-        5,
+        f.model.F0.quantity - 1 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 1 * f.model.F0.uncertainty,
+        3,
     )
     F1 = np.linspace(
-        f.model.F1.quantity - 3 * f.model.F1.uncertainty,
-        f.model.F1.quantity + 3 * f.model.F1.uncertainty,
-        7,
+        f.model.F1.quantity - 1 * f.model.F1.uncertainty,
+        f.model.F1.quantity + 1 * f.model.F1.uncertainty,
+        5,
     )
 
     chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0", "F1"), (F0, F1), ncpu=ncpu)
@@ -92,19 +90,13 @@ def test_grid_multiprocessor():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_oneparam():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
-
-    f = WLSFitter(t, m)
-    f.fit_toas()
-    bestfit = f.resids.chi2
+def test_grid_oneparam(get_data_and_fit):
+    f, bestfit = get_data_and_fit
 
     F0 = np.linspace(
-        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
-        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
-        5,
+        f.model.F0.quantity - 1 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 1 * f.model.F0.uncertainty,
+        3,
     )
 
     chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0",), (F0,), ncpu=ncpu)
@@ -112,19 +104,13 @@ def test_grid_oneparam():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_oneparam_extraparam():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
-
-    f = WLSFitter(t, m)
-    f.fit_toas()
-    bestfit = f.resids.chi2
+def test_grid_oneparam_extraparam(get_data_and_fit):
+    f, bestfit = get_data_and_fit
 
     F0 = np.linspace(
-        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
-        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
-        5,
+        f.model.F0.quantity - 1 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 1 * f.model.F0.uncertainty,
+        3,
     )
 
     chi2grid, extraparams = pint.gridutils.grid_chisq(
@@ -134,19 +120,13 @@ def test_grid_oneparam_extraparam():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_oneparam_existingexecutor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
-
-    f = WLSFitter(t, m)
-    f.fit_toas()
-    bestfit = f.resids.chi2
+def test_grid_oneparam_existingexecutor(get_data_and_fit):
+    f, bestfit = get_data_and_fit
 
     F0 = np.linspace(
-        f.model.F0.quantity - 5 * f.model.F0.uncertainty,
-        f.model.F0.quantity + 5 * f.model.F0.uncertainty,
-        21,
+        f.model.F0.quantity - 1 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 1 * f.model.F0.uncertainty,
+        3,
     )
     with concurrent.futures.ProcessPoolExecutor(
         max_workers=ncpu,
@@ -156,28 +136,22 @@ def test_grid_oneparam_existingexecutor():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_3param_singleprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
-
-    f = WLSFitter(t, m)
-    f.fit_toas()
-    bestfit = f.resids.chi2
+def test_grid_3param_singleprocessor(get_data_and_fit):
+    f, bestfit = get_data_and_fit
 
     F0 = np.linspace(
-        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
-        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
+        f.model.F0.quantity - 1 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 1 * f.model.F0.uncertainty,
         3,
     )
     F1 = np.linspace(
-        f.model.F1.quantity - 3 * f.model.F1.uncertainty,
-        f.model.F1.quantity + 3 * f.model.F1.uncertainty,
-        7,
+        f.model.F1.quantity - 1 * f.model.F1.uncertainty,
+        f.model.F1.quantity + 1 * f.model.F1.uncertainty,
+        3,
     )
     DM = np.linspace(
-        f.model.DM.quantity - 3 * f.model.DM.uncertainty,
-        f.model.DM.quantity + 3 * f.model.DM.uncertainty,
+        f.model.DM.quantity - 1 * f.model.DM.uncertainty,
+        f.model.DM.quantity + 1 * f.model.DM.uncertainty,
         5,
     )
     chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0", "F1", "DM"), (F0, F1, DM), ncpu=1)
@@ -185,28 +159,22 @@ def test_grid_3param_singleprocessor():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_3param_multiprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
-
-    f = WLSFitter(t, m)
-    f.fit_toas()
-    bestfit = f.resids.chi2
+def test_grid_3param_multiprocessor(get_data_and_fit):
+    f, bestfit = get_data_and_fit
 
     F0 = np.linspace(
-        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
-        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
+        f.model.F0.quantity - 1 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 1 * f.model.F0.uncertainty,
         3,
     )
     F1 = np.linspace(
-        f.model.F1.quantity - 3 * f.model.F1.uncertainty,
-        f.model.F1.quantity + 3 * f.model.F1.uncertainty,
-        7,
+        f.model.F1.quantity - 1 * f.model.F1.uncertainty,
+        f.model.F1.quantity + 1 * f.model.F1.uncertainty,
+        3,
     )
     DM = np.linspace(
-        f.model.DM.quantity - 3 * f.model.DM.uncertainty,
-        f.model.DM.quantity + 3 * f.model.DM.uncertainty,
+        f.model.DM.quantity - 1 * f.model.DM.uncertainty,
+        f.model.DM.quantity + 1 * f.model.DM.uncertainty,
         5,
     )
     chi2grid, _ = pint.gridutils.grid_chisq(
@@ -216,21 +184,15 @@ def test_grid_3param_multiprocessor():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_derived_singleprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
-
-    f = WLSFitter(t, m)
-    f.fit_toas()
-    bestfit = f.resids.chi2
+def test_grid_derived_singleprocessor(get_data_and_fit):
+    f, bestfit = get_data_and_fit
 
     F0 = np.linspace(
-        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
-        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
-        15,
+        f.model.F0.quantity - 1 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 1 * f.model.F0.uncertainty,
+        5,
     )
-    tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
+    tau = (-f.model.F0.quantity / 2 / f.model.F1.quantity) * np.linspace(0.99, 1.01, 3)
     chi2grid_tau, params, _ = pint.gridutils.grid_chisq_derived(
         f,
         ("F0", "F1"),
@@ -241,21 +203,15 @@ def test_grid_derived_singleprocessor():
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
 
 
-def test_grid_derived_extraparam_singleprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
-
-    f = WLSFitter(t, m)
-    f.fit_toas()
-    bestfit = f.resids.chi2
+def test_grid_derived_extraparam_singleprocessor(get_data_and_fit):
+    f, bestfit = get_data_and_fit
 
     F0 = np.linspace(
         f.model.F0.quantity - 3 * f.model.F0.uncertainty,
         f.model.F0.quantity + 3 * f.model.F0.uncertainty,
-        15,
+        5,
     )
-    tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
+    tau = (-f.model.F0.quantity / 2 / f.model.F1.quantity) * np.linspace(0.99, 1.01, 3)
     chi2grid_tau, params, extraparams = pint.gridutils.grid_chisq_derived(
         f,
         ("F0", "F1"),
@@ -267,42 +223,30 @@ def test_grid_derived_extraparam_singleprocessor():
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
 
 
-def test_grid_derived_multiprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
-
-    f = WLSFitter(t, m)
-    f.fit_toas()
-    bestfit = f.resids.chi2
+def test_grid_derived_multiprocessor(get_data_and_fit):
+    f, bestfit = get_data_and_fit
 
     F0 = np.linspace(
         f.model.F0.quantity - 3 * f.model.F0.uncertainty,
         f.model.F0.quantity + 3 * f.model.F0.uncertainty,
-        15,
+        5,
     )
-    tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
+    tau = (-f.model.F0.quantity / 2 / f.model.F1.quantity) * np.linspace(0.99, 1.01, 3)
     chi2grid_tau, params, _ = pint.gridutils.grid_chisq_derived(
         f, ("F0", "F1"), (lambda x, y: x, lambda x, y: -x / 2 / y), (F0, tau), ncpu=ncpu
     )
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
 
 
-def test_grid_derived_existingexecutor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
-
-    f = WLSFitter(t, m)
-    f.fit_toas()
-    bestfit = f.resids.chi2
+def test_grid_derived_existingexecutor(get_data_and_fit):
+    f, bestfit = get_data_and_fit
 
     F0 = np.linspace(
         f.model.F0.quantity - 3 * f.model.F0.uncertainty,
         f.model.F0.quantity + 3 * f.model.F0.uncertainty,
-        15,
+        5,
     )
-    tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
+    tau = (-f.model.F0.quantity / 2 / f.model.F1.quantity) * np.linspace(0.99, 1.01, 3)
 
     with concurrent.futures.ProcessPoolExecutor(max_workers=ncpu) as executor:
         chi2grid_tau, params, _ = pint.gridutils.grid_chisq_derived(
@@ -315,21 +259,15 @@ def test_grid_derived_existingexecutor():
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
 
 
-def test_grid_derived_extraparam_existingexecutor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
-
-    f = WLSFitter(t, m)
-    f.fit_toas()
-    bestfit = f.resids.chi2
+def test_grid_derived_extraparam_existingexecutor(get_data_and_fit):
+    f, bestfit = get_data_and_fit
 
     F0 = np.linspace(
         f.model.F0.quantity - 3 * f.model.F0.uncertainty,
         f.model.F0.quantity + 3 * f.model.F0.uncertainty,
-        15,
+        5,
     )
-    tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
+    tau = (-f.model.F0.quantity / 2 / f.model.F1.quantity) * np.linspace(0.99, 1.01, 3)
 
     with concurrent.futures.ProcessPoolExecutor(max_workers=ncpu) as executor:
         chi2grid_tau, params, extraparams = pint.gridutils.grid_chisq_derived(
@@ -359,6 +297,7 @@ def test_grid_3param_prefix_singleprocessor():
         description=modelcomponent.F_description(2),
         longdouble=True,
         frozen=False,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     modelcomponent.add_param(p, setup=True)
     m.validate()
@@ -368,18 +307,18 @@ def test_grid_3param_prefix_singleprocessor():
     bestfit = f.resids.chi2
 
     F0 = np.linspace(
-        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
-        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
+        f.model.F0.quantity - 1 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 1 * f.model.F0.uncertainty,
         3,
     )
     F1 = np.linspace(
-        f.model.F1.quantity - 3 * f.model.F1.uncertainty,
-        f.model.F1.quantity + 3 * f.model.F1.uncertainty,
-        7,
+        f.model.F1.quantity - 1 * f.model.F1.uncertainty,
+        f.model.F1.quantity + 1 * f.model.F1.uncertainty,
+        3,
     )
     F2 = np.linspace(
-        f.model.F2.quantity - 3 * f.model.F2.uncertainty,
-        f.model.F2.quantity + 3 * f.model.F2.uncertainty,
+        f.model.F2.quantity - 1 * f.model.F2.uncertainty,
+        f.model.F2.quantity + 1 * f.model.F2.uncertainty,
         5,
     )
     chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0", "F1", "F2"), (F0, F1, F2), ncpu=1)
@@ -403,6 +342,7 @@ def test_grid_3param_prefix_multiprocessor():
         description=modelcomponent.F_description(2),
         longdouble=True,
         frozen=False,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     modelcomponent.add_param(p, setup=True)
     m.validate()
@@ -412,18 +352,18 @@ def test_grid_3param_prefix_multiprocessor():
     bestfit = f.resids.chi2
 
     F0 = np.linspace(
-        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
-        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
+        f.model.F0.quantity - 1 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 1 * f.model.F0.uncertainty,
         3,
     )
     F1 = np.linspace(
-        f.model.F1.quantity - 3 * f.model.F1.uncertainty,
-        f.model.F1.quantity + 3 * f.model.F1.uncertainty,
-        7,
+        f.model.F1.quantity - 1 * f.model.F1.uncertainty,
+        f.model.F1.quantity + 1 * f.model.F1.uncertainty,
+        3,
     )
     F2 = np.linspace(
-        f.model.F2.quantity - 3 * f.model.F2.uncertainty,
-        f.model.F2.quantity + 3 * f.model.F2.uncertainty,
+        f.model.F2.quantity - 1 * f.model.F2.uncertainty,
+        f.model.F2.quantity + 1 * f.model.F2.uncertainty,
         5,
     )
     chi2grid, _ = pint.gridutils.grid_chisq(
@@ -444,9 +384,9 @@ def test_grid_fitters_singleprocessor(fitter):
     f.fit_toas()
     bestfit = f.resids.chi2
     F0 = np.linspace(
-        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
-        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
-        7,
+        f.model.F0.quantity - 1 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 1 * f.model.F0.uncertainty,
+        3,
     )
     chi2grid, _ = pint.gridutils.grid_chisq(
         f, ("F0",), (F0,), printprogress=False, ncpu=1

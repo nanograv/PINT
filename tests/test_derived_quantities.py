@@ -30,7 +30,6 @@ from pint.derived_quantities import (
 
 
 def test_mass_function():
-
     # Mass function
     # RHS of Eqn. 8.34 in Lorimer & Kramer (2008)
     # this should be 4* pi**2 * x**3 / (G * Pb**2)
@@ -41,7 +40,6 @@ def test_mass_function():
 
 
 def test_other_mass_function():
-
     # Mass function, second form
     # LHS of Eqn. 8.34 in Lorimer & Kramer (2008)
     # this should be (Mc * sin(inc))**3 / (Mp + Mc)**2
@@ -69,7 +67,7 @@ def test_Edot():
 def test_Bfield():
     # B
     assert np.isclose(
-        pulsar_B(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s), 238722891596281.66 * u.G
+        pulsar_B(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s), 238693670891966.22 * u.G
     )
 
 
@@ -77,7 +75,7 @@ def test_Blc():
     # B_lc
     assert np.isclose(
         pulsar_B_lightcyl(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s),
-        0.07774704753236616 * u.G,
+        0.07896965114785195 * u.G,
     )
 
 

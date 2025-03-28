@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import os
 
 import pytest
@@ -50,6 +49,7 @@ def test_nicer_result_bary(capsys):
 parfile_nicer_topo = datadir / "sgr1830.par"
 orbfile_nicer_topo = datadir / "sgr1830.orb"
 eventfile_nicer_topo = datadir / "sgr1830kgfilt.evt"
+
 
 # TODO -- should add explicit check for absolute phase
 def test_nicer_result_topo(capsys):

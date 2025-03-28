@@ -4,28 +4,328 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+This file contains the released changes to the codebase. See CHANGELOG-unreleased.md for
+the unreleased changes. This file should only be changed while tagging a new version.
+
+## [1.1.1] 2024-012-18
 ### Changed
-- Changed minimum supported version of scipy to 1.4.1
-- Moved DMconst from `pint.models.dispersion_model` to `pint` to avoid circular imports
-- Removed references to `astropy._erfa` (removed since astropy 4.2)
+- Command line scripts now automatically do `allow_tcb` and `allow_T2` while reading par files.
+- Updated the `plot_chains` function in `event_optimize` so that the subplots are a fixed size to prevent the subplots from being condensed in the case of many fit parameters.
+### Added
+- Time derivatives of NE_SW in `SolarWindDispersion`
+- New prefix pattern for `split_prefixed_name` to handle derivatives of NE_SW
+- Added an option `nbin` to `photonphase` to decide how many phase bins to use for the phaseogram
+- Added an option `linearize_model` to speed up the photon phases calculation within `event_optimize` through the designmatrix.
+- Added AIC and BIC calculation to be written in the post fit parfile from `event_optimize`
+- When TCB->TDB conversion info is missing, will print parameter name
+- Piecewise-constant model for chromatic variations (CMX)
+- `add_param` returns the name of the parameter (useful for numbered parameters)
+- Rerun intermittent failures in CI
+- micromamba CI environment for testing macOS-latest, without tox
+- models now have metadata dictionary
+### Fixed
+- Changed WAVE_OM units from 1/d to rad/d.
+- When EQUAD is created from TNEQ, has proper TCB->TDB conversion info
+- TOA selection masks will work when only TOA is the first one
+- Condense code in Glitch model and add test coverage.
+- `find_empty_masks` will now search through `CMX` parameters
+- Fixed some docstrings for binary models.
+### Removed
+- macOS 12 CI 
+
+## [1.1] 2024-11-05
+### Changed
+* Bump oldest python to 3.9
+* Change oldest dependencies: `numpy` 1.18.5 to 1.23.0; `astropy` 4.0 to 5.0.5; `scipy` 1.4.1 to 1.9.0; `matplotlib` 3.2.0 to 3.4.3
+* Update CI testing to use python 3.13
+
+## [1.0.2] 2024-10-18
+### Changed
+- Moved the events -> TOAs and photon weights code into the function `load_events_weights` within `event_optimize`.
+- Updated the `maxMJD` argument in `event_optimize` to default to the current mjd
+- `maskParameter.__repr__()` output now includes the frozen attribute.
+- Changed default value of `FDJUMPLOG` to `Y`
+- Bumped `black` version to 24.x
+- Moved all custom exceptions and warnings to a single module `pint.exceptions`
+- Changed from `setup.cfg` to `pyproject.toml`
+### Added
+- arXiv link of PINT noise paper in README
+- Type hints in `pint.derived_quantities`, `pint.modelutils`, `pint.binaryconvert`, `pint.config`, 
+`pint.erfautils`, `pint.fits_utils`, `pint.logging` and `pint.residuals`
+- Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
+- `PLChromNoise` component to model chromatic red noise with a power law spectrum
+- Fourier series representation of chromatic noise (`CMWaveX`)
+- `pint.utils.cmwavex_setup` and `pint.utils.plchromnoise_from_cmwavex` functions
+- More validation for correlated noise components in `TimingModel.validate_component_types()`
+- ORBWAVEs model for modelling binary orbital period variations in the fourier domain
+### Fixed
+- Bug in `DMWaveX.get_indices()` function
+- Explicit type conversion in `woodbury_dot()` function
+- Documentation: Fixed empty descriptions in the timing model components table
+- BIC implementation
+- `event_optimize`: Fixed a bug that was causing the results.txt file to be written without the median values. 
+- SWX model now has SWXP_0001 frozen by default, and new segments should also have SWXP frozen
+- Can now properly use local files for ephemeris
+- Typos in `explanation.rst` regarding local ephemeris.
+- DD/ELL1 models will check for valid SINI and raise exception if it strays, which will tell the fitter to try elsewhere
+- Don't try to print AIC for wideband data in `pintk` (it's not yet implemented)
+### Removed
+- Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the file is a pickle file.
+- Removed obsolete code, such as manually tracking the progress of the MCMC run within `event_optimize`
+- `download_data.sh` script and `de432s.bsp` ephemeris file
+
+## [1.0.1] 2024-07-01
+### Changed
+- Avoided unnecessary creation of `SkyCoord` objects in `AstrometryEquatorial` and `AstrometryEcliptic`.
+- Avoided unnecessary `TOAs` table slices in `SolarSystemShapiro`
+- Allow "CLK UNCORR" in par files (indicates no GPS or BIPM corrections). 
+- Better documentation for `akaike_information_criterion()`
+- Type hinting for most of the `pint.utils` module
+- `funcParameter`s are no longer listed in the `pintk` interface.
+- Updated location of CCERA
+- Removed `include_bipm`, and `bipm_version` from the Observatory class. Now they are passed as arguments to `site.clock_correction()`
+- Renamed `include_gps` to `apply_gps2utc` in the Observatory class
+- Removed `apply_gps2utc` from `TOAs.clock_corr_info` since it can be different for different observatories. It is not a global setting.
+- The following observatories no longer have a default of `include_bipm=False`: magic, lst, virgo, lho, llo, geo600, kagra, hess, hawc
+- New algorithm for TCB <-> TDB conversion
+- Reordered plotting axes in `pintk`
+- Changed `scipy.integrate.simps` to `scipy.integrate.simpson` to work with scipy 1.14
+### Added
+- `bayesian_information_criterion()` function 
+- `dmx_setup` function
+- `funcParameter`s are no longer listed in the `pintk` interface.
+- `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
+- Test for `pint.utils.split_swx()`
+- Custom type definitions for type hints
+- Added `citation.cff`
+- `convert_tcb2tdb`, `tcb2tdb_scale_factor`, and `effective_dimensionality` attributes for `floatParameter`s, `MJDParameter`s, `AngleParameter`s, `maskParameter`s, and `prefixParameter`s.
+- Added `pint.observatory.find_latest_bipm()` which returns latest BIPM year available
+- Documentation: HOWTO about determining tcb<->tdb scaling factors
+- Type hints in `pint.toa` and `get_model()` & `get_model_and_toas()` functions
+- `pint.models.chromatic_model.Chromatic` as the base class for variable-index chromatic delays.
+- `pint.models.chromatic_model.ChromaticCM` for a Taylor series representation of the variable-index chromatic delay.
+- Whitened residuals (`white-res`) as a plotting axis in `pintk`
+- `TOAs.get_Tspan()` method
+### Fixed
+- `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
+- Fix #1759 by changing order of comparison
+- Moved the test in `test_pmtransform_units.py` into a function.
+- Fixed bug in residual calculation when adding or removing phase wraps
+- Fix #1766 by correcting logic and more clearly naming argument (clkcorr->undo_clkcorr)
+- `make_fake_toas_fromtim` now handles BIPM corrections and wideband DMs correctly. 
+- Fix removal of top-level parameter
+- Minimal fixes to allow usage of numpy 2.0
+### Removed
+
+## [1.0] 2024-04-26
+### Changed
+- Moved `get_derived_params` to `timing_model`
+- `check_ephemeris_connection` CI test no longer requires access to static NANOGrav site
+- `TimingModel.compare()` now calls `change_binary_epoch()`.
+- When clock files contain out-of-order entries, the exception now records the first MJDs that are out of order
+- `np.compat.long` -> `int` (former is deprecated)
+- Turned ErfaWarning into an exception during testing; cleaned up test suite.
+- macos-latest runner changed to macos-12 runner for CI tests to avoid M1 architecture issues
+### Added
+- Added numdifftools to setup.cfg to match requirements.txt
+- Documentation: Added `convert_parfile` to list of command-line tools in RTD
+- DDH binary model
+- function `pint.utils.xxxselections` to do DMX-style selections for any parameter name
+- Plot model DM in pintk
+- More tests for pintk
+- Maximum likelihood fitting for ECORR
+    - `is_time_correlated` class attribute in correlated `NoiseComponent`s
+    - `has_time_correlated_errors` property in `TimingModel`
+    - `Residuals._calc_ecorr_chi2()` method for fast chi2 computation using Sherman-Morrison identity
+    - `pint.utils.sherman_morrison_dot` and `pint.utils.woodbury_dot`
+    - Refactored repeated code out of `Residuals.calc_phase_mean` and `Residuals.calc_time_mean`
+    - Simplified `Residuals._calc_gls_chi2()` so that it uses Woodbury identity directly
+    - Refactored WLS chi2 code out of `Residuals.calc_chi2()` into a new function `Residuals._calc_wls_chi2()`
+    - `Residuals.d_lnlikelihood_d_whitenoise_param` will throw a `NotImplementedError` when correlated noise is present.
+    - `DownhillFitter._fit_noise()` doesn't use derivatives when correlated noise is present.
+    - Documentation: Noise fitting example notebook.
+- `freeze_params` option in `wavex_setup` and `dmwavex_setup`
+- `plrednoise_from_wavex`, `pldmnoise_from_dmwavex`, and `find_optimal_nharms` functions
+- fake TOAs can be created with `subtract_mean=False`, to maintain phase coherence between different data sets
+- Binary models can be guessed by the `ModelBuilder`. Options and script are added to allow reading/conversion of the T2 binary model
+- Better explanation of ELL1H behavior when H3/H4/STIGMA supplied and when NHARMS is used
+- FDJumpDM component for System-dependent DM offsets
+- Documentation: Explanation for FDJUMP and FDJUMPDM
+### Fixed
+- `MCMC_walkthrough` notebook now runs
+- Fixed runtime data README 
+- Fixed `derived_params` when OMDOT has 0 uncertainty
+- `model.find_empty_masks` will now also look at DMX and SWX parameters
+- Fixed `make_fake_toas_fromtim`
+- Use `Hessian` instead of `Hessdiag` in `DownhillFitter._fit_noise`; compute noise parameter uncertainties only once in `DownhillFitter.fit_toas`.
+- Consistent naming in `TimingModel.get_params_mapping()`
+- Better exceptions for unsupported/unimplemented binary models (BTX, MSS, etc.)
+- Emit warnings when `WaveX`/`DMWaveX` is used together with other representations of red/DM noise
+- `get_observatory()` no longer overwrites `include_gps` and `include_bipm` of `Observatory` objects unless explicitly stated (BIPM and GPS clock corrections no longer incorrectly applied to BAT TOAs).
+- Added back `spacecraft` as an alias for `stl_geo`
+- Fix bug 1729 (missing f-string)
+- Fixed common failure of test_observatory
+- pintk now shows scaled error bars
+- Docstring of `DispersionJump`
+
+
+## [0.9.8] 2023-12-04
+### Changed
+- `WAVE` parameters can be added to a `Wave` model with `add_wave_component()` in `wave.py` 
+- Moved design matrix normalization code from `pint.fitter` to the new `pint.utils.normalize_designmatrix()` function.
+- Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
+- `ssb_to_psb_ICRS` implementation is now a lot faster (uses erfa functions directly)
+- `ssb_to_psb_ECL` implementation within `AstrometryEcliptic` model is now a lot faster (uses erfa functions directly)
+- Upgraded versioneer for compatibility with Python 3.12
+- Creation of `Fitter` objects will fail if there are free unfittable parameters in the timing model.
+- Only fittable parameters will be listed as check boxes in the `plk` interface.
+- Update CI tests for Python 3.12
+- Made `test_grid` routines faster
+- `pintk` uses downhill fitters by default
+### Added
+- CHI2, CHI2R, TRES, DMRES now in postfit par files
+- Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
+- `Parameter.as_latex` method for latex representation of a parameter.
+- `pint.output.publish` module and `pintpublish` script for generating publication (LaTeX) output.
+- Added radial velocity methods for binary models
+- Support for wideband data in `pint.bayesian` (no correlated noise).
+- Added `DMWaveX` model (Fourier representation of DM noise)
+- Piecewise orbital model (`BinaryBTPiecewise`)
+- `TimingModel.fittable_params` property
+- Simulate correlated noise using `pint.simulation` (also available via the `zima` script)
+- `pintk` will recognize when timfile and parfile inputs are switched and swap them
+- `pintk` can plot against solar elongation
+- Optionally return the the log normalization factor of the likelihood function from the `Residuals.calc_chi2()` method.
+- `DownhilWLSFitter` can now estimate white noise parameters and their uncertainties.
+- `Residuals.lnlikelihood()` method
+- `pint.utils.akaike_information_criterion()` function
+- `TimingModel.d_toasigma_d_param` method to compute derivatives of scaled TOA uncertainties w.r.t. white noise parameters.
+- `TimingModel.toasigma_derivs` property to get all derivatives functions of scaled TOA uncertainties.
+- `ScaleToaError.register_toasigma_deriv_funcs` method to populate derivatives of scaled TOA uncertainties.
+- `ScaleToaError.d_toasigma_d_EFAC` and `ScaleToaError.d_toasigma_d_EQUAD` methods.
+- Separate `.fullname` for all observatories
+- `Residuals.calc_whitened_resids()` method
+- Plot wideband DM measurements, wideband DM residuals, and wideband DM errors in `pintk`. (Disabled for narrowband data.)
+- Optionally generate multi-frequency TOAs in an epoch using `make_fake_toas_uniform` and `make_fake_toas_fromMJDs`
+- Documentation: Example notebook for simulations and flag usage
+- Proper motion conversion/calculations can now uniformly use float, Quantity, or Time input
+### Fixed
+- Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
+- Fixed RTD by specifying theme explicitly.
+- `.value()` now works for pairParameters
+- Setting `model.PARAM1 = model.PARAM2` no longer overrides the name of `PARAM1`
+- Fixed an incorrect docstring in `pbprime()` functions. 
+- Fix ICRS -> ECL conversion when parameter uncertainties are not set.
+- `get_TOAs` raises an exception upon finding mixed narrowband and wideband TOAs in a tim file. `TOAs.is_wideband` returns True only if *ALL* TOAs have the -pp_dm flag.
+- `TimingModel.designmatrix()` method will fail with an informative error message if there are free unfittable parameters in the timing model.
+- `make_fake_toas_uniform` and `make_fake_toas_fromMJDs` respects units of errors
+- Robust access of EPHEM and PLANET_SHAPIRO in `make_fake_toas_fromtim`
+- `pintk` will not allow choices of axes that are not in timing model/data
+- `pintk` correctly displays initial log level
+- Fixed sign of y coordinate for Pico Veleta observatory (also being fixed in tempo2)
+- Minor bug fixes in example notebooks
+- Set `UNITS` to TDB if it's not given in the par file.
+### Removed
+
+
+## [0.9.7] 2023-08-24
+### Changed
+- Made the addition of a TZR TOA (`AbsPhase`) in the `TimingModel` explicit in `Residuals` class.
+- Updated `CONTRIBUTING.rst` with the latest information.
+- Made `TimingModel.params` and `TimingModel.ordered_params` identical. Deprecated `TimingModel.ordered_params`.
+### Added
+- Third-order Roemer delay terms to ELL1 model
+- Options to add a TZR TOA (`AbsPhase`) during the creation of a `TimingModel` using `ModelBuilder.__call__`, `get_model`, and `get_model_and_toas`
+- `pint.print_info()` function for bug reporting
+- Added an autocorrelation function to check for chain convergence in `event_optimize`
+- A hacky implementation of system-dependent FD parameters (FDJUMP)
+- Minor doc updates to explain default NHARMS and missing derivative functions
+### Fixed
+- Deleting JUMP1 from flag tables will not prevent fitting
+- Simulating TOAs from tim file when PLANET_SHAPIRO is true now works
+- Docstrings for `get_toas()` and `get_model_and_toas()`
+- Set `DelayComponent_list` and `NoiseComponent_list` to empty list if such components are absent
+- Fix invalid access of `PLANET_SHAPIRO` in models without `Astrometry`
+### Removed
+
+
+## [0.9.6] 2023-06-22
+### Changed
+- Applied `sourcery` refactors to the entire codebase
+- Changed threshold for `test_model_derivatives` test to avoid CI failures
+- Unreleased CHANGELOG entries should now be entered in `CHANGELOG-unreleased.md` instead of `CHANGELOG.md`. Updated documentation accordingly.
+- Changed tests to remove `unittest` and use pure pytest format
+- Changed deprecated `sampler.chain` usage
+- Download data automatically in the profiling script `high_level_benchmark.py` instead of silently giving wrong results.
+### Added
+- `SpindownBase` as the abstract base class for `Spindown` and `PeriodSpindown` in the `How_to_build_a_timing_model_component.py` example.
+- `SolarWindDispersionBase` as the abstract base class for solar wind dispersion components.
+- `validate_component_types` method for more rigorous validation of timing model components.
+- roundtrip test to make sure clock corrections are not written to tim files
+- `calc_phase_mean` and `calc_time_mean` methods in `Residuals` class to compute the residual mean.
+- `PhaseOffset` component (overall phase offset between physical and TZR toas)
+- `tzr` attribute in `TOAs` class to identify TZR TOAs
+- Documentation: Explanation for offsets
+- Example: `phase_offset_example.py`
+- method `AllComponents.param_to_unit` to get units for any parameter, and then made function `utils.get_unit`
+- can override/add parameter values when reading models
+- docs now include list of observatories along with google maps links and clock files
+### Fixed
+- fixed docstring for `add_param_from_top`
+- Gridded calculations now respect logger settings
+- Event TOAs now have default error that is non-zero, and can set as desired
+- Model conversion ICRS <-> ECL works if PM uncertainties are not set
+- Fix `merge_TOAs()` to allow lists of length 1
+### Removed
+
+## [0.9.5] 2023-05-01
+### Changed
+- Changed minimum supported version of `scipy` to 1.4.1
+- Moved `DMconst` from `pint.models.dispersion_model` to `pint` to avoid circular imports
+- Removed references to `astropy._erfa` (removed since `astropy` 4.2)
 - Refactor `Dre` method, fix expressions for Einstein delay and post-Keplerian parameters in DD model
 - Updated contributor list (AUTHORS.rst)
 - Emit an informative warning for "MODE" statement in TOA file; Ignore "MODE 1" silently
+- Version of `sphinx-rtd-theme` updated in `requirements_dev.txt`
+- Updated `black` version to 23.x
+- Older event loading functions now use newer functions to create TOAs and then convert to list of TOA objects
+- Limited hypothesis to <= 6.72.0 to avoid numpy problems in oldestdeps
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
 - `TimingModel.total_dispersion_slope` method
 - Explicit discussion of DT92 convention to DDK model
-- H.E.S.S. telescope to the list of known observatories
-- Documentation: making TOAs from a list of times added to HowTo
+- HAWC, HESS and ORT telescopes to the list of known observatories
+- Documentation: making TOAs from array of times added to HowTo
+- Method to make TOAs from an array of times
 - Clock correction for LEAP
 - Wideband TOA simulation feature in `pint.simulation` and `zima`
 - ELL1k timing model
 - Test for `MCMCFitter`
+- Added multiprocessing capability to `event_optimize`
+- Can merge TOAs using '+' operator; in-place merge using '+=' operator
+- `funcParameters` defined as functions operating on other parameters
+- Option to save `emcee` backend chains in `event_optimize`
+- Documentation on how to extract a covariance matrix
+- DDS and DDGR models
+- Second-order corrections included in ELL1
+- Module for converting between binary models also included in `convert_parfile`
+- Method to get a parameter as a `uncertainties.ufloat` for doing math
+- Method to get current binary period and uncertainty at a given time regardless of binary model
+- TCB to TDB conversion on read, and conversion script (`tcb2tdb`)
+- Functions to get TOAs objects from satellite data (Fermi and otherwise)
+- Methods to convert a TOAs object into a list of TOA objects
 ### Fixed
+- Syntax error in README.rst
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
+- Added try/except to `test_pldmnoise.py`/`test_PLRedNoise_recovery` to avoid exceptions during CI
+- Import for `longdouble2str` in `get_tempo_result`
+- Plotting orbital phase in `pintk` when FB0 is used instead of PB
+- Selection of BIPM for random models
+- Added 1 sigma errors to update the postfit parfile errors in `event_optimize`
+- Fixed DDS CI testing failures
+- Add SolarSystemShapiro to the timing model only if an Astrometry component is present.
 ### Removed
 
 ## [0.9.3] 2022-12-16

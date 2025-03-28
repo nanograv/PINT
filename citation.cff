@@ -1,0 +1,192 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Agazie"
+  given-names: "Gabriella"
+- family-names: "Anumarlapudi"
+  given-names: "Akash"
+- family-names: "Archibald"
+  given-names: "Anne"
+- family-names: "Bachetti"
+  given-names: "Matteo"
+- family-names: "Beischer"
+  given-names: "Bastian"
+- family-names: "Bhakta"
+  given-names: "Deven"
+- family-names: "Champagne"
+  given-names: "Chloe"
+- family-names: "Colen"
+  given-names: "Jonathan"
+- family-names: "Cromartie"
+  given-names: "Thankful"
+- family-names: "Deil"
+  given-names: "Christoph"
+- family-names: "Demorest"
+  given-names: "Paul"
+- family-names: "Deneva"
+  given-names: "Julia"
+- family-names: "Ellis"
+  given-names: "Justin"
+- family-names: "Fiore"
+  given-names: "William"
+- family-names: "Jankowski"
+  given-names: "Fabian"
+- family-names: "Jenet"
+  given-names: "Rick"
+- family-names: "Jennings"
+  given-names: "Ross"
+- family-names: "Jing"
+  given-names: "Luo"
+- family-names: "Kaplan"
+  given-names: "David"
+- family-names: "Kerr"
+  given-names: "Matthew"
+- family-names: "Lam"
+  given-names: "Michael"
+- family-names: "Larsen"
+  given-names: "Bjorn"
+- family-names: "Levina"
+  given-names: "Sasha"
+- family-names: "Mahajan"
+  given-names: "Nikhil"
+- family-names: "McEwen"
+  given-names: "Alex"
+- family-names: "O'Neill"
+  given-names: "Patrick"
+- family-names: "Pennucci"
+  given-names: "Tim"
+- family-names: "Phillips"
+  given-names: "Camryn"
+- family-names: "Pitkin"
+  given-names: "Matt"
+- family-names: "Ransom"
+  given-names: "Scott"
+- family-names: "Ray"
+  given-names: "Paul"
+- family-names: "Shapiro-Albert"
+  given-names: "Brent"
+- family-names: "Sheehy"
+  given-names: "Chris"
+- family-names: "Spiewak"
+  given-names: "Renee"
+- family-names: "Stovall"
+  given-names: "Kevin"
+- family-names: "Susobhanan"
+  given-names: "Abhimanyu"
+- family-names: "Swiggum"
+  given-names: "Joe"
+- family-names: "Taylor"
+  given-names: "Jackson"
+- family-names: "Vallisneri"
+  given-names: "Michele"
+- family-names: "van Haasteren"
+  given-names: "Rutger"
+- family-names: "van Kerkwijk"
+  given-names: "Marten"
+- family-names: "Zimmerman"
+  given-names: "Josef"
+title: "PINT: A Modern Software Package for Pulsar Timing"
+version: 1.0
+doi: 10.3847/1538-4357/abe62f
+date-released: 2024-04-26
+url: "https://github.com/nanograv/PINT"
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Luo"
+    given-names: "Jing"
+  - family-names: "Ransom"
+    given-names: "Scott"
+  - family-names: "Demorest"
+    given-names: "Paul"
+  - family-names: "Ray"
+    given-names: "Paul S."
+  - family-names: "Archibald"
+    given-names: "Anne"
+  - family-names: "Kerr"
+    given-names: "Matthew" 
+  - family-names: "Jennings"
+    given-names: "Ross J." 
+  - family-names: "Bachetti"
+    given-names: "Matteo" 
+  - family-names: "van Haasteren"
+    given-names: "Rutger"
+  - family-names: "Champagne"
+    given-names: "Chloe A."
+  - family-names: "Colen"
+    given-names: "Jonathan"
+  - family-names: "Phillips"
+    given-names: "Camryn"
+  - family-names: "Zimmerman"
+    given-names: "Josef"
+  - family-names: "Stovall"
+    given-names: "Kevin"
+  - family-names: "Lam"
+    given-names: "Michael T."
+  - family-names: "Jenet"
+    given-names: "Fredrick A."
+  doi: 10.3847/1538-4357/abe62f
+  journal: "The Astrophysical Journal"
+  month: 4
+  start: 45 # First page number
+  title: "PINT: A Modern Software Package for Pulsar Timing"
+  issue: 1
+  volume: 911
+  year: 2021
+references:
+  - title: "PINT: Maximum-likelihood Estimation of Pulsar Timing Noise Parameters"
+    doi: "10.3847/1538-4357/ad59f7"
+    year: "2024"
+    type: article
+    journal: "The Astrophysical Journal"
+    authors:
+      - family-names: Susobhanan
+        given-names: Abhimanyu
+      - family-names: Kaplan
+        given-names: David L.
+      - family-names: Archibald 
+        given-names: Anne M.
+      - family-names: Luo
+        given-names: Jing
+      - family-names: Ray
+        given-names: Paul S.
+      - family-names: Pennucci
+        given-names: Timothy T.
+      - family-names: Ransom
+        given-names: Scott M.
+      - family-names: Agazie
+        given-names: Gabriella
+      - family-names: Fiore
+        given-names: William
+      - family-names: Larsen
+        given-names: Bjorn
+      - family-names: O'Neill
+        given-names: Patrick
+      - family-names: van Haasteren
+        given-names: Rutger
+      - family-names: Anumarlapudi
+        given-names: Akash
+      - family-names: Bachetti
+        given-names: Matteo
+      - family-names: Bhakta
+        given-names: Deven
+      - family-names: Champagne
+        given-names: Chloe A.
+      - family-names: Cromartie
+        given-names: H. Thankful
+      - family-names: Demorest
+        given-names: Paul B.
+      - family-names: Jennings
+        given-names: Ross J.
+      - family-names: Kerr
+        given-names: Matthew
+      - family-names: Levina
+        given-names: Sasha
+      - family-names: McEwen
+        given-names: Alexander
+      - family-names: Shapiro-Albert
+        given-names: Brent J.
+      - family-names: Swiggum
+        given-names: Joseph K. 
+    url: "https://ui.adsabs.harvard.edu/abs/2024ApJ...971..150S"
+

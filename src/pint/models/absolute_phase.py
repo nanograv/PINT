@@ -1,10 +1,12 @@
-"""Timing model absolute phase (TZRMJD, TZRSITE ...)"""
+"""Timing model absolute phase"""
+
 import astropy.units as u
 from loguru import logger as log
 
 import pint.toa as toa
+from pint.exceptions import MissingParameter
 from pint.models.parameter import MJDParameter, floatParameter, strParameter
-from pint.models.timing_model import MissingParameter, PhaseComponent
+from pint.models.timing_model import PhaseComponent
 
 
 class AbsPhase(PhaseComponent):
@@ -30,19 +32,23 @@ class AbsPhase(PhaseComponent):
         super().__init__()
         self.add_param(
             MJDParameter(
-                name="TZRMJD", description="Epoch of the zero phase.", time_scale="utc"
+                name="TZRMJD",
+                description="Epoch of the zero phase TOA.",
+                time_scale="utc",
+                convert_tcb2tdb=False,
             )
         )
         self.add_param(
             strParameter(
-                name="TZRSITE", description="Observatory of the zero phase measured."
+                name="TZRSITE", description="Observatory of the zero phase TOA."
             )
         )
         self.add_param(
             floatParameter(
                 name="TZRFRQ",
                 units=u.MHz,
-                description="The frequency of the zero phase measured.",
+                description="The frequency of the zero phase TOA.",
+                convert_tcb2tdb=False,
             )
         )
         self.tz_cache = None
@@ -59,7 +65,7 @@ class AbsPhase(PhaseComponent):
             raise MissingParameter(
                 "AbsPhase",
                 "TZRMJD",
-                "TZRMJD is required " "to compute the absolute phase. ",
+                "TZRMJD is required to compute the absolute phase.",
             )
         if self.TZRSITE.value is None:
             self.TZRSITE.value = "ssb"
@@ -81,31 +87,37 @@ class AbsPhase(PhaseComponent):
         """
         clkc_info = toas.clock_corr_info
         # If we have cached the TZR TOA and all the TZR* and clock info has not changed, then don't rebuild it
-        if self.tz_cache is not None:
-            if (
-                self.tz_clkc_info["include_bipm"] == clkc_info["include_bipm"]
-                and self.tz_clkc_info["include_gps"] == clkc_info["include_gps"]
-                and self.tz_planets == toas.planets
-                and self.tz_ephem == toas.ephem
-                and self.tz_hash
-                == hash((self.TZRMJD.value, self.TZRSITE.value, self.TZRFRQ.value))
-            ):
-                return self.tz_cache
+        if self.tz_cache is not None and (
+            self.tz_clkc_info["include_bipm"] == clkc_info["include_bipm"]
+            and self.tz_planets == toas.planets
+            and self.tz_ephem == toas.ephem
+            and self.tz_hash
+            == hash((self.TZRMJD.value, self.TZRSITE.value, self.TZRFRQ.value))
+        ):
+            return self.tz_cache
         # Otherwise we have to build the TOA and apply clock corrections
         # NOTE: Using TZRMJD.quantity.jd[1,2] so that the time scale can be properly
         # set to the TZRSITE default timescale (e.g. UTC for TopoObs and TDB for SSB)
         log.debug("Creating and dealing with the single TZR_toa for absolute phase")
-        TZR_toa = toa.TOA(
+        # TZR_toa = toa.TOA(
+        #     (self.TZRMJD.quantity.jd1 - 2400000.5, self.TZRMJD.quantity.jd2),
+        #     obs=self.TZRSITE.value,
+        #     freq=self.TZRFRQ.quantity,
+        # )
+        # tz = toa.get_TOAs_list(
+        #     [TZR_toa],
+        #     include_bipm=clkc_info["include_bipm"],
+        #     ephem=toas.ephem,
+        #     planets=toas.planets,
+        # )
+        tz = toa.get_TOAs_array(
             (self.TZRMJD.quantity.jd1 - 2400000.5, self.TZRMJD.quantity.jd2),
             obs=self.TZRSITE.value,
-            freq=self.TZRFRQ.quantity,
-        )
-        tz = toa.get_TOAs_list(
-            [TZR_toa],
+            freqs=self.TZRFRQ.quantity,
             include_bipm=clkc_info["include_bipm"],
-            include_gps=clkc_info["include_gps"],
             ephem=toas.ephem,
             planets=toas.planets,
+            tzr=True,
         )
         log.debug("Done with TZR_toa")
         self.tz_cache = tz

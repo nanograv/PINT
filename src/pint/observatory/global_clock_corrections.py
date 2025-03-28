@@ -12,6 +12,7 @@ The downloaded files are stored in the Astropy cache,
 to clear out old files you will want to do
 ``astropy.utils.data.clear_download_cache()``.
 """
+
 import collections
 import time
 from pathlib import Path
@@ -78,9 +79,8 @@ def get_file(
         url_base = global_clock_correction_url_base
         if url_mirrors is None:
             url_mirrors = global_clock_correction_url_mirrors
-    else:
-        if url_mirrors is None:
-            url_mirrors = [url_base]
+    elif url_mirrors is None:
+        url_mirrors = [url_base]
     local_file = None
     remote_url = url_base + name
     mirror_urls = [u + name for u in url_mirrors]
@@ -89,10 +89,10 @@ def get_file(
         try:
             local_file = Path(download_file(remote_url, cache=True, sources=[]))
             log.trace(f"file {remote_url} found in cache at path: {local_file}")
-        except KeyError:
+        except KeyError as e:
             log.trace(f"file {remote_url} not found in cache")
             if download_policy == "never":
-                raise FileNotFoundError(name)
+                raise FileNotFoundError(name) from e
 
     if download_policy == "if_missing" and local_file is not None:
         log.trace(
@@ -133,14 +133,13 @@ def get_file(
     try:
         return Path(download_file(remote_url, cache="update", sources=mirror_urls))
     except IOError as e:
-        if download_policy == "if_expired" and local_file is not None:
-            warn(
-                f"File {name} should be downloaded but {local_file} is being used "
-                f"because an error occurred: {e}"
-            )
-            return local_file
-        else:
+        if download_policy != "if_expired" or local_file is None:
             raise
+        warn(
+            f"File {name} should be downloaded but {local_file} is being used "
+            f"because an error occurred: {e}"
+        )
+        return local_file
 
 
 IndexEntry = collections.namedtuple(
@@ -175,10 +174,7 @@ class Index:
             if not line:
                 continue
             e = line.split(maxsplit=3)
-            if e[2] == "---":
-                date = None
-            else:
-                date = Time(e[2], format="iso")
+            date = None if e[2] == "---" else Time(e[2], format="iso")
             t = IndexEntry(
                 file=e[0],
                 update_interval_days=float(e[1]),

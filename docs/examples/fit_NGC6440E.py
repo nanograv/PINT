@@ -8,7 +8,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: .env
 #     language: python
@@ -33,11 +33,12 @@ import astropy.units as u
 # This will change which output method matplotlib uses and may behave better on some machines
 # import matplotlib
 # matplotlib.use('TKAgg')
+
 import matplotlib.pyplot as plt
 import pint.fitter
 import pint.residuals
 import pint.toa
-from pint.models import get_model, get_model_and_toas
+from pint.models import get_model_and_toas
 import pint.logging
 import os
 
@@ -61,7 +62,7 @@ m, t = get_model_and_toas(parfile, timfile)
 # ```python
 # # Define the timing model
 # m = get_model(parfile)
-# # Read in the TOAs, using the solar system epemeris and other things from the model
+# # Read in the TOAs, using the solar system ephemeris and other things from the model
 # t = pint.toa.get_TOAs(timfile, model=m)
 # ```
 

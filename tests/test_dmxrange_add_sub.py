@@ -53,13 +53,13 @@ def test_unusual_index():
     init_len = len(dm_mod.params)
     dm_mod.add_DMX_range(mjd_start, mjd_end, index, dmx, frozen=False)
     assert len(dm_mod.params) == init_len + 3
-    nm = "DMX_" + f"{int(index):04d}"
+    nm = f"DMX_{int(index):04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == dmx
-    nm = "DMXR1_" + f"{int(index):04d}"
+    nm = f"DMXR1_{int(index):04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == mjd_start
-    nm = "DMXR2_" + f"{int(index):04d}"
+    nm = f"DMXR2_{int(index):04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == mjd_end
 
@@ -114,13 +114,13 @@ def test_add_DMX():
     init_len = len(dm_mod.params)
     dm_mod.add_DMX_range(mjd_start, mjd_end, index, dmx, frozen=False)
     assert len(dm_mod.params) == init_len + 3
-    nm = "DMX_" + f"{int(index):04d}"
+    nm = f"DMX_{index:04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == dmx
-    nm = "DMXR1_" + f"{int(index):04d}"
+    nm = f"DMXR1_{index:04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == mjd_start
-    nm = "DMXR2_" + f"{int(index):04d}"
+    nm = f"DMXR2_{index:04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == mjd_end
 
@@ -135,7 +135,7 @@ def test_remove_DMX():
     dm_mod.add_DMX_range(mjd_start, mjd_end, index, dmx, frozen=False)
     dm_mod.remove_DMX_range(index)
     for pn in ["DMX_", "DMXR1_", "DMXR2_"]:
-        nm = str(pn) + str(f"{int(index):04d}")
+        nm = str(pn) + str(f"{index:04d}")
         assert nm not in dm_mod.params
 
 
@@ -161,18 +161,18 @@ def test_model_usage():
 
     dm_mod = model.components["DispersionDMX"]
     dm_mod.add_DMX_range(mjd_start, mjd_end, index, dmx, frozen=False)
-    nm = "DMX_" + f"{int(index):04d}"
+    nm = f"DMX_{index:04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == dmx
-    nm = "DMXR1_" + f"{int(index):04d}"
+    nm = f"DMXR1_{index:04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == mjd_start
-    nm = "DMXR2_" + f"{int(index):04d}"
+    nm = f"DMXR2_{index:04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == mjd_end
     dm_mod.remove_DMX_range(index)
     for pn in ["DMX_", "DMXR1_", "DMXR2_"]:
-        nm = pn + str(f"{int(index):04d}")
+        nm = pn + str(f"{index:04d}")
         assert nm not in dm_mod.params
     init_params = np.array(model.params)
     with pytest.raises(ValueError):

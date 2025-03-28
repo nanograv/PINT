@@ -4,9 +4,7 @@ import pint.fitter as fitter
 
 # import matplotlib
 # matplotlib.use('TKAgg')
-import matplotlib.pyplot as plt
 
-import astropy.units as u
 import numpy as np
 import os
 from tempfile import mkstemp
@@ -15,19 +13,17 @@ from os import remove, close
 import pint.utils as ut
 import subprocess
 import re
-import tempo2_utils as t2u
 from astropy.table import Table
 
 
 def change_parfile(filename, param, value):
-    """A function to change parfile parameter value and fit flag
-    """
+    """A function to change parfile parameter value and fit flag"""
     strv = ut.longdouble2string(value)
     fh, abs_path = mkstemp()
     with open(abs_path, "w") as new_file:
         with open(filename) as old_file:
             for line in old_file:
-                if line.startswith(param + " "):
+                if line.startswith(f"{param} "):
                     l = line.split()
                     line = line.replace(l[1], strv)
                     line = line.replace(" 0 ", " 1 ")
@@ -40,18 +36,16 @@ def change_parfile(filename, param, value):
 
 
 def reset_model(source, target, fitter):
-    """Change parfile and fitter to original parameter value.
-    """
+    """Change parfile and fitter to original parameter value."""
     fitter.reset_model()
     copyfile(source, target)
 
 
 def perturb_param(f, param, h, source, target):
-    """Perturbate parameter value and change the corresponding par file
-    """
+    """Perturbate parameter value and change the corresponding par file"""
     reset_model(source, target, f)
     pn = f.model.match_param_aliases(param)
-    if not pn == "":
+    if pn != "":
         par = getattr(f.model, pn)
         orv = par.value
         par.value = (1 + h) * orv
@@ -63,9 +57,8 @@ def perturb_param(f, param, h, source, target):
 
 
 def check_tempo_output(parf, timf, result_par):
-    """Check out tempo output
-    """
-    a = subprocess.check_output("tempo -f " + parf + " " + timf, shell=True)
+    """Check out tempo output"""
+    a = subprocess.check_output(f"tempo -f {parf} {timf}", shell=True)
     tempo_m = mb.get_model(result_par)
     info_idx = a.index("Weighted RMS residual: pre-fit")
     res = a[info_idx:-1]
@@ -73,41 +66,40 @@ def check_tempo_output(parf, timf, result_par):
     mpost = re.search("post-fit(.+?)us", res)
     mchi = re.search("=(.+?)pre/post", res)
     try:
-        pre_rms = float(mpre.group(1))
-        post_rms = float(mpost.group(1))
-        chi = float(mchi.group(1))
+        pre_rms = float(mpre[1])
+        post_rms = float(mpost[1])
+        chi = float(mchi[1])
     except ValueError:
-        pre_rms = mpre.group(1)
-        post_rms = mpost.group(1)
-        chi = mchi.group(1)
+        pre_rms = mpre[1]
+        post_rms = mpost[1]
+        chi = mchi[1]
         if chi.startswith("**"):
             chi = 0.0
     return tempo_m, pre_rms, post_rms, chi
 
 
 def check_tempo2_output(parf, timf, p, result_par):
-    """Check out tempo2 output
-    """
+    """Check out tempo2 output"""
     res = subprocess.check_output(
-        "tempo2 -f " + parf + " " + timf + " -norescale -newpar", shell=True
+        f"tempo2 -f {parf} {timf} -norescale -newpar", shell=True
     )
     mpre = re.search("RMS pre-fit residual =(.+?)(us)", res)
     mpost = re.search("RMS post-fit residual =(.+?)(us)", res)
     mchi = re.search("Chisqr/nfree =(.+?)/", res)
     m = mb.get_model(result_par)
-    mpostn = re.findall(r"\d+\.\d+", mpost.group(1))
+    mpostn = re.findall(r"\d+\.\d+", mpost[1])
     try:
-        pre_rms = float(mpre.group(1))
+        pre_rms = float(mpre[1])
     except ValueError:
-        pre_rms = mpre.group(1)
+        pre_rms = mpre[1]
     try:
         post_rms = float(mpostn[0])
     except ValueError:
-        post_rms = mpost.group(1)
+        post_rms = mpost[1]
     try:
-        chi = float(mchi.group(1)) / len(t.table)
-    except:
-        chi = mchi.group(1)
+        chi = float(mchi[1]) / len(t.table)
+    except Exception:
+        chi = mchi[1]
     pv = getattr(m, p).value
     pu = getattr(m, p).uncertainty_value
     return pv, pu, post_rms, chi
@@ -121,9 +113,8 @@ if __name__ == "__main__":
     base = []
     for fn in parfiles:
         b = fn.replace("_ori.par", "")
-        if not b.endswith(".par"):
-            if b not in base:
-                base.append(b.replace(".gls", ""))
+        if not b.endswith(".par") and b not in base:
+            base.append(b.replace(".gls", ""))
 
     per_step = {
         "A1": 1e-05,
@@ -153,14 +144,14 @@ if __name__ == "__main__":
         # if not b_name.startswith('B1855'):
         #     continue
         if b_name.endswith("+12"):
-            par = b_name + "_ori.par"
-            tempo_par = b_name + "_ptb.par"
+            par = f"{b_name}_ori.par"
+            tempo_par = f"{b_name}_ptb.par"
         else:
-            par = b_name + ".gls_ori.par"
-            tempo_par = b_name + ".gls_ptb.par"
-        tim = b_name + ".tim"
+            par = f"{b_name}.gls_ori.par"
+            tempo_par = f"{b_name}.gls_ptb.par"
+        tim = f"{b_name}.tim"
         m = mb.get_model(par)
-        result_par = m.PSR.value + ".par"
+        result_par = f"{m.PSR.value}.par"
         res[b_name] = {}
         cmd = subprocess.list2cmdline(["grep", "'EPHEM'", par])
         out = subprocess.check_output(cmd, shell=True)
@@ -328,11 +319,11 @@ if __name__ == "__main__":
             )
 
         # res[b_name] = (pt_table, pt2_table)
-        out_name_pt = b_name + "_PT.html"
-        print("Write " + out_name_pt)
+        out_name_pt = f"{b_name}_PT.html"
+        print(f"Write {out_name_pt}")
         pt_table.write(out_name_pt, format="ascii.html", overwrite=True)
-        out_name_pt2 = b_name + "_PT2.html"
-        print("Write " + out_name_pt2)
+        out_name_pt2 = f"{b_name}_PT2.html"
+        print(f"Write {out_name_pt2}")
         pt2_table.write(out_name_pt2, format="ascii.html", overwrite=True)
         reset_model(par, tempo_par, f)
     # subprocess.call("cat " + out_name_pt + ">>" + out_name_pt, shell=True)

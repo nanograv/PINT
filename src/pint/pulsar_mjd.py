@@ -27,9 +27,11 @@ was observing the sky at the moment a leap second was introduced.
 .. _leap_smear: https://developers.google.com/time/smear
 """
 
-import erfa
+import warnings
+
 import astropy.time
 import astropy.units as u
+import erfa
 import numpy as np
 from astropy.time import Time
 from astropy.time.formats import TimeFormat
@@ -104,10 +106,10 @@ class PulsarMJD(TimeFormat):
     def value(self):
         if self._scale == "utc":
             mjd1, mjd2 = jds_to_mjds_pulsar(self.jd1, self.jd2)
-            return mjd1 + mjd2
         else:
             mjd1, mjd2 = jds_to_mjds(self.jd1, self.jd2)
-            return mjd1 + mjd2
+
+        return mjd1 + mjd2
 
 
 class MJDLong(TimeFormat):
@@ -257,9 +259,7 @@ def time_from_mjd_string(s, scale="utc", format="pulsar_mjd"):
     elif format.lower().startswith("mjd"):
         return astropy.time.Time(val=s, scale=scale, format="mjd_string")
     else:
-        raise ValueError(
-            "Format {} is not recognizable as an MJD format".format(format)
-        )
+        raise ValueError(f"Format {format} is not recognizable as an MJD format")
 
 
 def time_from_longdouble(t, scale="utc", format="pulsar_mjd"):
@@ -290,10 +290,7 @@ def time_to_longdouble(t):
     double MJDs (near the present) is roughly 0.7 ns.
 
     """
-    if t.format.startswith("pulsar_mjd"):
-        return t.pulsar_mjd_long
-    else:
-        return t.mjd_long
+    return t.pulsar_mjd_long if t.format.startswith("pulsar_mjd") else t.mjd_long
 
 
 # Precision-aware conversion functions
@@ -330,10 +327,7 @@ def data2longdouble(data):
     np.longdouble
 
     """
-    if type(data) is str:
-        return str2longdouble(data)
-    else:
-        return np.longdouble(data)
+    return str2longdouble(data) if type(data) is str else np.longdouble(data)
 
 
 def quantity2longdouble_withunit(data):
@@ -359,7 +353,7 @@ def quantity2longdouble_withunit(data):
 
 def longdouble2str(x):
     """Convert numpy longdouble to string."""
-    return repr(x)
+    return str(x)
 
 
 def str2longdouble(str_data):
@@ -473,7 +467,7 @@ def _str_to_mjds(s):
                 mjd_s.append("0")
             imjd_s, fmjd_s = mjd_s
             imjd = np.longdouble(int(imjd_s))
-            fmjd = np.longdouble("0." + fmjd_s)
+            fmjd = np.longdouble(f"0.{fmjd_s}")
             if ss.startswith("-"):
                 fmjd = -fmjd
             imjd *= 10**expon
@@ -485,7 +479,7 @@ def _str_to_mjds(s):
             mjd_s.append("0")
         imjd_s, fmjd_s = mjd_s
         imjd = int(imjd_s)
-        fmjd = float("0." + fmjd_s)
+        fmjd = float(f"0.{fmjd_s}")
         if ss.startswith("-"):
             fmjd = -fmjd
     return day_frac(imjd, fmjd)
@@ -494,20 +488,19 @@ def _str_to_mjds(s):
 def str_to_mjds(s):
     if isinstance(s, (str, bytes)):
         return _str_to_mjds(s)
-    else:
-        imjd = np.empty_like(s, dtype=int)
-        fmjd = np.empty_like(s, dtype=float)
-        with np.nditer(
-            [s, imjd, fmjd],
-            flags=["refs_ok"],
-            op_flags=[["readonly"], ["writeonly"], ["writeonly"]],
-        ) as it:
-            for si, i, f in it:
-                si = si[()]
-                if not isinstance(si, (str, bytes)):
-                    raise TypeError("Requires an array of strings")
-                i[...], f[...] = _str_to_mjds(si)
-            return it.operands[1], it.operands[2]
+    imjd = np.empty_like(s, dtype=int)
+    fmjd = np.empty_like(s, dtype=float)
+    with np.nditer(
+        [s, imjd, fmjd],
+        flags=["refs_ok"],
+        op_flags=[["readonly"], ["writeonly"], ["writeonly"]],
+    ) as it:
+        for si, i, f in it:
+            si = si[()]
+            if not isinstance(si, (str, bytes)):
+                raise TypeError("Requires an array of strings")
+            i[...], f[...] = _str_to_mjds(si)
+        return it.operands[1], it.operands[2]
 
 
 def _mjds_to_str(mjd1, mjd2):
@@ -527,10 +520,7 @@ _v_mjds_to_str = np.vectorize(_mjds_to_str, otypes=[np.dtype("U30")])
 
 def mjds_to_str(mjd1, mjd2):
     r = _v_mjds_to_str(mjd1, mjd2)
-    if r.shape == ():
-        return r[()]
-    else:
-        return r
+    return r[()] if r.shape == () else r
 
 
 # These routines are from astropy but were broken in < 3.2.2 and <= 2.0.15

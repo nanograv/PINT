@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -31,13 +31,10 @@ from io import StringIO
 import numpy as np
 
 from astropy.time import Time
-from astropy import units as u
 import astropy.coordinates
-from pint.models import get_model, get_model_and_toas
+from pint.models import get_model
 from pint.fitter import Fitter
-from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
-from pint.models.solar_wind_dispersion import SolarWindDispersionX
 import pint.utils
 import pint.gridutils
 import pint.logging

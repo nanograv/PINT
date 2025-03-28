@@ -1,35 +1,53 @@
-import copy
-import warnings
-from io import StringIO
-from collections import Counter, defaultdict
-from pathlib import Path
+"""Building a timing model from a par file."""
 
-from pint.models.parameter import maskParameter
-from pint.models.timing_model import (
-    DEFAULT_ORDER,
-    Component,
-    AllComponents,
-    TimingModel,
-    ignore_prefix,
-    AliasConflict,
+import copy
+import re
+import warnings
+from collections import Counter, defaultdict
+from io import StringIO
+from pathlib import Path
+from typing import Tuple
+
+from astropy import units as u
+from loguru import logger as log
+
+from pint.exceptions import (
+    ComponentConflict,
+    MissingBinaryError,
+    PrefixError,
+    TimingModelError,
     UnknownBinaryModel,
     UnknownParameter,
-    TimingModelError,
-    MissingBinaryError,
+)
+from pint.models.astrometry import Astrometry
+from pint.models.binary_ddk import _convert_kin, _convert_kom
+from pint.models.tcb_conversion import convert_tcb_tdb
+from pint.models.timing_model import (
+    AllComponents,
+    TimingModel,
     ignore_params,
     ignore_prefix,
 )
-from pint.toa import get_TOAs
-from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
-
+from pint.toa import TOAs, get_TOAs
+from pint.types import file_like
+from pint.utils import get_unit, interesting_lines, lines_of, split_prefixed_name
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
 
 default_models = ["StandardTimingModel"]
-
-
-class ComponentConflict(ValueError):
-    """Error for multiple components can be select but no other indications."""
+_binary_model_priority = [
+    "Isolated",
+    "BT",
+    "BT_piecewise",
+    "ELL1",
+    "ELL1H",
+    "ELL1k",
+    "DD",
+    "DDK",
+    "DDGR",
+    "DDS",
+    "DDH",
+]
 
 
 def parse_parfile(parfile):
@@ -53,6 +71,28 @@ def parse_parfile(parfile):
     return parfile_dict
 
 
+def _replace_fdjump_in_parfile_dict(pardict):
+    """Replace parameter names s of the form "FDJUMPp" by "FDpJUMP"
+    while reading the par file, where p is the prefix index.
+
+    Ideally, this should have been done using the parameter alias
+    mechanism, but there is no easy way to do this currently due to the
+    mask and prefix indices being treated in an identical manner.
+
+    See :class:`~pint.models.fdjump.FDJump` for more details."""
+    fdjumpn_regex = re.compile("^FDJUMP(\\d+)")
+    pardict_new = {}
+    for key, value in pardict.items():
+        if m := fdjumpn_regex.match(key):
+            j = int(m.groups()[0])
+            new_key = f"FD{j}JUMP"
+            pardict_new[new_key] = value
+        else:
+            pardict_new[key] = value
+
+    return pardict_new
+
+
 class ModelBuilder:
     """Class for building a `TimingModel` object from a parameter file.
 
@@ -71,9 +111,18 @@ class ModelBuilder:
         # Validate the components
         self.all_components = AllComponents()
         self._validate_components()
-        self.default_components = ["SolarSystemShapiro"]
+        self.default_components = []
 
-    def __call__(self, parfile, allow_name_mixing=False):
+    def __call__(
+        self,
+        parfile,
+        allow_name_mixing=False,
+        allow_tcb=False,
+        allow_T2=False,
+        force_binary_model=None,
+        toas_for_tzr=None,
+        **kwargs,
+    ):
         """Callable object for making a timing model from .par file.
 
         Parameters
@@ -87,28 +136,120 @@ class ModelBuilder:
             T2EFAC and EFAC, both of them maps to PINT parameter EFAC, present
             in the parfile at the same time.
 
+        allow_tcb : True, False, or "raw", optional
+            Whether to read TCB par files. Default is False, and will throw an
+            error upon encountering TCB par files. If True, the par file will be
+            converted to TDB upon read. If "raw", an unconverted malformed TCB
+            TimingModel object will be returned.
+
+        allow_T2 : bool, optional
+            Whether to convert a T2 binary model to an appropriate underlying
+            binary model. Default is False, and will throw an error upon
+            encountering the T2 binary model. If True, the binary model will be
+            converted to the most appropriate PINT-compatible binary model.
+
+        force_binary_model : str, optional
+            When set to some binary model, like force_binary_model="DD", this
+            will override the binary model set in the parfile. Defaults to None
+
+        toas_for_tzr : TOAs or None, optional
+            If this is not None, a TZR TOA (AbsPhase) will be created using the
+            given TOAs object.
+
+        kwargs : dict
+            Any additional parameter/value pairs that will add to or override those in the parfile.
+
         Returns
         -------
         pint.models.timing_model.TimingModel
             The result timing model based on the input .parfile or file object.
         """
+
+        assert allow_tcb in [True, False, "raw"]
+        convert_tcb = allow_tcb == True
+        allow_tcb_ = allow_tcb in [True, "raw"]
+
+        assert isinstance(allow_T2, bool)
+
         pint_param_dict, original_name, unknown_param = self._pintify_parfile(
             parfile, allow_name_mixing
         )
-        selected, conflict, param_not_in_pint = self.choose_model(pint_param_dict)
+        remaining_args = {}
+        for k, v in kwargs.items():
+            if k not in pint_param_dict:
+                if isinstance(v, u.Quantity):
+                    pint_param_dict[k] = [
+                        str(v.to_value(get_unit(k))),
+                    ]
+                else:
+                    pint_param_dict[k] = [
+                        str(v),
+                    ]
+                original_name[k] = k
+            else:
+                remaining_args[k] = v
+        selected, conflict, param_not_in_pint = self.choose_model(
+            pint_param_dict, force_binary_model=force_binary_model, allow_T2=allow_T2
+        )
         selected.update(set(self.default_components))
+
+        # Add SolarSystemShapiro only if an Astrometry component is present.
+        if any(
+            isinstance(self.all_components.components[sc], Astrometry)
+            for sc in selected
+        ):
+            selected.add("SolarSystemShapiro")
+
         # Report conflict
         if len(conflict) != 0:
             self._report_conflict(conflict)
         # Make timing model
         cps = [self.all_components.components[c] for c in selected]
         tm = TimingModel(components=cps)
-        self._setup_model(tm, pint_param_dict, original_name, setup=True, validate=True)
+        self._setup_model(
+            tm,
+            pint_param_dict,
+            original_name,
+            setup=True,
+            validate=True,
+            allow_tcb=allow_tcb_,
+        )
         # Report unknown line
         for k, v in unknown_param.items():
             p_line = " ".join([k] + v)
             warnings.warn(f"Unrecognized parfile line '{p_line}'", UserWarning)
             # log.warning(f"Unrecognized parfile line '{p_line}'")
+
+        if tm.UNITS.value is None or tm.UNITS.value == "":
+            log.warning("UNITS is not specified. Assuming TDB...")
+            tm.UNITS.value = "TDB"
+
+        if tm.UNITS.value == "TCB" and convert_tcb:
+            convert_tcb_tdb(tm)
+
+        for k, v in remaining_args.items():
+            if not hasattr(tm, k):
+                raise ValueError(f"Model does not have parameter '{k}'")
+            log.debug(f"Overriding '{k}' to '{v}'")
+            if isinstance(v, u.Quantity):
+                getattr(tm, k).quantity = v
+            else:
+                getattr(tm, k).value = v
+
+        # Explicitly add a TZR TOA from a given TOAs object.
+        if "AbsPhase" not in tm.components and toas_for_tzr is not None:
+            log.info("Creating a TZR TOA (AbsPhase) using the given TOAs object.")
+            tm.add_tzr_toa(toas_for_tzr)
+
+        if not hasattr(tm, "DelayComponent_list"):
+            setattr(tm, "DelayComponent_list", [])
+        if not hasattr(tm, "NoiseComponent_list"):
+            setattr(tm, "NoiseComponent_list", [])
+
+        tm.meta["allow_tcb"] = allow_tcb_
+        tm.meta["convert_tcb"] = convert_tcb
+        tm.meta["allow_T2"] = allow_T2
+
         return tm
 
     def _validate_components(self):
@@ -166,9 +307,9 @@ class ModelBuilder:
             # Add aliases compare
             overlap = in_param & cpm_param
             # translate to PINT parameter
-            overlap_pint_par = set(
-                [self.all_components.alias_to_pint_param(ovlp)[0] for ovlp in overlap]
-            )
+            overlap_pint_par = {
+                self.all_components.alias_to_pint_param(ovlp)[0] for ovlp in overlap
+            }
             # The degree of overlapping for input component and compared component
             overlap_deg_in = len(component.params) - len(overlap_pint_par)
             overlap_deg_cpm = len(cp.params) - len(overlap_pint_par)
@@ -242,47 +383,54 @@ class ModelBuilder:
             parfile_dict = parse_parfile(parfile)
         else:
             parfile_dict = parfile
+
+        # This is a special-case-hack to deal with FDJUMP parameters.
+        # @TODO: Implement a general mechanism to deal with cases like this.
+        parfile_dict = _replace_fdjump_in_parfile_dict(parfile_dict)
+
         for k, v in parfile_dict.items():
             try:
                 pint_name, init0 = self.all_components.alias_to_pint_param(k)
             except UnknownParameter:
-                if k in ignore_params:  # Parameter is known but in the ingore list
+                if k in ignore_params:
+                    # Parameter is known but in the ignore list
                     continue
-                else:  # Check ignored prefix
-                    try:
-                        pfx, idxs, idx = split_prefixed_name(k)
-                        if pfx in ignore_prefix:  # It is an ignored prefix.
-                            continue
-                        else:
-                            unknown_param[k] += v
-                    except PrefixError:
+                # Check ignored prefix
+                try:
+                    pfx, idxs, idx = split_prefixed_name(k)
+                    if pfx in ignore_prefix:  # It is an ignored prefix.
+                        continue
+                    else:
                         unknown_param[k] += v
+                except PrefixError:
+                    unknown_param[k] += v
                 continue
             pint_param_dict[pint_name] += v
             original_name_map[pint_name].append(k)
             repeating[pint_name] += len(v)
             # Check if this parameter is allowed to be repeated by PINT
-            if len(pint_param_dict[pint_name]) > 1:
-                if pint_name not in self.all_components.repeatable_param:
-                    raise TimingModelError(
-                        f"Parameter {pint_name} is not a repeatable parameter. "
-                        f"However, multiple line use it."
-                    )
+            if (
+                len(pint_param_dict[pint_name]) > 1
+                and pint_name not in self.all_components.repeatable_param
+            ):
+                raise TimingModelError(
+                    f"Parameter {pint_name} is not a repeatable parameter. "
+                    f"However, multiple line use it."
+                )
         # Check if the name is mixed
         for p_n, o_n in original_name_map.items():
-            if len(o_n) > 1:
-                if not allow_name_mixing:
-                    raise TimingModelError(
-                        f"Parameter {p_n} have mixed input names/alias "
-                        f"{o_n}. If you want to have mixing names, please use"
-                        f" 'allow_name_mixing=True', and the output .par file "
-                        f"will use '{original_name_map[pint_name][0]}'."
-                    )
+            if len(o_n) > 1 and not allow_name_mixing:
+                raise TimingModelError(
+                    f"Parameter {p_n} have mixed input names/alias "
+                    f"{o_n}. If you want to have mixing names, please use"
+                    f" 'allow_name_mixing=True', and the output .par file "
+                    f"will use '{original_name_map[pint_name][0]}'."
+                )
             original_name_map[p_n] = o_n[0]
 
         return pint_param_dict, original_name_map, unknown_param
 
-    def choose_model(self, param_inpar):
+    def choose_model(self, param_inpar, force_binary_model=None, allow_T2=False):
         """Choose the model components based on the parfile.
 
         Parameters
@@ -290,6 +438,16 @@ class ModelBuilder:
         param_inpar: dict
             Dictionary of the unique parameters in .par file with the key is the
             parfile line. :func:`parse_parfile` returns this dictionary.
+
+        allow_T2 : bool, optional
+            Whether to convert a T2 binary model to an appropriate underlying
+            binary model. Default is False, and will throw an error upon
+            encountering the T2 binary model. If True, the binary model will be
+            converted to the most appropriate PINT-compatible binary model.
+
+        force_binary_model : str, optional
+            When set to some binary model, like force_binary_model="DD", this
+            will override the binary model set in the parfile. Defaults to None
 
         Returns
         -------
@@ -323,10 +481,13 @@ class ModelBuilder:
         # build the base fo the timing model
         # pint_param_dict, unknown_param = self._pintify_parfile(param_inpar)
         binary = param_inpar.get("BINARY", None)
-        if binary is not None:
+
+        if binary:
             binary = binary[0]
-            binary_cp = self.all_components.search_binary_components(binary)
-            selected_components.add(binary_cp.__class__.__name__)
+            selected_components.add(
+                self.choose_binary_model(param_inpar, force_binary_model, allow_T2)
+            )
+
         # 2. Get the component list from the parameters in the parfile.
         # 2.1 Check the aliases of input parameters.
         # This does not include the repeating parameters, but it should not
@@ -347,12 +508,11 @@ class ModelBuilder:
             if p_name != first_init:
                 param_not_in_pint.append(pp)
 
-            p_cp = self.all_components.param_component_map.get(first_init, None)
-            if p_cp:
+            if p_cp := self.all_components.param_component_map.get(first_init, None):
                 param_components_inpar[p_name] = p_cp
         # Back map the possible_components and the parameters in the parfile
         # This will remove the duplicate components.
-        conflict_components = defaultdict(set)  # graph for confilict
+        conflict_components = defaultdict(set)  # graph for conflict
         for k, cps in param_components_inpar.items():
             # If `timing_model` in param --> component mapping skip
             # Timing model is the base.
@@ -386,10 +546,10 @@ class ModelBuilder:
                     temp_cf_cp.remove(cp)
                     conflict_components[cp].update(set(temp_cf_cp))
                 continue
-        # Check if the selected component in the confilict graph. If it is
-        # remove the selected componens with its conflict components.
+        # Check if the selected component in the conflict graph. If it is
+        # remove the selected components with its conflict components.
         for ps_cp in selected_components:
-            cf_cps = conflict_components.get(ps_cp, None)
+            cf_cps = conflict_components.get(ps_cp)
             if cf_cps is not None:  # Had conflict, but resolved.
                 for cf_cp in cf_cps:
                     del conflict_components[cf_cp]
@@ -398,18 +558,92 @@ class ModelBuilder:
         selected_cates = {}
         for cp in selected_components:
             cate = self.all_components.component_category_map[cp]
-            if cate not in selected_cates.keys():
-                selected_cates[cate] = cp
-            else:
-                exisit_cp = selected_cates[cate]
+            if cate in selected_cates:
+                exist_cp = selected_cates[cate]
                 raise TimingModelError(
-                    f"Component '{cp}' and '{exisit_cp}' belong to the"
+                    f"Component '{cp}' and '{exist_cp}' belong to the"
                     f" same category '{cate}'. Only one component from"
                     f" the same category can be used for a timing model."
                     f" Please check your input (e.g., .par file)."
                 )
 
+            else:
+                selected_cates[cate] = cp
         return selected_components, conflict_components, param_not_in_pint
+
+    def choose_binary_model(self, param_inpar, force_binary_model=None, allow_T2=False):
+        """Choose the BINARY model based on the parfile.
+
+        Parameters
+        ----------
+        param_inpar: dict
+            Dictionary of the unique parameters in .par file with the key is the
+            parfile line. :func:`parse_parfile` returns this dictionary.
+
+        force_binary_model : str, optional
+            When set to some binary model, like force_binary_model="DD", this
+            will override the binary model set in the parfile. Defaults to None
+
+        allow_T2 : bool, optional
+            Whether to convert a T2 binary model to an appropriate underlying
+            binary model. Default is False, and will throw an error upon
+            encountering the T2 binary model. If True, the binary model will be
+            converted to the most appropriate PINT-compatible binary model.
+
+        Returns
+        -------
+        str
+            Name of the binary component
+
+        Note
+        ----
+        If the binary model does not have a PINT model (e.g. the T2 model), an
+        error is thrown with the suggested model that could replace it. If
+        allow_T2 is set to True, the most appropriate binary model is guessed
+        and used. If an appropriate model cannot be found, no suggestion is
+        given and an error is thrown.
+        """
+        binary = param_inpar["BINARY"][0]
+
+        # Guess what the binary model should be, regardless of BINARY parameter
+        try:
+            binary_model_guesses = guess_binary_model(param_inpar)
+        except UnknownBinaryModel as e:
+            log.error(
+                "Unable to find suitable binary model that has all the"
+                "parameters in the parfile. Please fix the par file."
+            )
+
+        # Allow for T2 model, gracefully
+        if force_binary_model is not None and binary != "T2":
+            binary = force_binary_model
+        elif binary == "T2" and allow_T2:
+            binary = binary_model_guesses[0]
+            log.warning(
+                f"Found T2 binary model. Gracefully converting T2 to: {binary}."
+            )
+
+            # Make sure that DDK parameters are properly converted
+            convert_binary_params_dict(param_inpar, force_binary_model=binary)
+
+        try:
+            binary_cp = self.all_components.search_binary_components(binary)
+
+        except UnknownBinaryModel as e:
+            log.error(f"Could not find binary model {binary}")
+
+            log.info(
+                f"Compatible models with these parameters: {', '.join(binary_model_guesses)}."
+            )
+
+            # Re-raise the error, with an added guess for the binary model if we have one
+            if binary_model_guesses:
+                raise UnknownBinaryModel(
+                    str(e), suggestion=binary_model_guesses[0]
+                ) from None
+            raise
+
+        return binary_cp.__class__.__name__
 
     def _setup_model(
         self,
@@ -418,6 +652,7 @@ class ModelBuilder:
         original_name=None,
         setup=True,
         validate=True,
+        allow_tcb=False,
     ):
         """Fill up a timing model with parameter values and then setup the model.
 
@@ -443,29 +678,28 @@ class ModelBuilder:
             Whether to run the setup function in the timing model.
         validate : bool, optional
             Whether to run the validate function in the timing model.
+        allow_tcb : bool, optional
+            Whether to allow reading TCB par files
         """
-        if original_name is not None:
-            use_alias = True
-        else:
-            use_alias = False
+        use_alias = original_name is not None
         for pp, v in pint_param_dict.items():
             try:
                 par = getattr(timing_model, pp)
             except AttributeError:
-                # since the input is pintfied, it should be an uninitized indexed parameter
+                # since the input is pintfied, it should be an uninitialized indexed parameter
                 # double check if the missing parameter an indexed parameter.
                 pint_par, first_init = self.all_components.alias_to_pint_param(pp)
                 try:
                     prefix, _, index = split_prefixed_name(pint_par)
-                except PrefixError:
+                except PrefixError as e:
                     par_hosts = self.all_components.param_component_map[pint_par]
-                    currnt_cp = timing_model.components.keys()
+                    current_cp = timing_model.components.keys()
                     raise TimingModelError(
                         f"Parameter {pint_par} is recognized"
                         f" by PINT, but not used in the current"
                         f" timing model. It is used in {par_hosts},"
-                        f" but the current timing model uses {currnt_cp}."
-                    )
+                        f" but the current timing model uses {current_cp}."
+                    ) from e
                 # TODO need to create a better API for _locate_param_host
                 host_component = timing_model._locate_param_host(first_init)
                 timing_model.add_param_from_top(
@@ -477,10 +711,7 @@ class ModelBuilder:
             # Fill up the values
             param_line = len(v)
             if param_line < 2:
-                if use_alias:
-                    name = original_name[pp]
-                else:
-                    name = pp
+                name = original_name[pp] if use_alias else pp
                 par.from_parfile_line(" ".join([name] + v))
             else:  # For the repeatable parameters
                 lines = copy.deepcopy(v)  # Line queue.
@@ -516,20 +747,20 @@ class ModelBuilder:
 
                     # There is no current repeatable parameter matching the new line
                     # First try to fill up an empty space.
-                    if empty_repeat_param != []:
-                        emt_par = empty_repeat_param.pop(0)
-                        emt_par.from_parfile_line(" ".join([emt_par.name, li]))
-                        if use_alias:  # Use the input alias as input
-                            emt_par.use_alias = original_name[pp]
-                    else:
+                    if not empty_repeat_param:
                         # No empty space, add a new parameter to the timing model.
                         host_component = timing_model._locate_param_host(pp)
                         timing_model.add_param_from_top(temp_par, host_component[0][0])
 
+                    else:
+                        emt_par = empty_repeat_param.pop(0)
+                        emt_par.from_parfile_line(" ".join([emt_par.name, li]))
+                        if use_alias:  # Use the input alias as input
+                            emt_par.use_alias = original_name[pp]
         if setup:
             timing_model.setup()
         if validate:
-            timing_model.validate()
+            timing_model.validate(allow_tcb=allow_tcb)
         return timing_model
 
     def _report_conflict(self, conflict_graph):
@@ -538,12 +769,18 @@ class ModelBuilder:
             # Put all the conflict components together from the graph
             cf_cps = list(v)
             cf_cps.append(k)
-            raise ComponentConflict(
-                "Can not decide the one component from:" " {}".format(cf_cps)
-            )
+            raise ComponentConflict(f"Can not decide the one component from: {cf_cps}")
 
 
-def get_model(parfile, allow_name_mixing=False):
+def get_model(
+    parfile: file_like,
+    allow_name_mixing: bool = False,
+    allow_tcb: bool = False,
+    allow_T2: bool = False,
+    force_binary_model: str = None,
+    toas_for_tzr: TOAs = None,
+    **kwargs,
+) -> TimingModel:
     """A one step function to build model from a parfile.
 
     Parameters
@@ -557,6 +794,29 @@ def get_model(parfile, allow_name_mixing=False):
         T2EFAC and EFAC, both of them maps to PINT parameter EFAC, present
         in the parfile at the same time.
 
+    allow_tcb : True, False, or "raw", optional
+        Whether to read TCB par files. Default is False, and will throw an
+        error upon encountering TCB par files. If True, the par file will be
+        converted to TDB upon read. If "raw", an unconverted malformed TCB
+        TimingModel object will be returned.
+
+    allow_T2 : bool, optional
+        Whether to convert a T2 binary model to an appropriate underlying
+        binary model. Default is False, and will throw an error upon
+        encountering the T2 binary model. If True, the binary model will be
+        converted to the most appropriate PINT-compatible binary model.
+
+    force_binary_model : str, optional
+        When set to some binary model, like force_binary_model="DD", this will
+        override the binary model set in the parfile. Defaults to None
+
+    toas_for_tzr : TOAs or None, optional
+        If this is not None, a TZR TOA (AbsPhase) will be created using the
+        given TOAs object.
+
+    kwargs : dict
+        Any additional parameter/value pairs that will add to or override those in the parfile.
+
     Returns
     -------
     Model instance get from parfile.
@@ -566,33 +826,54 @@ def get_model(parfile, allow_name_mixing=False):
         contents = parfile.read()
     except AttributeError:
         contents = None
-    if contents is None:
-        # # parfile is a filename and can be handled by ModelBuilder
-        # if _model_builder is None:
-        #     _model_builder = ModelBuilder()
-        model = model_builder(parfile, allow_name_mixing)
-        model.name = parfile
-        return model
-    else:
-        tm = model_builder(StringIO(contents), allow_name_mixing)
-        return tm
+    if contents is not None:
+        return model_builder(
+            StringIO(contents),
+            allow_name_mixing,
+            allow_tcb=allow_tcb,
+            allow_T2=allow_T2,
+            force_binary_model=force_binary_model,
+            toas_for_tzr=toas_for_tzr,
+            **kwargs,
+        )
+
+    # # parfile is a filename and can be handled by ModelBuilder
+    # if _model_builder is None:
+    #     _model_builder = ModelBuilder()
+    model = model_builder(
+        parfile,
+        allow_name_mixing,
+        allow_tcb=allow_tcb,
+        allow_T2=allow_T2,
+        force_binary_model=force_binary_model,
+        toas_for_tzr=toas_for_tzr,
+        **kwargs,
+    )
+    model.name = parfile
+    model.meta["original_name"] = parfile
+
+    return model
 
 
 def get_model_and_toas(
-    parfile,
-    timfile,
-    ephem=None,
-    include_bipm=None,
-    bipm_version=None,
-    include_gps=None,
-    planets=None,
-    usepickle=False,
-    tdb_method="default",
-    include_pn=True,
-    picklefilename=None,
-    allow_name_mixing=False,
-    limits="warn",
-):
+    parfile: file_like,
+    timfile: file_like,
+    ephem: str = None,
+    include_bipm: bool = None,
+    bipm_version: str = None,
+    planets: bool = None,
+    usepickle: bool = False,
+    tdb_method: str = "default",
+    include_pn: bool = True,
+    picklefilename: str = None,
+    allow_name_mixing: bool = False,
+    limits: str = "warn",
+    allow_tcb: bool = False,
+    allow_T2: bool = False,
+    force_binary_model: str = None,
+    add_tzr_to_model: bool = True,
+    **kwargs,
+) -> Tuple[TimingModel, TOAs]:
     """Load a timing model and a related TOAs, using model commands as needed
 
     Parameters
@@ -601,13 +882,14 @@ def get_model_and_toas(
         The parfile name, or a file-like object to read the parfile contents from
     timfile : str
         The timfile name, or a file-like object to read the timfile contents from
+    ephem : str, optional
+        If not None (default), this ephemeris will be used to create the TOAs object.
+        Default is to use the EPHEM parameter from the timing model.
     include_bipm : bool or None
         Whether to apply the BIPM clock correction. Defaults to True.
     bipm_version : string or None
         Which version of the BIPM tables to use for the clock correction.
         The format must be 'BIPMXXXX' where XXXX is a year.
-    include_gps : bool or None
-        Whether to include the GPS clock correction. Defaults to True.
     planets : bool or None
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
@@ -630,12 +912,39 @@ def get_model_and_toas(
         in the parfile at the same time.
     limits : "warn" or "error"
         What to do when encountering TOAs for which clock corrections are not available.
+    allow_tcb : True, False, or "raw", optional
+        Whether to read TCB par files. Default is False, and will throw an
+        error upon encountering TCB par files. If True, the par file will be
+        converted to TDB upon read. If "raw", an unconverted malformed TCB
+        TimingModel object will be returned.
+    allow_T2 : bool, optional
+        Whether to convert a T2 binary model to an appropriate underlying
+        binary model. Default is False, and will throw an error upon
+        encountering the T2 binary model. If True, the binary model will be
+        converted to the most appropriate PINT-compatible binary model.
+    force_binary_model : str, optional
+        When set to some binary model, like force_binary_model="DD", this
+        will override the binary model set in the parfile. Defaults to None
+    add_tzr_to_model : bool, optional
+        Create a TZR TOA in the timing model using the created TOAs object. Default is
+        True.
+    kwargs : dict
+        Any additional parameter/value pairs that will add to or override those in the parfile.
 
     Returns
     -------
     A tuple with (model instance, TOAs instance)
     """
-    mm = get_model(parfile, allow_name_mixing)
+
+    mm = get_model(
+        parfile,
+        allow_name_mixing,
+        allow_tcb=allow_tcb,
+        allow_T2=allow_T2,
+        force_binary_model=force_binary_model,
+        **kwargs,
+    )
+
     tt = get_TOAs(
         timfile,
         include_pn=include_pn,
@@ -643,11 +952,142 @@ def get_model_and_toas(
         ephem=ephem,
         include_bipm=include_bipm,
         bipm_version=bipm_version,
-        include_gps=include_gps,
         planets=planets,
         usepickle=usepickle,
         tdb_method=tdb_method,
         picklefilename=picklefilename,
         limits=limits,
     )
+
+    if "AbsPhase" not in mm.components and add_tzr_to_model:
+        log.info("Creating a TZR TOA (AbsPhase) using the given TOAs object.")
+        mm.add_tzr_toa(tt)
+
     return mm, tt
+
+
+def guess_binary_model(parfile_dict):
+    """Based on the PINT parameter dictionary, guess the binary model
+
+    Parameters
+    ----------
+    parfile_dict
+        The parameter dictionary as read-in by parse_parfile
+
+    Returns
+    -------
+    list:
+        A priority-ordered list of possible binary models. The first one is the
+        best-guess
+
+    """
+
+    def add_sini(parameters):
+        """If 'KIN' is a model parameter, Tempo2 doesn't really use SINI"""
+        return list(parameters) + ["SINI"] if "KIN" in parameters else list(parameters)
+
+    all_components = AllComponents()
+    binary_models = all_components.category_component_map["pulsar_system"]
+
+    # Find all binary parameters
+    binary_parameters_map = {
+        all_components.components[binary_model].binary_model_name: add_sini(
+            all_components.search_binary_components(binary_model).aliases_map.keys()
+        )
+        for binary_model in binary_models
+    }
+    binary_parameters_map["Isolated"] = []
+    all_binary_parameters = {
+        parname for parnames in binary_parameters_map.values() for parname in parnames
+    }
+
+    # Find all parfile parameters
+    all_parfile_parameters = set(parfile_dict.keys())
+
+    # All binary parameters in the parfile
+    parfile_binary_parameters = all_parfile_parameters & all_binary_parameters
+
+    # Find which binary models include those
+    allowed_binary_models = {
+        binary_model
+        for (binary_model, bmc) in binary_parameters_map.items()
+        if len(parfile_binary_parameters - set(bmc)) == 0
+    }
+
+    # Now select the best-guess binary model
+    priority = [bm for bm in _binary_model_priority if bm in allowed_binary_models]
+    omitted = allowed_binary_models - set(priority)
+
+    return priority + list(omitted)
+
+
+def convert_binary_params_dict(
+    parfile_dict, convert_komkin=True, drop_ddk_sini=True, force_binary_model=None
+):
+    """Convert the PINT parameter dictionary to include the best-guess binary
+
+    Parameters
+    ----------
+    parfile_dict
+        The parameter dictionary as read-in by parse_parfile
+    convert_komkin
+        Whether or not to convert the KOM and KIN parameters
+    drop_ddk_sini
+        Whether to drop SINI when converting to the DDK model
+
+    force_binary_model : str, optional
+        When set to some binary model, like force_binary_model="DD", this will
+        override the binary model set in the parfile. Defaults to None
+
+    Returns
+    -------
+    A new parfile dictionary with the binary model replaced with the best-guess
+    model. For a conversion to DDK, this function also converts the KOM/KIN
+    parameters if they exist.
+    """
+    binary = parfile_dict.get("BINARY", None)
+    binary = binary[0] if binary else binary
+
+    log.debug("Requested to convert binary model for BINARY model: {binary}")
+
+    if binary:
+        if not force_binary_model:
+            binary_model_guesses = guess_binary_model(parfile_dict)
+            log.info(
+                f"Compatible models with these parameters: {', '.join(binary_model_guesses)}. Using {binary_model_guesses[0]}"
+            )
+
+            if not binary_model_guesses:
+                error_message = "Unable to determine binary model for this par file"
+                log_message = "Unable to determine the binary model based on the model parameters in the par file."
+
+                log.error(log_message)
+                raise UnknownBinaryModel(error_message)
+
+        else:
+            binary_model_guesses = [force_binary_model]
+
+        # Select the best-guess binary model
+        parfile_dict["BINARY"] = [binary_model_guesses[0]]
+
+        # Convert KIN if requested
+        if convert_komkin and "KIN" in parfile_dict:
+            log.info(f"Converting KOM to/from IAU <--> DT96: {parfile_dict['KIN']}")
+            log.debug("Converting KIN to/from IAU <--> DT96")
+            entries = parfile_dict["KIN"][0].split()
+            new_value = _convert_kin(float(entries[0]) * u.deg).value
+            parfile_dict["KIN"] = [" ".join([str(new_value)] + entries[1:])]
+
+        # Convert KOM if requested
+        if convert_komkin and "KOM" in parfile_dict:
+            log.debug("Converting KOM to/from IAU <--> DT96")
+            entries = parfile_dict["KOM"][0].split()
+            new_value = _convert_kom(float(entries[0]) * u.deg).value
+            parfile_dict["KOM"] = [" ".join([str(new_value)] + entries[1:])]
+
+        # Drop SINI if requested
+        if drop_ddk_sini and binary_model_guesses[0] == "DDK":
+            log.debug("Dropping SINI from DDK model")
+            parfile_dict.pop("SINI", None)
+
+    return parfile_dict

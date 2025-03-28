@@ -1,5 +1,6 @@
-"""Test for the DM uncertaity rescaling DMEFAC and DMEQUAD
+"""Test for the DM uncertainty rescaling DMEFAC and DMEQUAD
 """
+
 from io import StringIO
 
 import numpy as np
@@ -57,9 +58,7 @@ def test_only_one_equad(test_toas, test_model):
     test_model.setup()
     scale_sigma = test_model.scale_dm_sigma(test_toas)
     mask = test_model.DMEQUAD1.select_toa_mask(test_toas)
-    scaled_value = (
-        np.sqrt(0.01**2 + test_model.DMEQUAD1.value**2) * u.pc / u.cm**3
-    )
+    scaled_value = np.sqrt(0.01**2 + test_model.DMEQUAD1.value**2) * u.pc / u.cm**3
     rest = list(set(range(test_toas.ntoas)).symmetric_difference(mask))
     assert np.isclose(scale_sigma[mask], scaled_value).any()
     assert np.all(scale_sigma[rest] == 0.01 * u.pc / u.cm**3)
@@ -100,9 +99,7 @@ def test_only_one_equad_one_efact_different_backend(test_toas, test_model):
     mask1 = test_model.DMEFAC1.select_toa_mask(test_toas)
     mask2 = test_model.DMEQUAD1.select_toa_mask(test_toas)
     scaled_value1 = test_model.DMEFAC1.value * 0.01 * u.pc / u.cm**3
-    scaled_value2 = (
-        np.sqrt(0.01**2 + test_model.DMEQUAD1.value**2) * u.pc / u.cm**3
-    )
+    scaled_value2 = np.sqrt(0.01**2 + test_model.DMEQUAD1.value**2) * u.pc / u.cm**3
     assert np.isclose(scale_sigma[mask1], scaled_value1).any()
     assert np.isclose(scale_sigma[mask2], scaled_value2).any()
     rest1 = list(set(range(test_toas.ntoas)).symmetric_difference(mask1))

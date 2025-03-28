@@ -1,9 +1,11 @@
 """Pulsar timing piecewise spin-down solution."""
+
 import astropy.units as u
 import numpy as np
 
+from pint.exceptions import MissingParameter
 from pint.models.parameter import prefixParameter
-from pint.models.timing_model import MissingParameter, PhaseComponent
+from pint.models.timing_model import PhaseComponent
 from pint.utils import split_prefixed_name, taylor_horner
 
 
@@ -57,6 +59,7 @@ class PiecewiseSpindown(PhaseComponent):
                 description_template=self._description_solution_epochstart,
                 parameter_type="MJD",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -67,6 +70,7 @@ class PiecewiseSpindown(PhaseComponent):
                 description_template=self._description_solution_epochstop,
                 parameter_type="MJD",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -76,6 +80,7 @@ class PiecewiseSpindown(PhaseComponent):
                 description_template=self._description_solution_epoch,
                 parameter_type="MJD",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -86,6 +91,7 @@ class PiecewiseSpindown(PhaseComponent):
                 description_template=self._description_solution_startphase,
                 type_match="float",
                 uncertainty=1,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -95,6 +101,7 @@ class PiecewiseSpindown(PhaseComponent):
                 value=0.0,
                 description_template=self._description_solution_frequency,
                 type_match="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -103,6 +110,7 @@ class PiecewiseSpindown(PhaseComponent):
                 units="Hz/s",
                 value=0.0,
                 description_template=self._description_solution_frequencyderivative,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -111,6 +119,7 @@ class PiecewiseSpindown(PhaseComponent):
                 units="Hz/s^2",
                 value=0.0,
                 description_template=self._description_solution_secondfrequencyderivative,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -231,10 +240,7 @@ class PiecewiseSpindown(PhaseComponent):
         par = getattr(self, param)
         unit = par.units
         pn, idxf, idxv = split_prefixed_name(param)
-        if param.startswith("PWF"):
-            order = split_prefixed_name(param[:4])[2] + 1
-        else:
-            order = 0
+        order = split_prefixed_name(param[:4])[2] + 1 if param.startswith("PWF") else 0
         # order = idxv + 1
         fterms = self.get_spin_terms(idxv)
         # make the chosen fterms 1 others 0

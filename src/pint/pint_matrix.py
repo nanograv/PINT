@@ -1,12 +1,13 @@
 """ pint_matrix module defines the pint matrix base class, the design matrix .  and the covariance matrix
 """
 
-import numpy as np
-from itertools import combinations
-import astropy.units as u
-from collections import OrderedDict
-from warnings import warn
 import copy
+from collections import OrderedDict
+from itertools import combinations
+from warnings import warn
+
+import astropy.units as u
+import numpy as np
 
 import pint.utils as pu
 
@@ -68,17 +69,11 @@ class PintMatrix:
 
     @property
     def labels(self):
-        labels = []
-        for dim in range(len(self.axis_labels)):
-            labels.append(self.get_axis_labels(dim))
-        return labels
+        return [self.get_axis_labels(dim) for dim in range(len(self.axis_labels))]
 
     @property
     def label_units(self):
-        units = []
-        for dim in range(len(self.axis_labels)):
-            units.append(self.get_axis_labels(dim))
-        return units
+        return [self.get_axis_labels(dim) for dim in range(len(self.axis_labels))]
 
     def diag(self, k=0):
         """
@@ -111,18 +106,14 @@ class PintMatrix:
         labels : list of label names for all dimensions, or just along the specified axis
 
         """
-        labels = []
         if axis is None:
             r = range(len(self.axis_labels))
+        elif isinstance(axis, int):
+            return [x[0] for x in self.get_axis_labels(axis)]
         else:
-            if isinstance(axis, int):
-                return [x[0] for x in self.get_axis_labels(axis)]
-            else:
-                # assume it's an iterable (how to check?)
-                r = axis
-        for dim in r:
-            labels.append([x[0] for x in self.get_axis_labels(dim)])
-        return labels
+            # assume it's an iterable (how to check?)
+            r = axis
+        return [[x[0] for x in self.get_axis_labels(dim)] for dim in r]
 
     def get_unique_label_names(self):
         """Return all unique label names (there may be duplications between axes).
@@ -154,12 +145,8 @@ class PintMatrix:
         sizes : list of (start,stop) indices for the given label across each dimension
 
         """
-        lb_sizes = []
         lbs = self.get_label(label, axis=axis)
-        for ii, lb in enumerate(lbs):
-            size = lb[3] - lb[2]
-            lb_sizes.append((ii, size))
-        return lb_sizes
+        return [(ii, lb[3] - lb[2]) for ii, lb in enumerate(lbs)]
 
     def _check_index_overlap(self):
         for ii in range(self.ndim):
@@ -167,7 +154,7 @@ class PintMatrix:
             comb = combinations(axis_labels, 2)
             for cb in comb:
                 if cb[0][1][0] <= cb[1][1][1] and cb[1][1][0] <= cb[0][1][1] - 1:
-                    raise ValueError("Label index in dim {} has" " overlap".format(ii))
+                    raise ValueError(f"Label index in dim {ii} has overlap")
 
     def _get_label_start(self, label_entry):
         return label_entry[1][0]
@@ -206,20 +193,17 @@ class PintMatrix:
         """
 
         # We assume the labels are unique in the matrix.
-        all_label = []
-        for ii, dim in enumerate(self.axis_labels):
-            if label in dim.keys():
-                if axis is None or axis == ii:
-                    all_label.append((label, ii) + dim[label])
-        if all_label == []:
-            if axis is None:
-                raise KeyError("Label {} is not in the matrix".format(label))
-            else:
-                raise KeyError(
-                    "Label {} is not in the matrix in axis {}".format(label, axis)
-                )
-        else:
+        all_label = [
+            (label, ii) + dim[label]
+            for ii, dim in enumerate(self.axis_labels)
+            if label in dim.keys() and (axis is None or axis == ii)
+        ]
+        if all_label != []:
             return all_label
+        if axis is None:
+            raise KeyError(f"Label {label} is not in the matrix")
+        else:
+            raise KeyError(f"Label {label} is not in the matrix in axis {axis}")
 
     def get_label_along_axis(self, axis, label_name):
         """Get the request label from on axis.
@@ -234,9 +218,7 @@ class PintMatrix:
         if label_name in label_in_one_axis.keys():
             return (label_name, axis) + label_in_one_axis[label_name]
         else:
-            raise ValueError(
-                "Label '{}' is not in the axis {}".format(label_name, axis)
-            )
+            raise ValueError(f"Label '{label_name}' is not in the axis {axis}")
 
     def get_label_slice(self, labels):
         """Return the given label slices.
@@ -390,7 +372,7 @@ class DesignMatrixMaker:
         # The derivative function should be a wrapper function like d_phase_d_param()
         if derivative_quantity is None:
             raise ValueError("Argument 'derivative_quantity' can not be None.")
-        self.deriv_func_name = "d_{}_d_param".format(self.derivative_quantity)
+        self.deriv_func_name = f"d_{self.derivative_quantity}_d_param"
 
     def __call__(
         self, data, model, derivative_params, offset=False, offset_padding=0.0
@@ -406,19 +388,22 @@ class DesignMatrixMaker:
         derivative_params : list
             The parameter list for the derivatives 'd_quantity_d_param'.
         offset : bool, optional
-            Add the an offset to the beginning of design matrix. Default is False.
-            This is match the current phase offset in the design matrix.
+            Add the implicit offset to the beginning of design matrix. Default is False.
+            This is to match the current phase offset in the design matrix.
+            This option will be ignored if a `PhaseOffset` component is present in the timing model.
         offset_padding : float, optional
             if including offset, the value for padding.
         """
         # Get derivative functions
         deriv_func = getattr(model, self.deriv_func_name)
         # Check if the derivate quantity a phase derivative
+
+        offset = offset and "PhaseOffset" not in model.components
+
         params = ["Offset"] if offset else []
         params += derivative_params
-        labels = []
         M = np.zeros((len(data), len(params)))
-        labels.append({self.derivative_quantity: (0, M.shape[0], self.quantity_unit)})
+        labels = [{self.derivative_quantity: (0, M.shape[0], self.quantity_unit)}]
         labels_dim2 = {}
         for ii, param in enumerate(params):
             if param == "Offset":
@@ -450,17 +435,20 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
         derivative_params : list
             The parameter list for the derivatives 'd_quantity_d_param'.
         offset : bool, optional
-            Add the an offset to the beginning of design matrix. Default is True.
+            Add the the implicit offset to the beginning of design matrix. Default is True.
+            This option will be ignored if a `PhaseOffset` component is present in the timing model.
         offset_padding : float, optional
             if including offset, the value for padding. Default is 1.0
         """
         deriv_func = getattr(model, self.deriv_func_name)
         # Check if the derivate quantity a phase derivative
+
+        offset = offset and "PhaseOffset" not in model.components
+
         params = ["Offset"] if offset else []
         params += derivative_params
-        labels = []
         M = np.zeros((data.ntoas, len(params)))
-        labels.append({self.derivative_quantity: (0, M.shape[0], self.quantity_unit)})
+        labels = [{self.derivative_quantity: (0, M.shape[0], self.quantity_unit)}]
         labels_dim2 = {}
         delay = model.delay(data)
         for ii, param in enumerate(params):
@@ -481,19 +469,14 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
             labels_dim2[param] = (ii, ii + 1, param_unit)
 
         labels.append(labels_dim2)
-        mask = []
-        for ii, param in enumerate(params):
-            if param == "Offset":
-                continue
-            mask.append(ii)
+        mask = [ii for ii, param in enumerate(params) if param != "Offset"]
         M[:, mask] /= model.F0.value
         # TODO maybe use defined label is better
         labels[0] = {
             self.derivative_quantity: (0, M.shape[0], self.quantity_unit * u.s)
         }
 
-        d_matrix = DesignMatrix(M, labels)
-        return d_matrix
+        return DesignMatrix(M, labels)
 
 
 class TOADesignMatrixMaker(PhaseDesignMatrixMaker):
@@ -509,10 +492,13 @@ class TOADesignMatrixMaker(PhaseDesignMatrixMaker):
         self.deriv_func_name = "d_phase_d_param"
 
     def __call__(self, data, model, derivative_params, offset=True, offset_padding=1.0):
-        d_matrix = super().__call__(
-            data, model, derivative_params, offset=offset, offset_padding=offset_padding
+        return super().__call__(
+            data,
+            model,
+            derivative_params,
+            offset=offset,
+            offset_padding=offset_padding,
         )
-        return d_matrix
 
 
 class NoiseDesignMatrixMaker(DesignMatrixMaker):
@@ -524,13 +510,11 @@ class NoiseDesignMatrixMaker(DesignMatrixMaker):
     """
 
     def __call__(self, data, model):
-        result = []
         if len(model.basis_funcs) == 0:
             return None
 
-        for nf in model.basis_funcs:
-            result.append(nf(data)[0])
-        M = np.hstack([r for r in result])
+        result = [nf(data)[0] for nf in model.basis_funcs]
+        M = np.hstack(list(result))
         labels = [
             {"toa": (0, M.shape[0], u.s)},
             {"toa_noise_params": (0, M.shape[1], u.s)},
@@ -579,8 +563,7 @@ def combine_design_matrices_by_quantity(design_matrices):
                 off_set = new_labels[-1][1][1]
             axis_labels[0].update(dict(new_labels))
         all_matrix.append(d_matrix.matrix)
-    result = DesignMatrix(np.vstack(all_matrix), axis_labels)
-    return result
+    return DesignMatrix(np.vstack(all_matrix), axis_labels)
 
 
 def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
@@ -624,9 +607,7 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
 
             if d_quantity_size != base_size:
                 raise ValueError(
-                    "Input design matrix's label "
-                    "{} has different size with matrix "
-                    "{}".format(d_quantity, 0)
+                    f"Input design matrix's label {d_quantity} has different size with matrix 0"
                 )
             else:
                 # assign new index for combined matrix
@@ -656,7 +637,7 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
     new_matrix = np.zeros((base_matrix.shape[0], matrix2.shape[1]))
     new_matrix.fill(padding)
     # Fill up the new_matrix with matrix2
-    for quantity, new_idx in new_quantity_index.items():
+    for new_idx in new_quantity_index.values():
         old_idx = matrix2.get_label_along_axis(0, d_quantity)[2:4]
         new_matrix[new_idx[0] : new_idx[1], :] = matrix2.matrix[
             old_idx[0] : old_idx[1], :
@@ -723,7 +704,7 @@ class CovarianceMatrix(PintMatrix):
         coordinatefirst : bool, optional
             whether or not the output should be re-ordered to put the coordinates first (after the Offset, if present)
         offset : bool, optional
-            whether the absolute phase (i.e. "offset") should be shown
+            whether the implicit phase offset (i.e. "Offset") should be shown
         usecolor : bool, optional
             use color for "problem" CorrelationMatrix params
 
@@ -743,10 +724,9 @@ class CovarianceMatrix(PintMatrix):
             elif ("ELONG" in fps) and ("ELAT" in fps):
                 coordinates = ["ELONG", "ELAT"]
                 # TODO: allow for other coordinates
-            if not (
-                (fps.index(coordinates[0]) == (0 + int(offsetfirst)))
-                and (fps.index(coordinates[1]) == (1 + int(offsetfirst)))
-            ):
+            if fps.index(coordinates[0]) != 0 + int(offsetfirst) or fps.index(
+                coordinates[1]
+            ) != 1 + int(offsetfirst):
                 if offsetfirst:
                     neworder = [fps.index("Offset")]
                     start = 1
@@ -778,8 +758,8 @@ class CovarianceMatrix(PintMatrix):
         else:  # "correlation"
             base = "{0: {width}.{prec}f}"
             lens = [max(len(fp) + 2, prec + 4) for fp in fps]
+        sout = f"\nParameter {self.matrix_type} matrix:\n"
         maxlen = max(lens)
-        sout = "\nParameter {} matrix:\n".format(self.matrix_type)
         line = "{0:^{width}}".format("", width=maxlen)
         for fp, ln in zip(fps, lens):
             line += "{0:^{width}}".format(fp, width=ln)
@@ -839,7 +819,7 @@ class CovarianceMatrixMaker:
         self.covariance_quantity = covariance_quantity
         self.quantity_unit = quantity_unit
         # The derivative function should be a wrapper function like d_phase_d_param()
-        self.cov_func_name = "{}_covariance_matrix".format(self.covariance_quantity)
+        self.cov_func_name = f"{self.covariance_quantity}_covariance_matrix"
 
     def __call__(self, data, model):
         """A general method to make design matrix.
@@ -853,9 +833,7 @@ class CovarianceMatrixMaker:
         """
         func = getattr(model, self.cov_func_name)
         M = func(data)
-        label = [
-            {self.covariance_quantity: (0, M.shape[0], self.quantity_unit**2)}
-        ] * 2
+        label = [{self.covariance_quantity: (0, M.shape[0], self.quantity_unit**2)}] * 2
         return CovarianceMatrix(M, label)
 
 
@@ -880,7 +858,7 @@ def combine_covariance_matrix(covariance_matrices, crossterm={}, crossterm_paddi
         # Since covariance matrix are symmtric, only use dim1
         new_size += cm.shape[0]
         cm_labels = cm.get_axis_labels(1)
-        label_entry = tuple()
+        label_entry = ()
         for cmlb in cm_labels:
             label_entry = (
                 cmlb[0],
@@ -899,14 +877,13 @@ def combine_covariance_matrix(covariance_matrices, crossterm={}, crossterm_paddi
     for ii, lb1 in enumerate(new_label):
         for jj, lb2 in enumerate(new_label):
             if ii == jj:
-                new_cm[
-                    lb1[1][0] : lb1[1][1], lb2[1][0] : lb2[1][1]
-                ] = covariance_matrices[ii].matrix
-            else:
-                if crossterm != {}:
-                    cross_m = crossterm.get((lb1, lb2), None)
-                    if cross_m is None:
-                        cross_m = crossterm.get((lb2, lb1), None).T
+                new_cm[lb1[1][0] : lb1[1][1], lb2[1][0] : lb2[1][1]] = (
+                    covariance_matrices[ii].matrix
+                )
+            elif crossterm != {}:
+                cross_m = crossterm.get((lb1, lb2), None)
+                if cross_m is None:
+                    cross_m = crossterm.get((lb2, lb1), None).T
 
-                    new_cm[lb1[1][0] : lb1[1][1], lb2[1][0] : lb2[1][1]] = cross_m
+                new_cm[lb1[1][0] : lb1[1][1], lb2[1][0] : lb2[1][1]] = cross_m
     return CovarianceMatrix(new_cm, [OrderedDict(new_label)] * 2)

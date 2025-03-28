@@ -1,4 +1,5 @@
 """ Color modes for graphed pintk TOAs. """
+
 import numpy as np
 import matplotlib
 import matplotlib.colors
@@ -297,9 +298,9 @@ class ObsMode(ColorMode):
             obs_name = "MeerKAT"
         else:
             obs_name = obs.upper()
-        obs_text[
-            obs
-        ] = f"  {obs_colors[obs].replace('xkcd:','').capitalize()} = {obs_name}"
+        obs_text[obs] = (
+            f"  {obs_colors[obs].replace('xkcd:','').capitalize()} = {obs_name}"
+        )
 
     def displayInfo(self):
         outstr = '"Observatory" mode selected\n'
@@ -360,7 +361,7 @@ class JumpMode(ColorMode):
             model = self.application.psr.postfit_model
         else:
             model = self.application.psr.prefit_model
-        if not "PhaseJump" in model.components:
+        if "PhaseJump" not in model.components:
             return []
         return model.get_jump_param_objects()
 

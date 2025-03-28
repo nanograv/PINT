@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: .env
 #     language: python
@@ -99,7 +99,7 @@ tm = TimingModel("NGC6400E", component_instances)
 
 # %%
 # print the components in the timing model
-for (cp_name, cp_instance) in tm.components.items():
+for cp_name, cp_instance in tm.components.items():
     print(cp_name, cp_instance)
 
 # %% [markdown]
@@ -280,7 +280,11 @@ print(tm.components["DispersionDMX"].params)
 # %%
 # Add prefix parameters
 dmx_0003 = p.prefixParameter(
-    parameter_type="float", name="DMX_0003", value=None, units=u.pc / u.cm**3
+    parameter_type="float",
+    name="DMX_0003",
+    value=None,
+    units=u.pc / u.cm**3,
+    tcb2tdb_scale_factor=u.Quantity(1),
 )
 
 tm.components["DispersionDMX"].add_param(dmx_0003, setup=True)
@@ -299,10 +303,18 @@ display(tm.delay_deriv_funcs.keys())  # the derivative function should be added.
 
 # %%
 dmxr1_0003 = p.prefixParameter(
-    parameter_type="mjd", name="DMXR1_0003", value=None, units=u.day
+    parameter_type="mjd",
+    name="DMXR1_0003",
+    value=None,
+    units=u.day,
+    tcb2tdb_scale_factor=u.Quantity(1),
 )  # DMXR1 is a type of MJD parameter internally.
 dmxr2_0003 = p.prefixParameter(
-    parameter_type="mjd", name="DMXR2_0003", value=None, units=u.day
+    parameter_type="mjd",
+    name="DMXR2_0003",
+    value=None,
+    units=u.day,
+    tcb2tdb_scale_factor=u.Quantity(1),
 )  # DMXR1 is a type of MJD parameter internally.
 
 tm.components["DispersionDMX"].add_param(dmxr1_0003, setup=True)
@@ -346,7 +358,12 @@ display(tm.components["Spindown"].params)
 
 # %%
 f1 = p.prefixParameter(
-    parameter_type="float", name="F1", value=0.0, units=u.Hz / (u.s), longdouble=True
+    parameter_type="float",
+    name="F1",
+    value=0.0,
+    units=u.Hz / (u.s),
+    longdouble=True,
+    tcb2tdb_scale_factor=u.Quantity(1),
 )
 
 f2 = p.prefixParameter(
@@ -355,6 +372,7 @@ f2 = p.prefixParameter(
     value=0.0,
     units=u.Hz / (u.s) ** 2,
     longdouble=True,
+    tcb2tdb_scale_factor=u.Quantity(1),
 )
 
 # %%

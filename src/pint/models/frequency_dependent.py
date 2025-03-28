@@ -1,11 +1,13 @@
 """Frequency-dependent delays to model profile evolution."""
+
 from warnings import warn
 
 import astropy.units as u
 import numpy as np
 
+from pint.exceptions import MissingParameter
 from pint.models.parameter import prefixParameter
-from pint.models.timing_model import DelayComponent, MissingParameter
+from pint.models.timing_model import DelayComponent
 
 
 class FD(DelayComponent):
@@ -24,7 +26,7 @@ class FD(DelayComponent):
 
     @classmethod
     def _description_template(cls, x):
-        return "%d term of frequency dependent coefficients" % x
+        return f"{x} term of frequency dependent coefficients"
 
     register = True
     category = "frequency_dependent"
@@ -36,13 +38,14 @@ class FD(DelayComponent):
                 name="FD1",
                 units="second",
                 value=0.0,
-                description="Coefficient of delay as a polynomial function of log-frequency",
+                description="Polynomial coefficient of log-frequency-dependent delay",
                 # descriptionTplt=lambda x: (
                 #    "%d term of frequency" " dependent  coefficients" % x
                 # ),
                 descriptionTplt=self._description_template,
                 # unitTplt=lambda x: "second",
                 type_match="float",
+                convert_tcb2tdb=False,
             )
         )
 
@@ -59,10 +62,9 @@ class FD(DelayComponent):
 
     def validate(self):
         super().validate()
-        FD_terms = list(self.get_prefix_mapping_component("FD").keys())
-        FD_terms.sort()
+        FD_terms = sorted(self.get_prefix_mapping_component("FD").keys())
         FD_in_order = list(range(1, max(FD_terms) + 1))
-        if not FD_terms == FD_in_order:
+        if FD_terms != FD_in_order:
             diff = list(set(FD_in_order) - set(FD_terms))
             raise MissingParameter("FD", "FD%d" % diff[0])
 
@@ -73,7 +75,7 @@ class FD(DelayComponent):
         Time Measurements, and Analysis of 37 Millisecond Pulsars, The
         Astrophysical Journal, Volume 813, Issue 1, article id. 65, 31 pp.(2015).
         Eq.(2):
-        FDdelay = sum(c_i * (log(obs_freq/1GHz))^i)
+            FD_delay = sum_i(c_i * (log(obs_freq/1GHz))^i)
         """
         tbl = toas.table
         try:

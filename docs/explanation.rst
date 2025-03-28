@@ -147,12 +147,14 @@ in, and what kind of time you're asking for::
 
 The conventional time scale for working with pulsars, and the one PINT
 uses, is Barycentric Dynamical Time (TDB). You should be aware that there
-is another time scale, not yet supported in PINT, called Barycentric
-Coordinate Time (TCB), and that because of different handling of
-relativistic corrections, it does not advance at the same rate as TDB
+is another time scale, not yet fully supported in PINT, called Barycentric
+Coordinate Time (TCB). Because of different handling of relativistic 
+corrections, the TCB timescale does not advance at the same rate as TDB
 (there is also a many-second offset). TEMPO2 uses TCB by default, so
 you may encounter pulsar timing models or even measurements that use
-TCB. PINT will attempt to detect this and let you know.
+TCB. PINT provides a command line tool `tcb2tdb` to approximately convert
+TCB timing models to TDB. PINT can also optionally convert TCB timing models
+to TDB (approximately) upon read.
 
 Note that the need for leap seconds is because the Earth's rotation is
 somewhat erratic - no, we're not about to be thrown off, but its
@@ -164,10 +166,10 @@ website from time to time.
 
 It is also conventional to record pulsar data with reference to an
 observatory clock, usually a maser, that may drift with respect to
-International Atomic Time (TAI_). Usually GPS is used to track the
-deviations of this observatory clock and record them in a file. PINT
-also needs up-to-date versions of these observatory clock correction files
-to produce accurate results.
+International Atomic Time (TAI_). Usually, GPS is used to track the
+deviations of this observatory clock and these deviations are recorded in a file
+known as a clock file. PINT also needs up-to-date versions of these observatory 
+clock correction files to produce accurate results.
 
 Even more detail about how PINT handles time scales is available on the github
 wiki_.
@@ -213,12 +215,90 @@ The total DM and dispersion slope predicted by a given timing model (:class:`pin
 for a given set of TOAs (:class:`pint.toa.TOAs`) can be computed using :func:`pint.models.timing_model.TimingModel.total_dm`
 and :func:`pint.models.timing_model.TimingModel.total_dispersion_slope` methods respectively.
  
+Offsets in pulsar timing
+------------------------
+Offsets arise in pulsar timing models for a variety of reasons. The different types of
+offsets are listed below:
+
+Overall phase offset (PHOFF)
+''''''''''''''''''''''''''''
+The pulse phase corresponding to the TOAs are usually computed in reference to an arbitrary 
+fiducial TOA known as the TZR TOA (see :class:`pint.models.absolute_phase.AbsPhase`). Since the 
+choice of the TZR TOA is arbitrary, there can be an overall phase offset between the TZR TOA and 
+the measured TOAs. There are three ways to account for this offset: (1) subtract the weighted mean
+from the timing residuals, (2) make the TZR TOA (given by the `TZRMJD` parameter) fittable, or 
+(3) introduce a fittable phase offset parameter between measured TOAs and the TZR TOA.
+Traditionally, pulsar timing packages have opted to implicitly subtract the residual mean, and this
+is the default behavior of `PINT`. Option (2) is hard to implement because the TZR TOA may be 
+specified at any observatory, and computing the TZR phase requires the application of the clock 
+corrections. The explicit phase offset (option 3) can be invoked by adding the `PHOFF` parameter, 
+(implemented in :class:`pint.models.phase_offset.PhaseOffset`). If the explicit offset `PHOFF`
+is given, the implicit residual mean subtraction behavior will be disabled.
+
+In the pulsar ephemeris (par) file, an example `PHOFF` parameter looks like this:
+
+    `PHOFF   0.1   1   0.001`
+
+System-dependent delays (`JUMP`s)
+'''''''''''''''''''''''''''''''''
+It is very common to have TOAs for the same pulsar obtained using different observatories, 
+telescope receivers, backend systems, and data processing pipelines, especially in long-running 
+campaigns. Delays can arise between the TOAs measured using such different systems due to, among
+other reasons, instrumental delays, differences in algorithms used for RFI mitigation, folding, TOA 
+measurement etc., and the choice of different template profiles used for TOA measurement. Such 
+offsets are usually modeled using phase jumps (the `JUMP` parameter, see :class:`pint.models.jump.PhaseJump`) 
+between TOAs generated from different systems.
+
+Here are some examples for `JUMP` parameters in a par file:
+    `JUMP   -f 430_PUPPI    0.01  1   1e-5`
+    `JUMP   tel ao          0.01  1   1e-5`
+    `JUMP   mjd 55000 55100 0.01  1   1e-5`
+    `JUMP   freq 1000 1400  0.01  1   1e-5`
+
+System-dependent DM offsets (`DMJUMP`s and `FDJUMPDM`s)
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Similar to system-dependent delays, offsets can arise between wideband DM values measured using 
+different systems due to the choice of template portraits with different fiducial DMs. This is 
+usually modeled using DM jumps (the `DMJUMP` parameter, see :class:`pint.models.dispersion_model.DispersionJump`).
+This type of offset only applies to the wideband DM values and not to the wideband TOAs. 
+
+Here are some examples for `DMJUMP` parameters in a par file:
+    `DMJUMP   -f 430_PUPPI    1e-4  1   1e-5`
+    `DMJUMP   tel ao          1e-4  1   1e-5`
+    `DMJUMP   mjd 55000 55100 1e-4  1   1e-5`
+    `DMJUMP   freq 1000 1400  1e-4  1   1e-5`
+
+Similar offsets also arise in the case of narrowband TOAs. Unlike the wideband case, these offsets 
+manifest as system-dependent corrections to the DM delay. They are modeled using the `FDJUMPDM` parameters
+(see see :class:`pint.models.dispersion_model.FDJumpDM`)
+
+Here are some examples for `FDJUMPDM` parameters in a par file:
+    `FDJUMPDM   -f 430_PUPPI       1e-4  1   1e-5`
+    `FDJUMPDM   -f L-wide_PUPPI    1e-4  1   1e-5`
+
+System- and frequency-dependent offsets (`FDJUMP`s)
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+In narrowband datasets, the template profiles often do not adequately model the frequency-dependent 
+evolution of pulse profiles, resulting in a frequency-dependent artefact in the timing residuals.
+This systematic effect is usually modeled phenomenologically as a log-polynomial function of frequency 
+whose coefficients are the so-called FD parameters (see :class:`pint.models.frequency_dependent.FD`). 
+Sometimes, this effect needs to be modeled separately for different systems since different template 
+profiles will be used for each system. This is achieved through system-dependent FD parameters or `FDJUMP`s 
+(see :class:`pint.models.fdjump.FDJump`). 
+
+Here are some examples for `FDJUMP` parameters in a par file:
+    `FD1JUMP   -f L-wide_PUPPI    1e-4  1   1e-5`
+    `FD2JUMP   -f L-wide_PUPPI    1e-4  1   1e-5`
+    `FD1JUMP   -f 430_PUPPI       1e-4  1   1e-5`
+    `FD2JUMP   -f 430_PUPPI       1e-4  1   1e-5`
+
 Observatories
 -------------
 
-PINT comes with a number of defined observatories.  Those on the surface of the Earth are :class:`~pint.observatory.topo_obs.TopoObs` 
-instances.  It can also pull in observatories from ``astropy``, 
-and you can define your own.  Observatories are generally referenced when reading TOA files, but can also be accessed directly::
+PINT comes with a number of defined observatories.  Those on the surface of the Earth 
+are :class:`~pint.observatory.topo_obs.TopoObs` instances.  It can also pull in observatories 
+from ``astropy``, and you can define your own.  Observatories are generally referenced when 
+reading TOA files, but can also be accessed directly::
 
   import pint.observatory
   gbt = pint.observatory.get_observatory("gbt")  
@@ -228,7 +308,8 @@ Observatory definitions
 
 Observatory definitions are included in ``pint.config.runtimefile("observatories.json")``.  
 To see the existing names, :func:`pint.observatory.Observatory.names_and_aliases` will 
-return a dictionary giving all of the names (primary keys) and potential aliases (values).
+return a dictionary giving all of the names (primary keys) and potential aliases (values).  
+You can also find the full list at :ref:`Observatory List`.
 
 The observatory data are stored in JSON format.  A simple example is::
 
@@ -236,20 +317,30 @@ The observatory data are stored in JSON format.  A simple example is::
         "tempo_code": "1",
         "itoa_code": "GB",
         "clock_file": "time_gbt.dat",
+        "apply_gps2utc": true,
         "itrf_xyz": [
             882589.289,
             -4924872.368,
             3943729.418
         ],
-        "origin": "The Robert C. Byrd Green Bank Telescope.\nThis data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\n"
-    }
+        "fullname": "The Robert C. Byrd Green Bank Telescope",
+        "origin": "This data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\n"
+    },
 
-The observatory is defined by its name (``gbt``) and its position.  This can be given as geocentric coordinates in the 
-International_Terrestrial_Reference_System_ (ITRF) through the ``itrf_xyz`` triple (units as ``m``), or geodetic coordinates 
-(WGS84_ assumed) through ``lat``, ``lon``, ``alt`` 
-(units are ``deg`` and ``m``).  Conversion is done through Astropy_EarthLocation_.
+The observatory is defined by its name (``gbt``) and its position.  This can be given as 
+geocentric coordinates in the International_Terrestrial_Reference_System_ (ITRF) through 
+the ``itrf_xyz`` triple (units as ``m``), or geodetic coordinates (WGS84_ assumed) through 
+``lat``, ``lon``, ``alt`` (units are ``deg`` and ``m``).  Conversion is done through 
+Astropy_EarthLocation_.
 
-Other attributes are optional.  Here we have also specified the ``tempo_code`` and ``itoa_code``, and a human-readable ``origin`` string.
+The time corrections are specified by the ``clock_file`` parameter, which gives the time corrections to be 
+applied to site arrival times to get to UTC.  Usually this is done by reference to an observatory time
+standard that is tied to GPS, and so the times are in UTC(GPS).  The ``apply_gps2utc`` parameter
+is a boolean that selects whether to apply the correction from UTC(GPS) to UTC that is 
+derived from BIPM Circular T.
+
+Other attributes are optional.  Here we have also specified the ``tempo_code`` and 
+``itoa_code``, and a human-readable ``origin`` string.
 
 A more complex/complete example is::
 
@@ -262,6 +353,7 @@ A more complex/complete example is::
             "jb2gps.clk"
         ],
         "clock_fmt": "tempo2",
+        "apply_gps2utc" : true,
         "aliases": [
             "jboroach"
         ],
@@ -280,19 +372,22 @@ A more complex/complete example is::
         ]
     }
 
-Here we have included additional explicit ``aliases``, specified the clock format via ``clock_fmt``, and specified that the last entry in the 
-clock file is bogus (``bogus_last_correction``).  There are two clock files included in ``clock_file``:
+Here we have included additional explicit ``aliases``, specified the clock format via 
+``clock_fmt``, and specified that the last entry in the clock file is bogus (``bogus_last_correction``).  
+There are two clock files included in ``clock_file``:
 
 * ``jbroach2jb.clk`` (where we also specify that it is ``valid_beyond_ends``)
 * ``jb2gps.clk``
 
-These are combined to reference this particular telescope/instrument combination.  For the full set of options, see :class:`~pint.observatory.topo_obs.TopoObs`.
+These are combined to reference this particular telescope/instrument combination.  
+For the full set of options, see :class:`~pint.observatory.topo_obs.TopoObs`.
 
 
 Adding New Observatories
 ''''''''''''''''''''''''
 
-In addition to modifying ``pint.config.runtimefile("observatories.json")``, there are other ways to add new observatories.  
+In addition to modifying ``pint.config.runtimefile("observatories.json")``, there are other 
+ways to add new observatories.  
 **Make sure you define any new observatory before you load any TOAs.**
 
 1. You can define them pythonically:
@@ -302,7 +397,8 @@ In addition to modifying ``pint.config.runtimefile("observatories.json")``, ther
     import astropy.coordinates
     newobs = pint.observatory.topo_obs.TopoObs("newobs", location=astropy.coordinates.EarthLocation.of_site("keck"), origin="another way to get Keck")
 
-This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``), or a :class:`~astropy.coordinates.EarthLocation` instance.
+This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``), or a 
+:class:`~astropy.coordinates.EarthLocation` instance.
 
 2. You can include them just for the duration of your python session:
 ::
@@ -315,6 +411,7 @@ This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``)
             "tempo_code": "1",
             "itoa_code": "GB",
             "clock_file": "",
+            "apply_gps2utc": false,
             "itrf_xyz": [
                 882589.289,
                 -4924872.368,
@@ -325,14 +422,17 @@ This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``)
         }"""
     load_observatories(io.StringIO(fakeGBT), overwrite=True)
 
-Note that since we are overwriting an existing observatory (rather than defining a completely new one) we specify ``overwrite=True``.  
+Note that since we are overwriting an existing observatory (rather than defining a 
+completely new one) we specify ``overwrite=True``.  
 
-3. You can define them in a different file on disk.  If you took the JSON above and put it into a file ``/home/user/anothergbt.json``, 
+3. You can define them in a different file on disk.  If you took the JSON above and 
+put it into a file ``/home/user/anothergbt.json``, 
 you could then do::
 
     export $PINT_OBS_OVERRIDE=/home/user/anothergbt.json
 
-(or the equivalent in your shell of choice) before you start any PINT scripts.  By default this will overwrite any existing definitions.
+(or the equivalent in your shell of choice) before you start any PINT scripts.  
+By default this will overwrite any existing definitions.
 
 4. You can rely on ``astropy``.  For instance:
 ::
@@ -340,7 +440,8 @@ you could then do::
     import pint.observatory
     keck = pint.observatory.Observatory.get("keck")
 
-will find Keck.  :func:`astropy.coordinates.EarthLocation.get_site_names` will return a list of potential observatories.
+will find Keck.  :func:`astropy.coordinates.EarthLocation.get_site_names` will return a list 
+of potential observatories.
 
 .. _International_Terrestrial_Reference_System: https://en.wikipedia.org/wiki/International_Terrestrial_Reference_System_and_Frame
 .. _WGS84: https://en.wikipedia.org/wiki/World_Geodetic_System#WGS84
@@ -423,6 +524,20 @@ repository or specific versions for reproducibility, you have several options:
    overlap with any existing observatory, you should be able to create your
    custom observatory and point the clock correction files to the right place
    as above.
+
+Ephemerides
+'''''''''''
+
+JPL Solar System ephemerides (of the form ``DE*.bsp``) are typically downloaded automatically 
+and stored using ``astropy``'s data downloading and caching mechanism.  The list of URLs used for this 
+are given in :mod:`pint.solar_system_ephemerides`.  However, you can also specify a local file instead.  
+To do this, load the file explicitly with:
+::
+
+    out = pint.solar_system_ephemerides.load_kernel("de118", path=<path_to_file>)
+
+After this, you can specify the ephemeris normally when creating TOAs etc.  
+This will persist as long as the current session lasts.
 
 Structure of Pulsar Timing Data Formats
 ---------------------------------------
@@ -666,13 +781,16 @@ model and data require different calculations - narrowband (TOA-only) versus
 wideband (TOA and DM measurements) and uncorrelated errors versus correlated
 errors.
 
-The TEMPO/TEMPO2 and default PINT fitting algorithms (:class:`pint.fitter.WidebandTOAFitter` for example), leaving aside the rank-reduced case, proceed like:
+The TEMPO/TEMPO2 and default PINT fitting algorithms (:class:`pint.fitter.WidebandTOAFitter`, for example), 
+leaving aside the rank-reduced case, proceed like:
 
 1. Evaluate the model and its derivatives at the starting point :math:`x`, producing a set of residuals :math:`\delta y` and a Jacobian `M`.
 2. Compute :math:`\delta x` to minimize :math:`\left| M\delta x - \delta y \right|_C`, where :math:`\left| \cdot \right|_C` is the squared amplitude of a vector with respect to the data uncertainties/covariance :math:`C`.
 3. Update the starting point by :math:`\delta x`.
 
-TEMPO and TEMPO2 can check whether the predicted improvement of chi-squared, assuming the linear model is correct, is enough to warrant continuing; if so, they jump back to step 1 unless the maximum number of iterations is reached. PINT does not contain this check.
+TEMPO and TEMPO2 can check whether the predicted improvement of chi-squared, assuming 
+the linear model is correct, is enough to warrant continuing; if so, they jump back to 
+step 1 unless the maximum number of iterations is reached. PINT does not contain this check.
 
 This algorithm is the Gauss-Newton_algorithm_ for solving nonlinear
 least-squares problems, and even in one-complex-dimensional cases can exhibit
@@ -694,9 +812,16 @@ PINT contains a slightly more sophisticated algorithm, implemented in
 4. Evaluate the model at the starting point plus :math:`\lambda \delta x`. If this is invalid or worse than the starting point, divide :math:`\lambda` by two and repeat this step. If :math:`\lambda` is too small, accept the best point seen to date and exit without convergence.
 5. If the model improved but only slightly with :math:`\lambda=1`, exit with convergence. If the maximum number of iterations was reached, exit without convergence. Otherwise update the starting point and return to step 1.
 
-This ensures that PINT tries taking smaller steps if problems arise, and claims convergence only if a normal step worked. It does not solve the problems that arise if some parameters are nearly degenerate, enough to cause problems with the numerical linear algebra.
+This ensures that PINT tries taking smaller steps if problems arise, and claims convergence 
+only if a normal step worked. It does not solve the problems that arise if some parameters are 
+nearly degenerate, enough to cause problems with the numerical linear algebra.
 
-As a rule, this kind of problem is addressed with the Levenberg-Marquardt algorithm, which operates on the same principle of taking reduced steps when the derivative appears not to match the function, but does so in a way that also reduces issues with degenerate parameters; unfortunately it is not clear how to adapt this problem to the rank-reduced case. Nevertheless PINT contains an implementation, in :class:`pint.fitter.WidebandLMFitter`, but it does not perform as well as one might hope in practice and must be considered experimental.
+As a rule, this kind of problem is addressed with the Levenberg-Marquardt algorithm, which 
+operates on the same principle of taking reduced steps when the derivative appears not to 
+match the function, but does so in a way that also reduces issues with degenerate parameters; 
+unfortunately it is not clear how to adapt this problem to the rank-reduced case. Nevertheless, 
+PINT contains an implementation in :class:`pint.fitter.WidebandLMFitter`, but it does not perform as 
+well as one might hope in practice and must be considered experimental.
 
 .. _Gauss-Newton_algorithm: https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm
 .. _chaotic: https://en.wikipedia.org/wiki/Newton_fractal

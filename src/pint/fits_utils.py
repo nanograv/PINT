@@ -1,25 +1,31 @@
 """FITS handling functions"""
 
 import numpy as np
+from astropy.io import fits
+from erfa import DAYSEC as SECS_PER_DAY
 from loguru import logger as log
 
-from erfa import DAYSEC as SECS_PER_DAY
-
 from pint.pulsar_mjd import fortran_float
-
 
 __all__ = ["read_fits_event_mjds", "read_fits_event_mjds_tuples"]
 
 
-def read_fits_event_mjds_tuples(event_hdu, timecolumn="TIME"):
-    """Read a set of MJDs from a FITS HDU, with proper converstion of times to MJD
+def read_fits_event_mjds_tuples(
+    event_hdu: fits.hdu.BinTableHDU, timecolumn: str = "TIME"
+) -> np.ndarray:
+    """Read a set of MJDs from a FITS HDU, with proper conversion of times to MJD
 
     The FITS time format is defined here:
     https://heasarc.gsfc.nasa.gov/docs/journal/timing3.html
 
+    Parameters
+    ----------
+    event_hdu : fits.hdu.BinTableHDU
+    timecolumn : str, optional
+
     Returns
     -------
-    mjds: MJDs returned are tuples of two doubles (jd1, jd2), as use by
+    mjds: MJDs returned are tuples of two doubles (jd1, jd2), as used by
         astropy Time() objects.
 
     """
@@ -58,23 +64,29 @@ def read_fits_event_mjds_tuples(event_hdu, timecolumn="TIME"):
             )
     log.debug("MJDREF = {0}".format(MJDREF))
 
-    # Should check timecolumn units to be sure they are seconds!
-
-    # MJD = (TIMECOLUMN + TIMEZERO)/SECS_PER_DAY + MJDREF
-    mjds = np.array(
+    return np.array(
         [(MJDREF, tt) for tt in (event_dat.field(timecolumn) + TIMEZERO) / SECS_PER_DAY]
     )
 
-    return mjds
 
-
-def read_fits_event_mjds(event_hdu, timecolumn="TIME"):
-    """Read a set of MJDs from a FITS HDU, with proper converstion of times to MJD
+def read_fits_event_mjds(
+    event_hdu: fits.hdu.BinTableHDU, timecolumn: str = "TIME"
+) -> np.ndarray:
+    """Read a set of MJDs from a FITS HDU, with proper conversion of times to MJD
 
     The FITS time format is defined here:
     https://heasarc.gsfc.nasa.gov/docs/journal/timing3.html
 
     MJDs returned are double precision floats
+
+        Parameters
+    ----------
+    event_hdu : fits.hdu.BinTableHDU
+    timecolumn : str, optional
+
+    Returns
+    -------
+    mjds: np.ndarray
     """
 
     event_hdr = event_hdu.header
@@ -107,8 +119,6 @@ def read_fits_event_mjds(event_hdu, timecolumn="TIME"):
     # Should check timecolumn units to be sure they are seconds!
 
     # MJD = (TIMECOLUMN + TIMEZERO)/SECS_PER_DAY + MJDREF
-    mjds = (
+    return (
         np.array(event_dat.field(timecolumn), dtype=float) + TIMEZERO
     ) / SECS_PER_DAY + MJDREF
-
-    return mjds

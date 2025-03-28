@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 import os
 from io import StringIO
 from copy import deepcopy
@@ -104,6 +103,7 @@ def test_ftest_nb():
         value=0.0,
         units=u.Hz / u.s / u.s,
         frozen=False,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     ft = f.ftest(F2, "Spindown", remove=False)
     assert isinstance(ft["ft"], (float, bool))
@@ -112,7 +112,12 @@ def test_ftest_nb():
     assert isinstance(Ftest_dict["ft"], (float, bool))
     # Test removing parameter
     F1 = param.prefixParameter(
-        parameter_type="float", name="F1", value=0.0, units=u.Hz / u.s, frozen=False
+        parameter_type="float",
+        name="F1",
+        value=0.0,
+        units=u.Hz / u.s,
+        frozen=False,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     ft = f.ftest(F1, "Spindown", remove=True)
     assert isinstance(ft["ft"], (float, bool))
@@ -130,7 +135,12 @@ def test_ftest_wb():
     wb_f.fit_toas()
     # Parallax
     PX = param.floatParameter(
-        parameter_type="float", name="PX", value=0.0, units=u.mas, frozen=False
+        parameter_type="float",
+        name="PX",
+        value=0.0,
+        units=u.mas,
+        frozen=False,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     PX_Component = "AstrometryEcliptic"
     # A1DOT
@@ -140,14 +150,15 @@ def test_ftest_wb():
         value=0.0,
         units=ls / u.second,
         frozen=False,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     A1DOT_Component = "BinaryELL1"
     # Test adding A1DOT
     Ftest_dict = wb_f.ftest(A1DOT, A1DOT_Component, remove=False, full_output=True)
-    assert isinstance(Ftest_dict["ft"], float) or isinstance(Ftest_dict["ft"], bool)
+    assert isinstance(Ftest_dict["ft"], (float, bool))
     # Test removing parallax
     Ftest_dict = wb_f.ftest(PX, PX_Component, remove=True, full_output=True)
-    assert isinstance(Ftest_dict["ft"], float) or isinstance(Ftest_dict["ft"], bool)
+    assert isinstance(Ftest_dict["ft"], (float, bool))
 
 
 def test_fitsummary_binary():

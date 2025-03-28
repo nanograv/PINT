@@ -1,5 +1,5 @@
 import tempo_utils as t1u
-from pint.utils import longdouble2str
+from pint.pulsar_mjd import longdouble2str
 import argparse
 
 

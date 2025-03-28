@@ -67,6 +67,9 @@ binary_models = [
     ("ELL1H", pytest.raises(MissingParameter)),
     ("T2", pytest.raises(UnknownBinaryModel)),
     ("ELLL1", pytest.raises(UnknownBinaryModel)),
+    ("BTX", pytest.raises(UnknownBinaryModel)),
+    ("DDFWHE", pytest.raises(UnknownBinaryModel)),
+    ("MSS", pytest.raises(UnknownBinaryModel)),
 ]
 
 
@@ -105,7 +108,7 @@ def test_get_model_roundtrip(tmp_dir, parfile):
     try:
         m_old = get_model(parfile)
     except (ValueError, IOError, MissingParameter) as e:
-        pytest.skip("Existing code raised an exception {}".format(e))
+        pytest.skip(f"Existing code raised an exception {e}")
 
     fn = join(tmp_dir, "file.par")
     with open(fn, "w") as f:
