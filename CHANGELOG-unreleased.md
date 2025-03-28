@@ -11,6 +11,7 @@ the released changes.
 ### Changed
 - In `Residuals`, store correlated noise amplitudes instead of noise residuals. `Residuals.noise_resids` is now a `@property`.
 - Refactor `pint.fitter` to reduce code duplication
+- Changed the "number of harmonics" parameters in red noise components into `intParameter`s
 ### Added
 - Simulate correlated DM noise for wideband TOAs
     - `NoiseComponent.introduces_dm_errors` attribute

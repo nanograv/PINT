@@ -9,7 +9,7 @@ from astropy.table import Table
 import numpy as np
 from loguru import logger as log
 
-from pint.models.parameter import Parameter, floatParameter, maskParameter
+from pint.models.parameter import Parameter, floatParameter, intParameter, maskParameter
 from pint.models.timing_model import Component
 from pint.toa import TOAs
 from pint import dmu, DMconst
@@ -541,18 +541,16 @@ class PLDMNoise(CorrelatedNoiseComponent):
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNDMC",
-                units="",
                 aliases=[],
                 description="Number of DM noise frequencies.",
                 convert_tcb2tdb=False,
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNDMFLOG",
-                units="",
                 description="Number of logarithmically spaced DM noise frequencies in the basis.",
                 convert_tcb2tdb=False,
             )
@@ -703,18 +701,16 @@ class PLChromNoise(CorrelatedNoiseComponent):
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNCHROMC",
-                units="",
                 aliases=[],
                 description="Number of chromatic noise frequencies.",
                 convert_tcb2tdb=False,
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNCHROMFLOG",
-                units="",
                 description="Number of logarithmically spaced chromatic noise frequencies in the basis.",
                 convert_tcb2tdb=False,
             )
@@ -883,18 +879,16 @@ class PLRedNoise(CorrelatedNoiseComponent):
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNREDC",
-                units="",
                 aliases=[],
                 description="Number of red noise frequencies.",
                 convert_tcb2tdb=False,
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNREDFLOG",
-                units="",
                 description="Number of logarithmically spaced red noise frequencies in the basis.",
                 convert_tcb2tdb=False,
             )
