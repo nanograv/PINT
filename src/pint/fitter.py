@@ -1416,8 +1416,6 @@ class DownhillGLSFitter(DownhillFitter):
             noise_ampls = {}
             ntmpar = self.model.ntmpar
             for comp in noise_dims:
-                # The first column of designmatrix is "offset", add 1 to match
-                # the indices of noise designmatrix
                 p0 = noise_dims[comp][0] + ntmpar
                 p1 = p0 + noise_dims[comp][1]
                 noise_ampls[comp] = (self.current_state.xhat / self.current_state.norm)[
@@ -1450,22 +1448,6 @@ class WidebandState(ModelState):
 
     @cached_property
     def M_params_units_norm(self):
-        # Define the linear system
-        # d_matrix = combine_design_matrices_by_quantity(
-        #     [
-        #         DesignMatrixMaker("toa", u.s)(
-        #             self.fitter.toas, self.model, self.model.free_params, offset=True
-        #         ),
-        #         DesignMatrixMaker("dm", u.pc / u.cm**3)(
-        #             self.fitter.toas, self.model, self.model.free_params, offset=True
-        #         ),
-        #     ]
-        # )
-        # M, params, units = (
-        #     d_matrix.matrix,
-        #     d_matrix.derivative_params,
-        #     d_matrix.param_units,
-        # )
         M, params, units, _ = self.model.wideband_designmatrix(self.fitter.toas)
 
         if not self.full_cov:
@@ -1554,11 +1536,6 @@ class WidebandState(ModelState):
     @cached_property
     def xhat(self):
         return self.U_s_Vt_xhat[3]
-
-    # @cached_property
-    # def step(self):
-    #     # compute absolute estimates, normalized errors, covariance matrix
-    #     return self.xhat / self.norm
 
     @cached_property
     def step(self):
@@ -1804,8 +1781,6 @@ class WLSFitter(Fitter):
                 params,
                 (threshold if threshold is not None else 1e-14 * max(M.shape)),
             )
-
-            # errs = np.sqrt(np.diag(Sigma)) / fac
 
             errors = np.sqrt(np.diag(Sigma))
 
