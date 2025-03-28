@@ -117,6 +117,8 @@ def test_wideband_fitting_with_dmgp():
         TNDMAMP -13         
         TNDMGAM 3
         TNDMC   15
+        TNDMFLOG 4
+        TNDMFLOG_FACTOR 2
         TZRMJD  50000
         TZRSITE ssb
         TZRFRQ  1400
@@ -136,7 +138,7 @@ def test_wideband_fitting_with_dmgp():
     )
 
     ntmpar = len(m.free_params)
-    nharms = int(m.TNDMC.value)
+    nharms = int(m.TNDMC.value) + int(m.TNDMFLOG.value)
 
     assert m.designmatrix(t)[0].shape == (ntoas, ntmpar)
     assert m.noise_model_designmatrix(t).shape == (ntoas, 2 * nharms)
