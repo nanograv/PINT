@@ -13,7 +13,7 @@ from loguru import logger as log
 import pint.fitter
 import pint.residuals
 import pint.toa
-from pint.models.noise_model import NoiseComponent
+import pint.models
 from pint.observatory import bipm_default, get_observatory
 from pint.types import file_like, time_like
 
@@ -29,7 +29,7 @@ __all__ = [
 
 def zero_residuals(
     ts: pint.toa.TOAs,
-    model: pint.models.timing_model.TimingModel,
+    model: pint.models.TimingModel,
     *,
     subtract_mean: bool = True,
     maxiter: int = 10,
@@ -75,7 +75,7 @@ def zero_residuals(
 
 
 def get_fake_toa_clock_versions(
-    model: pint.models.timing_model.TimingModel,
+    model: pint.models.TimingModel,
     include_bipm: bool = False,
 ) -> dict:
     """Get the clock settings (corrections, etc) for fake TOAs
@@ -125,7 +125,7 @@ def get_fake_toa_clock_versions(
 
 def make_fake_toas(
     ts: pint.toa.TOAs,
-    model: pint.models.timing_model.TimingModel,
+    model: pint.models.TimingModel,
     add_noise: bool = False,
     add_correlated_noise: bool = False,
     name: str = "fake",
@@ -161,19 +161,44 @@ def make_fake_toas(
     `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
     """
     tsim = deepcopy(ts)
+
     zero_residuals(tsim, model, subtract_mean=subtract_mean)
+
+    dms = model.total_dm(tsim)
+    delays = np.zeros(len(tsim)) << u.s
+
+    # Add white noise including EFAC and EQUAD
+    # This will be 0 if add_noise is False.
+    delays += (
+        model.scaled_toa_uncertainty(tsim)
+        * np.random.normal(size=len(tsim))
+        * int(add_noise)
+    )
 
     if add_correlated_noise:
         U = model.noise_model_designmatrix(tsim)
         b = model.noise_model_basis_weight(tsim)
-        corrn = (U @ (b**0.5 * np.random.normal(size=len(b)))) << u.s
-        tsim.adjust_TOAs(time.TimeDelta(corrn))
+        a = np.random.normal(size=len(b))
+        delays += (U @ (b**0.5 * a)) << u.s
 
-    if add_noise:
-        # this function will include EFAC and EQUAD
-        err = model.scaled_toa_uncertainty(tsim) * np.random.normal(size=len(tsim))
-        # Add the actual TOA noise
-        tsim.adjust_TOAs(time.TimeDelta(err))
+        if tsim.wideband:
+            # Correlated noise contribution to wideband DMs
+            Ud = model.noise_model_dm_designmatrix(tsim)
+            dms += (Ud @ (b**0.5 * a)) << pint.dmu
+
+    tsim.adjust_TOAs(time.TimeDelta(delays))
+
+    if tsim.wideband:
+        # White noise in wideband DMs
+        dms += (
+            model.scaled_dm_uncertainty(tsim)
+            * np.random.normal(size=len(tsim))
+            * int(add_noise)
+        )
+
+        # Set wideband DMs
+        for f, dm in zip(tsim.table["flags"], dms):
+            f["pp_dm"] = str(dm.to_value(pint.dmu))
 
     for f in tsim.table["flags"]:
         f["name"] = name
@@ -182,7 +207,7 @@ def make_fake_toas(
 
 
 def update_fake_dms(
-    model: pint.models.timing_model.TimingModel,
+    model: pint.models.TimingModel,
     ts: pint.toa.TOAs,
     dm_error: u.Quantity,
     add_noise: bool,
@@ -354,9 +379,10 @@ def make_fake_toas_uniform(
     )
 
     if wideband:
-        ts = update_fake_dms(
-            model, ts, wideband_dm_error, add_noise, add_correlated_noise
-        )
+        dm_errors = wideband_dm_error * np.ones(len(ts))
+        for f, dme in zip(ts.table["flags"], dm_errors):
+            f["pp_dme"] = str(dme.to_value(pint.dmu))
+            f["pp_dm"] = str(0.0)
 
     return make_fake_toas(
         ts,
@@ -484,9 +510,10 @@ def make_fake_toas_fromMJDs(
     )
 
     if wideband:
-        ts = update_fake_dms(
-            model, ts, wideband_dm_error, add_noise, add_correlated_noise
-        )
+        dm_errors = wideband_dm_error * np.ones(len(ts))
+        for f, dme in zip(ts.table["flags"], dm_errors):
+            f["pp_dme"] = str(dme.to_value(pint.dmu))
+            f["pp_dm"] = str(0.0)
 
     return make_fake_toas(
         ts,
@@ -534,10 +561,6 @@ def make_fake_toas_fromtim(
     :func:`make_fake_toas`
     """
     ts = pint.toa.get_TOAs(timfile, model=model)
-
-    if ts.is_wideband():
-        dm_errors = ts.get_dm_errors()
-        ts = update_fake_dms(model, ts, dm_errors, add_noise, add_correlated_noise)
 
     return make_fake_toas(
         ts,
