@@ -11,6 +11,7 @@ the released changes.
 ### Changed
 - In `Residuals`, store correlated noise amplitudes instead of noise residuals. `Residuals.noise_resids` is now a `@property`.
 - Refactor `pint.fitter` to reduce code duplication
+- Moved the functionality of `update_fake_dms()` to `make_fake_toas()` (required for correctly simulating DM noise)
 ### Added
 - Simulate correlated DM noise for wideband TOAs
 - Type hints in `pint.models.timing_model`
