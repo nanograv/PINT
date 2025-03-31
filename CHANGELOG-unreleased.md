@@ -21,7 +21,7 @@ the released changes.
 - Abstract base classes for noise components -- `WhiteNoiseComponent` and `CorrelatedNoiseComponent`
 - Changed `NoiseComponent.introduces_correlated_errors` into a `@property`
 - `get_dm_noise_basis()` and `get_wideband_noise_basis()` methods in `CorrelatedNoiseComponent`
-- New methods in `TimingModel` -- `wideband_covariance_matrix()`, `scaled_wideband_uncertainty()`, `noise_model_wideband_designmatrix()`, `full_designmatrix()`, `full_wideband_designmatrix()`, `full_basis_weight()`, `dm_designmatrix()`, `wideband_designmatrix()`
+- New methods in `TimingModel` -- `wideband_covariance_matrix()`, `scaled_wideband_uncertainty()`, `noise_model_dm_designmatrix`, `noise_model_wideband_designmatrix()`, `full_designmatrix()`, `full_wideband_designmatrix()`, `full_basis_weight()`, `dm_designmatrix()`, `wideband_designmatrix()`
 ### Fixed
 - Shape of `Fitter.resids.noise_ampls` (it was wrong before due to bad indexing)
 - Made `TimingModel.is_binary()` more robust.
