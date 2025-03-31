@@ -6,7 +6,7 @@ import pytest
 from pint.config import examplefile
 from pint.models import get_model_and_toas, get_model
 from pint.models.timing_model import Component
-from pint.models.noise_model import NoiseComponent
+from pint.models.noise_model import CorrelatedNoiseComponent, NoiseComponent
 from pint.simulation import make_fake_toas_uniform
 from io import StringIO
 
@@ -17,9 +17,7 @@ noise_component_labels = [
 correlated_noise_component_labels = [
     cl
     for cl, c in Component.component_types.items()
-    if issubclass(c, NoiseComponent)
-    and hasattr(c, "introduces_correlated_errors")
-    and c.introduces_correlated_errors
+    if issubclass(c, CorrelatedNoiseComponent)
 ]
 
 
@@ -65,7 +63,7 @@ def test_introduces_correlated_errors(component_label):
 
     component = Component.component_types[component_label]
     assert hasattr(component, "introduces_correlated_errors") and isinstance(
-        component.introduces_correlated_errors, bool
+        component().introduces_correlated_errors, bool
     )
 
 
