@@ -1753,6 +1753,22 @@ class TimingModel:
         result = [nf(toas)[0] for nf in self.basis_funcs]
         return np.hstack(result)
 
+    def noise_model_dm_designmatrix(self, toas: TOAs) -> np.ndarray:
+        """Returns the design/basis matrix for all noise components for wideband DMs.
+        Returns None if no correlated noise component is present. Non-zero elements
+        correspond to DM noise."""
+        return (
+            np.hstack(
+                [
+                    nc.get_dm_noise_basis(toas)
+                    for nc in self.NoiseComponent_list
+                    if nc.introduces_correlated_errors
+                ]
+            )
+            if self.has_correlated_errors
+            else None
+        )
+
     def noise_model_wideband_designmatrix(self, toas: TOAs) -> Optional[np.ndarray]:
         """Returns the design/basis matrix for all noise components for wideband TOAs.
         Includes both TOA and DM partial derivatives. Returns None if no correlated noise
