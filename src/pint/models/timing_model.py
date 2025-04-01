@@ -1666,7 +1666,7 @@ class TimingModel:
         return N + np.dot(U * Phi[None, :], U.T) if U is not None else N
 
     def dm_covariance_matrix(self, toas: TOAs) -> np.ndarray:
-        """Get the DM covariance matrix for noise . The matrix elements have
+        """Get the DM covariance matrix for the noise model. The matrix elements have
         units of dmu^2.
 
         If there is no noise model component provided, a diagonal matrix with
@@ -1754,7 +1754,39 @@ class TimingModel:
         if len(self.basis_funcs) == 0:
             return None
         result = [nf(toas)[0] for nf in self.basis_funcs]
-        return np.hstack(list(result))
+        return np.hstack(result)
+
+    def noise_model_dm_designmatrix(self, toas: TOAs) -> np.ndarray:
+        """Returns the design/basis matrix for all noise components for wideband DMs.
+        Returns None if no correlated noise component is present. Non-zero elements
+        correspond to DM noise."""
+        return (
+            np.hstack(
+                [
+                    nc.get_dm_noise_basis(toas)
+                    for nc in self.NoiseComponent_list
+                    if nc.introduces_correlated_errors
+                ]
+            )
+            if self.has_correlated_errors
+            else None
+        )
+
+    def noise_model_wideband_designmatrix(self, toas: TOAs) -> Optional[np.ndarray]:
+        """Returns the design/basis matrix for all noise components for wideband TOAs.
+        Includes both TOA and DM partial derivatives. Returns None if no correlated noise
+        component is present."""
+        return (
+            np.hstack(
+                [
+                    nc.get_wideband_noise_basis(toas)
+                    for nc in self.NoiseComponent_list
+                    if nc.introduces_correlated_errors
+                ]
+            )
+            if self.has_correlated_errors
+            else None
+        )
 
     def full_designmatrix(
         self, toas: TOAs
