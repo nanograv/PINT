@@ -1628,6 +1628,9 @@ class TimingModel:
         """Calculate dispersion measure from all the dispersion type of components."""
         # Here we assume the unit would be the same for all the dm value function.
         # By doing so, we do not have to hard code an unit here.
+        if len(self.dm_funcs) == 0:
+            return np.zeros(len(toas)) << pint.dmu
+
         dm = self.dm_funcs[0](toas)
 
         for dm_f in self.dm_funcs[1::]:
@@ -1751,23 +1754,7 @@ class TimingModel:
         if len(self.basis_funcs) == 0:
             return None
         result = [nf(toas)[0] for nf in self.basis_funcs]
-        return np.hstack(result)
-
-    def noise_model_wideband_designmatrix(self, toas: TOAs) -> Optional[np.ndarray]:
-        """Returns the design/basis matrix for all noise components for wideband TOAs.
-        Includes both TOA and DM partial derivatives. Returns None if no correlated noise
-        component is present."""
-        return (
-            np.hstack(
-                [
-                    nc.get_wideband_noise_basis(toas)
-                    for nc in self.NoiseComponent_list
-                    if nc.introduces_correlated_errors
-                ]
-            )
-            if self.has_correlated_errors
-            else None
-        )
+        return np.hstack(list(result))
 
     def full_designmatrix(
         self, toas: TOAs

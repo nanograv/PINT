@@ -12,6 +12,7 @@ the released changes.
 - In `Residuals`, store correlated noise amplitudes instead of noise residuals. `Residuals.noise_resids` is now a `@property`.
 - Refactor `pint.fitter` to reduce code duplication
 - Changed the "number of harmonics" parameters in red noise components into `intParameter`s
+- Moved the functionality of `update_fake_dms()` to `make_fake_toas()` (required for correctly simulating DM noise)
 ### Added
 - Simulate correlated DM noise for wideband TOAs
     - `NoiseComponent.introduces_dm_errors` attribute
@@ -21,7 +22,7 @@ the released changes.
     - Abstract base classes for noise components -- `WhiteNoiseComponent` and `CorrelatedNoiseComponent`
     - Changed `NoiseComponent.introduces_correlated_errors` into a `@property`
     - `get_dm_noise_basis()` and `get_wideband_noise_basis()` methods in `CorrelatedNoiseComponent` 
-    - New methods in `TimingModel` -- `wideband_covariance_matrix()`, `scaled_wideband_uncertainty()`, `noise_model_wideband_designmatrix()`, `full_designmatrix()`, `full_wideband_designmatrix()`, `full_basis_weight()`, `dm_designmatrix()`, `wideband_designmatrix()`
+    - New methods in `TimingModel` -- `wideband_covariance_matrix()`, `scaled_wideband_uncertainty()`, `noise_model_dm_designmatrix()`, `noise_model_wideband_designmatrix()`, `full_designmatrix()`, `full_wideband_designmatrix()`, `full_basis_weight()`, `dm_designmatrix()`, `wideband_designmatrix()`
     - New method in `WidebandTOAResiduals` -- `calc_wideband_resids()`
 - Added checkbox for optional subtraction of mean in `pintk`
 - Added Log-Linear Powerlaw noise parameters to `PLRedNoise`, `PLDMNoise`, `PLChromNoise`
@@ -34,6 +35,7 @@ the released changes.
 - Fixed the noise realization indexing in `Fitter`s
 - Added missing newline in `tempo_polyco_table_writer()`
 - Proper warning in `read_polyco_file()`
+- `TimingModel.total_dm()` returns zeros when there is no dispersion component in the timing model.
 ### Removed
 - Definition of `@cached_property` to support Python<=3.7
 - The broken `data.nanograv.org` URL from the list of solar system ephemeris mirrors
