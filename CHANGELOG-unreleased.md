@@ -18,6 +18,7 @@ the released changes.
 - Added checkbox for optional subtraction of mean in `pintk`
 - Added Log-Linear Powerlaw noise parameters to `PLRedNoise`, `PLDMNoise`, `PLChromNoise`
 - `TimingModel.ntmpar` property
+- Location of NENUFAR
 ### Fixed
 - Shape of `Fitter.resids.noise_ampls` (it was wrong before due to bad indexing)
 - Made `TimingModel.is_binary()` more robust.
