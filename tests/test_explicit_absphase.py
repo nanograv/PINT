@@ -10,7 +10,7 @@ PEPOCH  50000
 """
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def fake_toas():
     m = get_model(StringIO(par))
     t = make_fake_toas_uniform(50000, 50100, 50, m, add_noise=True)
