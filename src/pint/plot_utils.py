@@ -91,11 +91,13 @@ def phaseogram(
 
     if not binned:
         if weights is None:
-            for ph in [phss, phss+1.0]:
+            for ph in [phss, phss + 1.0]:
                 ax2.scatter(ph, mjds, s=size, color="k", alpha=alpha)
         else:
-            for ph in [phss, phss+1.0]:
-                ax2.scatter(ph, mjds, s=size, c=weights, cmap="binary", edgecolors="None")
+            for ph in [phss, phss + 1.0]:
+                ax2.scatter(
+                    ph, mjds, s=size, c=weights, cmap="binary", edgecolors="None"
+                )
     else:
         profile = np.zeros(bins, dtype=np.float64)
         ntoa = 64
@@ -180,9 +182,20 @@ def phaseogram_binned(
         Phases for each photon, assumes range is [0,1)
 
     """
-    phaseogram(mjds_in,phases,weights=weights,title=title,bins=bins,
-            rotate=rotate,size=size,alpha=alpha,width=width,
-            maxphs=maxphs,plotfile=plotfile)
+    phaseogram(
+        mjds_in,
+        phases,
+        weights=weights,
+        title=title,
+        bins=bins,
+        rotate=rotate,
+        size=size,
+        alpha=alpha,
+        width=width,
+        maxphs=maxphs,
+        plotfile=plotfile,
+    )
+
 
 def plot_priors(
     model,
