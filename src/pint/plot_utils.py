@@ -123,17 +123,17 @@ def phaseogram(
 
             a.extend(profile[i] for i in range(bins))
 
-            a = np.array(a)
-            b = a.reshape(ntoa, bins)
-            c = np.hstack([b, b])
-            ax2.imshow(
-                c,
-                interpolation="nearest",
-                origin="lower",
-                cmap=plt.cm.binary,
-                extent=[0, 2.0, mjds.min().value, mjds.max().value],
-                aspect="auto",
-            )
+        a = np.array(a)
+        b = a.reshape(ntoa, bins)
+        c = np.hstack([b, b])
+        ax2.imshow(
+            c,
+            interpolation="nearest",
+            origin="lower",
+            cmap=plt.cm.binary,
+            extent=[0, 2.0, mjds.min().value, mjds.max().value],
+            aspect="auto",
+        )
 
     ax2.set_xlim([0.0, maxphs])  # show 1 or more pulses
     ax2.set_ylim([mjds.min().value, mjds.max().value])
@@ -194,6 +194,7 @@ def phaseogram_binned(
         width=width,
         maxphs=maxphs,
         plotfile=plotfile,
+        binned=True,
     )
 
 
