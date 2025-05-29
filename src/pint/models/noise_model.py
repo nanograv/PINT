@@ -629,7 +629,7 @@ class PLSWNoise(NoiseComponent):
         amp, gam = 10**self.TNSWAMP.value, self.TNSWGAM.value
         return (amp, gam, nf)
 
-    def get_noise_basis(self, toas, planetssb, sunssb, pos_t):
+    def get_noise_basis(self, toas): # planetssb, sunssb, pos_t):
         """Return a Fourier design matrix for SW DM noise.
 
         See the documentation for pl_sw_basis_weight_pair function for details."""
@@ -638,12 +638,14 @@ class PLSWNoise(NoiseComponent):
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
         nf = self.get_pl_vals()[2]
-        # get the acrhomatic Fourier design matrix
+        # get the achromatic Fourier design matrix
         Fmat = create_fourier_design_matrix(t, nf)
-        # then get the solar wind chromatic part to multiply by
-        theta, R_earth, _, _ = self.theta_impact(planetssb, sunssb, pos_t)
-        dm_sol_wind = dm_solar(1.0, theta, R_earth)
-        dt_DM = dm_sol_wind * 4.148808e3 / (freqs**2)
+        # get solar wind geometry from pint.models.solar_wind_dispersion.SolarWindDispersion
+        solar_wind_geometry = self._parent.solar_wind_geometry(toas)
+        # dispersion constant taken from Handbook of Pulsar Astronomy, eq. 4.5
+        # the cm**-3 at the end reflect the units of the GP perturbations which are solar electron number density
+        # since this is the SW DM value if n_earth = 1 cm^-3. the GP will scale it.
+        dt_DM = (solar_wind_geometry * 4.148808e3*u.MHz**2/u.pc*u.cm**3*u.s / (freqs**2) * u.cm**-3).value
 
         return Fmat * dt_DM[:, None]
 
@@ -658,7 +660,7 @@ class PLSWNoise(NoiseComponent):
         Ffreqs = get_rednoise_freqs(t, nf)
         return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
 
-    def pl_sw_basis_weight_pair(self, toas, planetssb, sunssb, pos_t):
+    def pl_sw_basis_weight_pair(self, toas):
         """Return a Fourier design matrix and power law SW DM noise weights.
 
         A Fourier design matrix contains the sine and cosine basis_functions
@@ -672,7 +674,7 @@ class PLSWNoise(NoiseComponent):
 
         """
         return (
-            self.get_noise_basis(toas, planetssb, sunssb, pos_t),
+            self.get_noise_basis(toas),
             self.get_noise_weights(toas),
         )
 
