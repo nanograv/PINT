@@ -6,28 +6,27 @@ import warnings
 from typing import Optional
 
 import astropy.constants as const
+import astropy.constants as consts
 import astropy.coordinates as coords
 import astropy.units as u
-import astropy.constants as consts
 import numpy as np
 from astropy.time import Time
-
+from erfa import ErfaWarning, pmsafe
 from loguru import logger as log
 
-from erfa import ErfaWarning, pmsafe
+import pint.toa
 from pint import ls
-from pint.types import time_like
+from pint.exceptions import MissingParameter
 from pint.models.parameter import (
     AngleParameter,
     MJDParameter,
     floatParameter,
     strParameter,
 )
-import pint.toa
 from pint.models.timing_model import DelayComponent
 from pint.pulsar_ecliptic import OBL, PulsarEcliptic
+from pint.types import time_like
 from pint.utils import add_dummy_distance, remove_dummy_distance
-from pint.exceptions import MissingParameter
 
 astropy_version = sys.modules["astropy"].__version__
 mas_yr = u.mas / u.yr

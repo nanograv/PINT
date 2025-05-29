@@ -29,9 +29,9 @@ was observing the sky at the moment a leap second was introduced.
 
 import warnings
 
-import erfa
 import astropy.time
 import astropy.units as u
+import erfa
 import numpy as np
 from astropy.time import Time
 from astropy.time.formats import TimeFormat

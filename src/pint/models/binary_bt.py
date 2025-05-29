@@ -1,27 +1,23 @@
 """The BT (Blandford & Teukolsky) model."""
 
+import astropy.constants as consts
+import astropy.units as u
 import numpy as np
-from pint.models.parameter import floatParameter
+from astropy.time import Time
+
+from pint import ls
+from pint.exceptions import MissingParameter
+from pint.models.parameter import floatParameter, prefixParameter
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries.BT_model import BTmodel
 from pint.models.stand_alone_psr_binaries.BT_piecewise import BTpiecewise
-from pint.exceptions import MissingParameter
-import astropy.units as u
-import astropy.constants as consts
-from pint import ls
-from astropy.time import Time
-from pint.models.parameter import (
-    floatParameter,
-    prefixParameter,
-)
-
 from pint.toa_select import TOASelect
 
 
 class BinaryBT(PulsarBinary):
     """Blandford and Teukolsky binary model.
 
-    This binary model is described in Blandford and Teukolshy 1976. It is
+    This binary model is described in Blandford and Teukolsky (1976). It is
     a relatively simple parametrized post-Keplerian model that does not
     support Shapiro delay calculations.
 
@@ -36,12 +32,16 @@ class BinaryBT(PulsarBinary):
     Notes
     -----
     Because PINT's binary models all support specification of multiple orbital
-    frequency derivatives FBn, this is capable of behaving like the model called
-    BTX in tempo2. The model called BTX in tempo instead supports multiple
-    (non-interacting) companions, and that is not supported here. Neither can
-    PINT accept "BTX" as an alias for this model.
+    frequency derivatives ``FBn``, this is capable of behaving like the model called
+    ``BTX`` in ``tempo2``. The model called ``BTX`` in ``tempo`` instead supports multiple
+    (non-interacting) companions, and that is not supported here.
 
-    See Blandford & Teukolsky 1976, ApJ, 205, 580.
+    References
+    ----------
+    - Blandford & Teukolsky 1976, ApJ, 205, 580 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/1976ApJ...205..580B/abstract
+
     """
 
     register = True
@@ -82,16 +82,23 @@ class BinaryBT(PulsarBinary):
 
 
 class BinaryBTPiecewise(PulsarBinary):
-    """Model implementing the BT model with piecewise orbital parameters A1X and T0X. This model lets the user specify time ranges and fit for a different piecewise orbital parameter in each time range,
-    This is a PINT pulsar binary BTPiecewise model class, a subclass of PulsarBinary.
-    It is a wrapper for stand alone BTPiecewise class defined in
-    ./stand_alone_psr_binary/BT_piecewise.py
-    The aim for this class is to connect the stand alone binary model with the PINT platform.
-    BTpiecewise special parameters, where xxxx denotes the 4-digit index of the piece:
-    T0X_xxxx Piecewise T0 values for piece
-    A1X_xxxx Piecewise A1 values for piece
-    XR1_xxxx Lower time boundary of piece
-    XR2_xxxx Upper time boundary of piece
+    """BT model with piecewise orbital parameters ``A1X`` and ``T0X``. This model lets the user specify time ranges and fit for a different piecewise orbital parameter in each time range.
+
+    ``BTpiecewise`` special parameters, where xxxx denotes the 4-digit index of the piece:
+
+        - ``T0X_xxxx``: Piecewise ``T0`` values for piece
+        - ``A1X_xxxx``: Piecewise ``A1`` values for piece
+        - ``XR1_xxxx``: Lower time boundary of piece
+        - ``XR2_xxxx``: Upper time boundary of piece
+
+    The actual calculations for this are done in
+    :class:`pint.models.stand_alone_psr_binaries.BT_piecewise.BTpiecewise`
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_bt.BinaryBTPiecewise
+
     """
 
     register = True

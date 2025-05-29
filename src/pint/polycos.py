@@ -9,9 +9,9 @@ The pulse phase and frequency at time T are then calculated as:
 
     \\Delta T = 1440(T-T_{\\rm mid})
 
-    \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+    \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
 
-    f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+    f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \\Delta T + 3 COEFF[4] \\Delta T^2  + \\ldots \\right)
 
 Examples
 --------
@@ -33,13 +33,14 @@ References
 http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
 """
 
+from collections import OrderedDict
+from warnings import warn
+
 import astropy.table as table
 import astropy.units as u
 import numpy as np
 from astropy.io import registry
 from astropy.time import Time
-from collections import OrderedDict
-
 from loguru import logger as log
 
 try:
@@ -265,9 +266,9 @@ def tempo_polyco_table_reader(filename):
 
         \\Delta T = 1440(T-T_{\\rm mid})
 
-        \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+        \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
 
-        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \\Delta T + 3 COEFF[4] \\Delta T^2  + \\ldots \\right)
 
     Parameters
     ----------
@@ -392,9 +393,9 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
 
         \\Delta T = 1440(T-T_{\\rm mid})
 
-        \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+        \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
 
-        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \\Delta T + 3 COEFF[4] \\Delta T^2  + \\ldots \\right)
 
     Parameters
     ----------
@@ -462,6 +463,9 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
                 coeff_block += "{:25.17e}".format(coeff)
                 if (i + 1) % 3 == 0:
                     coeff_block += "\n"
+
+            if not coeff_block.endswith("\n"):
+                coeff_block += "\n"
 
             f.write(line1 + line2 + coeff_block)
 
@@ -649,17 +653,20 @@ class Polycos:
         Polycos
 
         """
-        raise DeprecationWarning(
-            "Use `p=pint.polycos.Polycos.read()` rather than `p.read_polyco_file()`"
+        warn(
+            "Use `p=pint.polycos.Polycos.read()` rather than `p.read_polyco_file()`",
+            DeprecationWarning,
         )
 
         self.fileName = filename
 
         if format not in [f["format"] for f in self.polycoFormats]:
             raise ValueError(
-                "Unknown polyco file format '" + format + "'\n"
-                "Please use function 'Polyco.add_polyco_file_format()'"
-                " to register the format\n"
+                (
+                    f"Unknown polyco file format '{format}'\n"
+                    f"Please use function 'Polyco.add_polyco_file_format()'"
+                    f" to register the format\n"
+                )
             )
         else:
             self.fileFormat = format
@@ -938,7 +945,7 @@ class Polycos:
 
         .. math::
 
-            \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \\ldots
+            \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
 
         Calculation done using :meth:`pint.polycos.PolycoEntry.evalabsphase`
         """

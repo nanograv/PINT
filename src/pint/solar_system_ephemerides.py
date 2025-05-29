@@ -1,5 +1,6 @@
 """Solar system ephemeris downloading and setting support."""
 
+import contextlib
 import os
 import pathlib
 from typing import Optional, Union
@@ -7,7 +8,6 @@ from typing import Optional, Union
 import astropy.coordinates
 import astropy.units as u
 import astropy.utils.state
-import contextlib
 import numpy as np
 from astropy.utils.data import download_file
 from loguru import logger as log
@@ -21,7 +21,7 @@ ephemeris_mirrors = [
     # NOTE the JPL ftp site is disabled for our automatic builds. Instead,
     # we duplicated the JPL ftp site on the nanograv server.
     # Search nanograv server first, then the other two.
-    "https://data.nanograv.org/static/data/ephem/",
+    # "https://data.nanograv.org/static/data/ephem/",
     "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/",
     "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/",
     # DE440 is here, officially
@@ -275,7 +275,7 @@ def objPosVel(
     elif obj2.lower() == "ssb" and obj1.lower() != "ssb":
         obj1pv = objPosVel_wrt_SSB(obj1, t, ephem, path=path, link=link)
         return -obj1pv
-    elif obj2.lower() != "ssb" and obj1.lower() != "ssb":
+    elif obj2.lower() != "ssb":
         obj1pv = objPosVel_wrt_SSB(obj1, t, ephem, path=path, link=link)
         obj2pv = objPosVel_wrt_SSB(obj2, t, ephem, path=path, link=link)
         return obj2pv - obj1pv

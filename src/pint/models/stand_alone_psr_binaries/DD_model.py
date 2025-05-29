@@ -3,7 +3,6 @@
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
-from loguru import logger as log
 
 from pint import Tsun
 from pint.models.parameter import InvalidModelParameters

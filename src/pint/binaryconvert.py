@@ -6,20 +6,21 @@ Potential issues:
 
 """
 
+import copy
+from typing import List, Optional, Tuple, Union
+
 import numpy as np
 from astropy import units as u
 from astropy.time import Time
-import copy
-from uncertainties import ufloat, umath
 from loguru import logger as log
-from typing import Optional, List, Tuple, Union
+from uncertainties import ufloat, umath
 
+import pint.models
 from pint import Tsun
 from pint.models.binary_bt import BinaryBT
-from pint.models.binary_dd import BinaryDD, BinaryDDS, BinaryDDH
+from pint.models.binary_dd import BinaryDD, BinaryDDH, BinaryDDS
 from pint.models.binary_ddk import BinaryDDK
 from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
-import pint.models
 
 # output types
 # DDGR is not included as there is not a well-defined way to get a unique output

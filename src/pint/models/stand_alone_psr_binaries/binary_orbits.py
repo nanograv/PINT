@@ -3,6 +3,7 @@ import re
 import astropy.units as u
 import numpy as np
 
+from pint.models.parameter import floatParameter
 from pint.utils import taylor_horner, taylor_horner_deriv
 
 
@@ -306,8 +307,7 @@ class OrbitWaves(Orbit):
         return ORBWAVEs
 
     def _tw(self):
-        tw = self.t - self.ORBWAVE_EPOCH.value * u.d
-        return tw
+        return self.t - self.ORBWAVE_EPOCH.value * u.d
 
     def _deltaPhi(self):
         tw = self._tw()
@@ -318,9 +318,7 @@ class OrbitWaves(Orbit):
         Cwaves = waveamps[:, 0, None] * np.cos(OM * nh[:, None] * tw[None, :])
         Swaves = waveamps[:, 1, None] * np.sin(OM * nh[:, None] * tw[None, :])
 
-        delta_Phi = np.sum(Cwaves + Swaves, axis=0)
-
-        return delta_Phi
+        return np.sum(Cwaves + Swaves, axis=0)
 
     def _d_deltaPhi_dt(self):
         tw = self._tw()

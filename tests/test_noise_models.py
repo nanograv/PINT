@@ -26,9 +26,11 @@ correlated_noise_component_labels = [
 def add_DM_noise_to_model(model):
     all_components = Component.component_types
     model.add_component(all_components["PLDMNoise"](), validate=False)
-    model["TNDMAMP"].quantity = 1e-13
+    model["TNDMAMP"].quantity = -13
     model["TNDMGAM"].quantity = 1.2
     model["TNDMC"].value = 30
+    model["TNDMFLOG"].value = 4
+    model["TNDMFLOG_FACTOR"].value = 2
     model.validate()
 
 
@@ -44,9 +46,11 @@ def add_SW_noise_to_model(model):
 def add_chrom_noise_to_model(model):
     all_components = Component.component_types
     model.add_component(all_components["PLChromNoise"](), validate=False)
-    model["TNCHROMAMP"].quantity = 1e-14
+    model["TNCHROMAMP"].quantity = -14
     model["TNCHROMGAM"].quantity = 1.2
     model["TNCHROMC"].value = 30
+    model["TNCHROMFLOG"].value = 4
+    model["TNCHROMFLOG_FACTOR"].value = 2
 
     model.add_component(all_components["ChromaticCM"](), validate=False)
     model["TNCHROMIDX"].value = 4

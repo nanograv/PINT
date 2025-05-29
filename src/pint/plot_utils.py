@@ -1,9 +1,9 @@
 #!/usr/bin/env python
+import astropy
+import astropy.time
+import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
-import astropy
-import astropy.units as u
-import astropy.time
 
 __all__ = ["phaseogram", "phaseogram_binned", "plot_priors"]
 
@@ -20,11 +20,11 @@ def phaseogram(
     width=6,
     maxphs=2.0,
     plotfile=None,
+    binned=False,
 ):
     """Make a nice 2-panel phaseogram
 
-    Makes a phaseogram of photons with phases, with a point for each photon that can
-    have a transparency determined by an array of weights.
+    Makes a phaseogram of photons with phases, with a point for each photon that can have a transparency determined by an array of weights.
 
     Parameters
     ----------
@@ -33,7 +33,26 @@ def phaseogram(
         will convert Quantity or Time into days.
     phases : array
         Phases for each photon, assumes range is [0,1)
-
+    weights : array
+        A [0,1] probability weight for each photon.
+    title : string
+        The title for the upper (histogram) axis.
+    bins : integer
+        The number of bins to include in the histogram(s).
+    rotate : float
+        An optional [0,1] phase shift for display.
+    size : integer
+        The marker size for the 2-d scatter plot (if not binned).
+    alpha : float
+        If weights aren't provided, a transparency parameter.
+    width : float
+        Figure width in inches.
+    maxphs : float
+        The maximum x-range to plot.
+    plotfile : str
+        An output file name for the histogram.
+    binned : boolean
+        Either bin the 2-d portion of the plot of scatter plot each photon.
     """
     # If mjds_in is a Time() then pull out the MJD values and make a quantity
     if type(mjds_in) == astropy.time.core.Time:
@@ -69,103 +88,16 @@ def phaseogram(
         ax1.set_ylabel("Counts")
     if title is not None:
         ax1.set_title(title)
-    if weights is None:
-        ax2.scatter(phss, mjds, s=size, color="k", alpha=alpha)
-        ax2.scatter(phss + 1.0, mjds, s=size, color="k", alpha=alpha)
-    else:
-        colarray = np.array([[0.0, 0.0, 0.0, w] for w in weights])
-        ax2.scatter(phss, mjds, s=size, color=colarray)
-        ax2.scatter(phss + 1.0, mjds, s=size, color=colarray)
-    ax2.set_xlim([0.0, maxphs])  # show 1 or more pulses
-    ax2.set_ylim([mjds.min().value, mjds.max().value])
-    ax2.set_ylabel("MJD")
-    ax2.get_yaxis().get_major_formatter().set_useOffset(False)
-    ax2.get_yaxis().get_major_formatter().set_scientific(False)
-    ax2r = ax2.twinx()
-    ax2r.set_ylim([years.min(), years.max()])
-    ax2r.set_ylabel("Year")
-    ax2r.get_yaxis().get_major_formatter().set_useOffset(False)
-    ax2r.get_yaxis().get_major_formatter().set_scientific(False)
-    ax2.set_xlabel("Pulse Phase")
-    plt.tight_layout()
-    if plotfile is not None:
-        plt.savefig(plotfile)
-        plt.close()
-    else:
-        plt.show()
 
-
-def phaseogram_binned(
-    mjds_in,
-    phases,
-    weights=None,
-    title=None,
-    bins=64,
-    rotate=0.0,
-    size=5,
-    alpha=0.25,
-    width=6,
-    maxphs=2.0,
-    plotfile=None,
-):
-    """
-    Make a nice 2-panel phaseogram
-
-    Makes a binned phaseogram of photons with phases, where the contribution to each bin
-    can be determined by an array of weights.
-
-    Parameters
-    ----------
-    mjds_in : array or astropy.units.Quantity or astropy.time.Time
-        Assumes units of days if bare numerical array, otherwise
-        will convert Quantity or Time into days.
-    phases : array
-        Phases for each photon, assumes range is [0,1)
-
-    """
-    # If mjds_in is a Time() then pull out the MJD values and make a quantity
-    if type(mjds_in) == astropy.time.core.Time:
-        mjds = mjds_in.mjd * u.d
-    # If mjds_in has no units, assume days
-    elif type(mjds_in) != astropy.units.quantity.Quantity:
-        mjds = mjds_in * u.d
-    else:
-        mjds = mjds_in
-
-    years = (mjds.to(u.d).value - 51544.0) / 365.25 + 2000.0
-    phss = phases + rotate
-    phss[phss >= 1.0] -= 1.0
-    plt.figure(figsize=(width, 8))
-    ax1 = plt.subplot2grid((3, 1), (0, 0))
-    ax2 = plt.subplot2grid((3, 1), (1, 0), rowspan=2)
-    wgts = None if weights is None else np.concatenate((weights, weights))
-    h, x, p = ax1.hist(
-        np.concatenate((phss, phss + 1.0)),
-        int(maxphs * bins),
-        range=[0, maxphs],
-        weights=wgts,
-        color="k",
-        histtype="step",
-        fill=False,
-        lw=2,
-    )
-    ax1.set_xlim([0.0, maxphs])  # show 1 or more pulses
-    ax1.set_ylim([0.0, 1.1 * h.max()])
-    if weights is not None:
-        ax1.set_ylabel("Weighted Counts")
-    else:
-        ax1.set_ylabel("Counts")
-    if title is not None:
-        ax1.set_title(title)
-    SCATTER = False
-    if SCATTER:
+    if not binned:
         if weights is None:
-            ax2.scatter(phss, mjds, s=size, color="k", alpha=alpha)
-            ax2.scatter(phss + 1.0, mjds, s=size, color="k", alpha=alpha)
+            for ph in [phss, phss + 1.0]:
+                ax2.scatter(ph, mjds, s=size, color="k", alpha=alpha)
         else:
-            colarray = np.array([[0.0, 0.0, 0.0, w] for w in weights])
-            ax2.scatter(phss, mjds, s=size, color=colarray)
-            ax2.scatter(phss + 1.0, mjds, s=size, color=colarray)
+            for ph in [phss, phss + 1.0]:
+                ax2.scatter(
+                    ph, mjds, s=size, c=weights, cmap="binary", edgecolors="None"
+                )
     else:
         profile = np.zeros(bins, dtype=np.float64)
         ntoa = 64
@@ -220,6 +152,50 @@ def phaseogram_binned(
         plt.close()
     else:
         plt.show()
+
+
+def phaseogram_binned(
+    mjds_in,
+    phases,
+    weights=None,
+    title=None,
+    bins=64,
+    rotate=0.0,
+    size=5,
+    alpha=0.25,
+    width=6,
+    maxphs=2.0,
+    plotfile=None,
+):
+    """
+    Make a nice 2-panel phaseogram
+
+    Makes a binned phaseogram of photons with phases, where the contribution to each bin
+    can be determined by an array of weights.
+
+    Parameters
+    ----------
+    mjds_in : array or astropy.units.Quantity or astropy.time.Time
+        Assumes units of days if bare numerical array, otherwise
+        will convert Quantity or Time into days.
+    phases : array
+        Phases for each photon, assumes range is [0,1)
+
+    """
+    phaseogram(
+        mjds_in,
+        phases,
+        weights=weights,
+        title=title,
+        bins=bins,
+        rotate=rotate,
+        size=size,
+        alpha=alpha,
+        width=width,
+        maxphs=maxphs,
+        plotfile=plotfile,
+        binned=True,
+    )
 
 
 def plot_priors(

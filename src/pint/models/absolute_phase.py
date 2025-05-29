@@ -4,9 +4,9 @@ import astropy.units as u
 from loguru import logger as log
 
 import pint.toa as toa
+from pint.exceptions import MissingParameter
 from pint.models.parameter import MJDParameter, floatParameter, strParameter
 from pint.models.timing_model import PhaseComponent
-from pint.exceptions import MissingParameter
 
 
 class AbsPhase(PhaseComponent):

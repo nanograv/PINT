@@ -11,6 +11,8 @@ wheel>=0.29.0
 pytest>=4.3
 pytest-cov>=2.7.1
 pytest-runner>=5.1
+pytest-xdist
+pytest-rerunfailures
 flake8>=3.7
 pep8-naming>=0.8.2
 flake8-docstrings>=1.4
@@ -27,7 +29,6 @@ jupytext
 pdbpp
 tox
 pre-commit
-typed-ast>=1.5.0
 black~=24.0
 pygments
 ipython
@@ -38,4 +39,4 @@ loguru
 # click<=8.0.4
 gprof2dot
 py-cpuinfo
-pytest-xdist
+statsmodels
