@@ -700,11 +700,7 @@ class PLSWNoise(NoiseComponent):
         from the model, substituting defaults if unspecified.
         """
         n_lin = int(self.TNSWC.value) if self.TNSWC.value is not None else 100
-        n_log = (
-            int(self.TNSWFLOG.value)
-            if (self.TNSWFLOG.value is not None)
-            else None
-        )
+        n_log = int(self.TNSWFLOG.value) if (self.TNSWFLOG.value is not None) else None
         sw_log_factor = (
             self.TNSWFLOG_FACTOR.value
             if (self.TNSWFLOG_FACTOR.value is not None)
@@ -714,7 +710,7 @@ class PLSWNoise(NoiseComponent):
         f_min_ratio = 1 / (sw_log_factor**n_log) if n_log is not None else 1
 
         return amp, gam, n_lin, n_log, f_min_ratio
-    
+
     def get_time_frequencies(self, toas: TOAs) -> np.ndarray:
         """Return the frequencies of the noise model"""
 
