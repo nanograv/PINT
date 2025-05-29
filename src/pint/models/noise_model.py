@@ -729,7 +729,7 @@ class PLSWNoise(NoiseComponent):
             t, n_lin, Tspan=T, logmode=0, f_min=f_min, nlog=n_log
         )
 
-    def get_noise_basis(self, toas):  # planetssb, sunssb, pos_t):
+    def get_noise_basis(self, toas: TOAs) -> np.ndarray:
         """Return a Fourier design matrix for SW DM noise.
 
         See the documentation for pl_sw_basis_weight_pair function for details."""
