@@ -576,8 +576,6 @@ class PLDMNoise(NoiseComponent):
         freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
         fref = 1400 * u.MHz
         D = (fref.value / freqs.value) ** 2
-        nf = self.get_pl_vals()[2]
-        Fmat = create_fourier_design_matrix(t, nf)
 
         return Fmat * D[:, None]
 
@@ -624,11 +622,17 @@ class PLSWNoise(NoiseComponent):
     .. paramtable::
         :class: pint.models.noise_model.PLSWNoise
 
-    Note
-    ----
-    Ref: Lentati et al. 2014, MNRAS 437(3), 3004-3023.
-    See also: Hazboun et al. 2019 and Susurla et al. 2024.
+    References
+    ----------
+    - Lentati et al. 2014, MNRAS 437(3), 3004-3023 [1]_
+    - van Haasteren & Vallisneri, 2014, MNRAS 446(2), 1170-1174 [2]_
+    - Hazboun et al. 2022, APJ, Volume 929, Issue 1, id.39, 11 pp. [3]_
+    - Susurla et al. 2024, A&A, Volume 692, id.A18, 18 pp.[4]_
 
+    .. [1] https://ui.adsabs.harvard.edu/abs/2014MNRAS.437.3004L/abstract
+    .. [2] https://ui.adsabs.harvard.edu/abs/2015MNRAS.446.1170V/abstract
+    .. [3] https://ui.adsabs.harvard.edu/abs/2022ApJ...929...39H/abstract
+    .. [4] https://ui.adsabs.harvard.edu/abs/2024A%26A...692A..18S/abstract
     """
 
     register = True
@@ -670,26 +674,70 @@ class PLSWNoise(NoiseComponent):
                 convert_tcb2tdb=False,
             )
         )
+        self.add_param(
+            floatParameter(
+                name="TNSWFLOG",
+                units="",
+                description="Number of logarithmically solar wind frequencies in the basis.",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNSWFLOG_FACTOR",
+                units="",
+                description="Factor of the log-spaced solar wind frequencies (2 -> [1/8,1/4,1/2,...])",
+                convert_tcb2tdb=False,
+            )
+        )
 
         self.covariance_matrix_funcs += [self.pl_sw_cov_matrix]
         self.basis_funcs += [self.pl_sw_basis_weight_pair]
 
-    def get_pl_vals(self):
-        nf = int(self.TNSWC.value) if self.TNSWC.value is not None else 30
+    def get_plc_vals(self) -> Tuple[float, float, int, int, float]:
+        """
+        Retrieve power-law parameters and frequency-basis parameters
+        from the model, substituting defaults if unspecified.
+        """
+        n_lin = int(self.TNSWC.value) if self.TNSWC.value is not None else 100
+        n_log = (
+            int(self.TNSWFLOG.value)
+            if (self.TNSWFLOG.value is not None)
+            else None
+        )
+        sw_log_factor = (
+            self.TNSWFLOG_FACTOR.value
+            if (self.TNSWFLOG_FACTOR.value is not None)
+            else 2
+        )
         amp, gam = 10**self.TNSWAMP.value, self.TNSWGAM.value
-        return (amp, gam, nf)
+        f_min_ratio = 1 / (sw_log_factor**n_log) if n_log is not None else 1
+
+        return amp, gam, n_lin, n_log, f_min_ratio
+    
+    def get_time_frequencies(self, toas: TOAs) -> np.ndarray:
+        """Return the frequencies of the noise model"""
+
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        T = np.max(t) - np.min(t)
+
+        (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
+        f_min = f_min_ratio / T
+
+        return t, get_rednoise_freqs(
+            t, n_lin, Tspan=T, logmode=0, f_min=f_min, nlog=n_log
+        )
 
     def get_noise_basis(self, toas):  # planetssb, sunssb, pos_t):
         """Return a Fourier design matrix for SW DM noise.
 
         See the documentation for pl_sw_basis_weight_pair function for details."""
 
-        tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
-        nf = self.get_pl_vals()[2]
         # get the achromatic Fourier design matrix
-        Fmat = create_fourier_design_matrix(t, nf)
+        t, f = self.get_time_frequencies(toas)
+        Fmat = create_fourier_design_matrix(t, f)
         # get solar wind geometry from pint.models.solar_wind_dispersion.SolarWindDispersion
         solar_wind_geometry = self._parent.solar_wind_geometry(toas)
         # dispersion constant taken from Handbook of Pulsar Astronomy, eq. 4.5
@@ -708,36 +756,33 @@ class PLSWNoise(NoiseComponent):
 
         return Fmat * dt_DM[:, None]
 
-    def get_noise_weights(self, toas):
-        """Return power-law SW DM noise weights.
+    def get_noise_weights(self, toas: TOAs) -> np.ndarray:
+        """Return power law SW noise weights.
 
         See the documentation for pl_sw_basis_weight_pair for details."""
 
-        tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        amp, gam, nf = self.get_pl_vals()
-        Ffreqs = get_rednoise_freqs(t, nf)
-        return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
+        (amp, gam, _, _, _) = self.get_plc_vals()
+        _, f = self.get_time_frequencies(toas)
+        df = np.diff(np.concatenate([[0], f]))
 
-    def pl_sw_basis_weight_pair(self, toas):
-        """Return a Fourier design matrix and power law SW DM noise weights.
+        return powerlaw(f.repeat(2), amp, gam) * df.repeat(2)
+
+    def pl_sw_basis_weight_pair(self, toas: TOAs) -> Tuple[np.ndarray, np.ndarray]:
+        """Return a Fourier design matrix and power law SW noise weights.
 
         A Fourier design matrix contains the sine and cosine basis_functions
         in a Fourier series expansion. Here we scale the design matrix by
-        (fref/f)**2 and a solar wind geometric factor,
-        where fref = 1400 MHz to match the convention used in enterprise.
+        (fref/f)**2 and a geometric factor where fref = 1400 MHz
+        to match the convention used in enterprise.
 
         The weights used are the power-law PSD values at frequencies n/T,
-        where n is in [1, TNDMC] and T is the total observing duration of
+        where n is in [1, TNSWC] and T is the total observing duration of
         the dataset.
 
         """
-        return (
-            self.get_noise_basis(toas),
-            self.get_noise_weights(toas),
-        )
+        return (self.get_noise_basis(toas), self.get_noise_weights(toas))
 
-    def pl_sw_cov_matrix(self, toas):
+    def pl_sw_cov_matrix(self, toas: TOAs) -> np.ndarray:
         Fmat, phi = self.pl_sw_basis_weight_pair(toas)
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
