@@ -32,6 +32,15 @@ def add_DM_noise_to_model(model):
     model.validate()
 
 
+def add_SW_noise_to_model(model):
+    all_components = Component.component_types
+    model.add_component(all_components["PLSWNoise"](), validate=False)
+    model["TNSWAMP"].quantity = -12
+    model["TNSWGAM"].quantity = -2.0 # blue spectrum
+    model["TNSWC"].value = 100
+    model.validate()
+
+
 def add_chrom_noise_to_model(model):
     all_components = Component.component_types
     model.add_component(all_components["PLChromNoise"](), validate=False)
