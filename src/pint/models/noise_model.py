@@ -679,7 +679,7 @@ class PLSWNoise(NoiseComponent):
         amp, gam = 10**self.TNSWAMP.value, self.TNSWGAM.value
         return (amp, gam, nf)
 
-    def get_noise_basis(self, toas): # planetssb, sunssb, pos_t):
+    def get_noise_basis(self, toas):  # planetssb, sunssb, pos_t):
         """Return a Fourier design matrix for SW DM noise.
 
         See the documentation for pl_sw_basis_weight_pair function for details."""
@@ -695,7 +695,16 @@ class PLSWNoise(NoiseComponent):
         # dispersion constant taken from Handbook of Pulsar Astronomy, eq. 4.5
         # the cm**-3 at the end reflect the units of the GP perturbations which are solar electron number density
         # since this is the SW DM value if n_earth = 1 cm^-3. the GP will scale it.
-        dt_DM = (solar_wind_geometry * 4.148808e3*u.MHz**2/u.pc*u.cm**3*u.s / (freqs**2) * u.cm**-3).value
+        dt_DM = (
+            solar_wind_geometry
+            * 4.148808e3
+            * u.MHz**2
+            / u.pc
+            * u.cm**3
+            * u.s
+            / (freqs**2)
+            * u.cm**-3
+        ).value
 
         return Fmat * dt_DM[:, None]
 
