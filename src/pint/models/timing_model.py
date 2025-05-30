@@ -486,24 +486,35 @@ class TimingModel:
             num_components_of_type(PulsarBinary) <= 1
         ), "Model can have at most one PulsarBinary component."
 
-        from pint.models.solar_wind_dispersion import SolarWindDispersionBase
-
-        assert (
-            num_components_of_type(SolarWindDispersionBase) <= 1
-        ), "Model can have at most one solar wind dispersion component."
+        from pint.models.solar_wind_dispersion import (
+            SolarWindDispersionBase,
+            SolarWindDispersionX,
+        )
 
         from pint.models.chromatic_model import ChromaticCM
         from pint.models.cmwavex import CMWaveX
+
         from pint.models.dispersion_model import DispersionDM, DispersionDMX
         from pint.models.dmwavex import DMWaveX
+
         from pint.models.ifunc import IFunc
-        from pint.models.noise_model import PLChromNoise, PLDMNoise, PLRedNoise
+        from pint.models.noise_model import (
+            PLChromNoise,
+            PLDMNoise,
+            PLRedNoise,
+            PLSWNoise,
+        )
         from pint.models.wave import Wave
         from pint.models.wavex import WaveX
 
         if num_components_of_type((DispersionDMX, PLDMNoise, DMWaveX)) > 1:
             log.warning(
                 "DispersionDMX, PLDMNoise, and DMWaveX cannot be used together. "
+                "They are ways of modelling the same effect."
+            )
+        if num_components_of_type((SolarWindDispersionX, PLSWNoise)) > 1:
+            log.warning(
+                "SolarWindDispersionX and PLSWNoise should probably not be used together. "
                 "They are ways of modelling the same effect."
             )
         if num_components_of_type((Wave, WaveX, PLRedNoise, IFunc)) > 1:
