@@ -43,8 +43,8 @@ from pint.models.model_builder import get_model, get_model_and_toas
 from pint.models.noise_model import (
     EcorrNoise,
     PLChromNoise,
-    PLSWNoise,
     PLDMNoise,
+    PLSWNoise,
     PLRedNoise,
     ScaleToaError,
 )
