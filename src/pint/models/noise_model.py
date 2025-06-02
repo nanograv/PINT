@@ -14,7 +14,6 @@ from pint.models.timing_model import Component
 from pint.toa import TOAs
 
 
-
 class NoiseComponent(Component):
 
     introduces_dm_errors = False
