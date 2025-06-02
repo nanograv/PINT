@@ -1654,6 +1654,17 @@ class TimingModel:
         Phi = self.noise_model_basis_weight(toas)
         return N + np.dot(U * Phi[None, :], U.T) if U is not None else N
 
+    def wideband_covariance_matrix(self, toas: TOAs) -> np.ndarray:
+        """Get the (2*Ntoa x 2*Ntoa) wideband covariance matrix for noise models.
+        The top-left (Ntoa x Ntoa) block has units of s^2. The top-right and bottom-
+        left  (Ntoa x Ntoa) blocks have units of s dmu. The bottom-right block has
+        units of dmu^2.
+        """
+        N = np.diag(self.scaled_wideband_uncertainty(toas) ** 2)
+        U = self.noise_model_wideband_designmatrix(toas)
+        Phi = self.noise_model_basis_weight(toas)
+        return N + np.dot(U * Phi[None, :], U.T) if U is not None else N
+
     def dm_covariance_matrix(self, toas: TOAs) -> np.ndarray:
         """Get the DM covariance matrix for the noise model. The matrix elements have
         units of dmu^2.
