@@ -1649,13 +1649,10 @@ class TimingModel:
         If there is no noise model component provided, a diagonal matrix with
         TOAs error as diagonal element will be returned.
         """
-        result = np.zeros((len(toas), len(toas)))
-        if "ScaleToaError" not in self.components:
-            result += np.diag(toas.table["error"].quantity.to(u.s).value ** 2)
-
-        for nf in self.covariance_matrix_funcs:
-            result += nf(toas)
-        return result
+        N = np.diag(self.scaled_toa_uncertainty(toas).to_value(u.s) ** 2)
+        U = self.noise_model_designmatrix(toas)
+        Phi = self.noise_model_basis_weight(toas)
+        return N + np.dot(U * Phi[None, :], U.T) if U is not None else N
 
     def dm_covariance_matrix(self, toas: TOAs) -> np.ndarray:
         """Get the DM covariance matrix for noise models. The matrix elements have
