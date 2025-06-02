@@ -36,7 +36,7 @@ parfile_contents = """
     TNECORR -group 430_PUPPI 0.00490558
     TNRedAmp -13.3087
     TNRedGam 0.125393
-    TNRedC 14
+    TNRedC 14.0
     TNRedTspan 1
 """
 
