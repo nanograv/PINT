@@ -127,6 +127,10 @@ class TestResidualBuilding:
         assert wb_res.model is wb_res.toa.model
         assert wb_res.model is wb_res.dm.model
         assert len(wb_res.calc_wideband_resids()) == 2 * len(self.toa)
+        assert len(self.model.scaled_wideband_uncertainty(self.toa)) == 2 * len(
+            self.toa
+        )
+        assert np.all(self.model.scaled_wideband_uncertainty(self.toa) > 0)
 
 
 def test_residuals_scaled_uncertainties():
