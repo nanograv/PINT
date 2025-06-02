@@ -10,5 +10,8 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Explicitly specify the Tspan for power-law GP noise parameters (TN*TSPAN)
+- TCB <-> TDB conversion for power-law GP noise parameters.
 ### Fixed
+- TN*C parameter are now `intParameters`
 ### Removed
