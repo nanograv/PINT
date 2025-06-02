@@ -10,5 +10,6 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- PLSWNoise: a Fourier basis stochastic solar wind model. See Hazboun et al. 2022 for details.
 ### Fixed
 ### Removed
