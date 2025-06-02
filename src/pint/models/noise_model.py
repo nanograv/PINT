@@ -5,7 +5,6 @@ from typing import Callable, List, Optional, Tuple
 import warnings
 
 import astropy.units as u
-import astropy.constants as const
 from astropy.table import Table
 import numpy as np
 from loguru import logger as log
@@ -14,8 +13,6 @@ from pint.models.parameter import Parameter, floatParameter, maskParameter
 from pint.models.timing_model import Component
 from pint.toa import TOAs
 
-AU_light_sec = const.au.to("lightyear").value * u.year.to("s")  # 1 AU in light seconds
-AU_pc = const.au.to("parsec").value  # 1 AU in parsecs (for DM normalization)
 
 
 class NoiseComponent(Component):
