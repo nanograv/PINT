@@ -10,6 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Type hints in `pint.fitter`
 ### Fixed
 - Made `TimingModel.is_binary()` more robust. 
 - Bug in `Fitter.plot()`
