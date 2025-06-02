@@ -1643,7 +1643,7 @@ class TimingModel:
         return dispersion_slope(dm_tot)
 
     def toa_covariance_matrix(self, toas: TOAs) -> np.ndarray:
-        """Get the TOA covariance matrix for noise models. The matrix elements
+        """Get the TOA covariance matrix for the noise model. The matrix elements
         have units of s^2.
 
         If there is no noise model component provided, a diagonal matrix with
@@ -1655,7 +1655,7 @@ class TimingModel:
         return N + np.dot(U * Phi[None, :], U.T) if U is not None else N
 
     def dm_covariance_matrix(self, toas: TOAs) -> np.ndarray:
-        """Get the DM covariance matrix for noise models. The matrix elements have
+        """Get the DM covariance matrix for the noise model. The matrix elements have
         units of dmu^2.
 
         If there is no noise model component provided, a diagonal matrix with
