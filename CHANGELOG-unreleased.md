@@ -11,6 +11,9 @@ the released changes.
 ### Changed
 ### Added
 - `WidebandTOAResiduals.calc_wideband_resids()` and `TimingModel.scaled_wideband_uncertainty()` methods
+- New abstract base classes `WhiteNoiseComponent` and `CorrelatedNoiseComponent` (changed the type hierarchy of `NoiseComponent`s)
+- `get_dm_noise_basis()` and `get_wideband_noise_basis()` methods in `CorrelatedNoiseComponent`
+- `noise_model_dm_designmatrix()`, `noise_model_wideband_designmatrix()`, `full_wideband_designmatrix()`, `dm_designmatrix()`, `wideband_designmatrix()` methods in `TimingModel`
 ### Fixed
 - `TimingModel.total_dm()` now returns zero when no DM component is present in the model.
 - Made `TimingModel.toa_covariance_matrix()` not explicitly dependent on `ScaleToaError`
