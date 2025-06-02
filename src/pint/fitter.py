@@ -83,6 +83,7 @@ from pint.exceptions import (
 from pint.models.parameter import (
     AngleParameter,
     InvalidModelParameters,
+    Parameter,
     boolParameter,
     strParameter,
 )
@@ -529,7 +530,7 @@ class Fitter:
             raise AttributeError
 
     def get_parameter_covariance_matrix(
-        self, with_phase=False, pretty_print=False, prec=3
+        self, with_phase: bool = False, pretty_print: bool = False, prec: int = 3
     ):
         """Show the parameter covariance matrix post-fit.
 
@@ -542,7 +543,11 @@ class Fitter:
         )
 
     def get_parameter_correlation_matrix(
-        self, with_phase=False, pretty_print=False, prec=3, usecolor=True
+        self,
+        with_phase: bool = False,
+        pretty_print: bool = False,
+        prec: int = 3,
+        usecolor: bool = True,
     ):
         """Show the parameter correlation matrix post-fit.
 
@@ -555,7 +560,14 @@ class Fitter:
             "correlation", with_phase, pretty_print, prec, usecolor
         )
 
-    def ftest(self, parameter, component, remove=False, full_output=False, maxiter=1):
+    def ftest(
+        self,
+        parameter: Parameter,
+        component: str,
+        remove: bool = False,
+        full_output: bool = False,
+        maxiter: int = 1,
+    ):
         """Compare the significance of adding/removing parameters to a timing model.
 
         Parameters
@@ -1038,14 +1050,14 @@ class DownhillFitter(Fitter):
 
     def fit_toas(
         self,
-        maxiter=20,
-        noise_fit_niter=2,
-        required_chi2_decrease=1e-2,
-        max_chi2_increase=1e-2,
-        min_lambda=1e-3,
-        noisefit_method="Newton-CG",
-        compute_noise_uncertainties=True,
-        debug=False,
+        maxiter: int = 20,
+        noise_fit_niter: int = 2,
+        required_chi2_decrease: float = 1e-2,
+        max_chi2_increase: float = 1e-2,
+        min_lambda: float = 1e-3,
+        noisefit_method: str = "Newton-CG",
+        compute_noise_uncertainties: bool = True,
+        debug: bool = False,
     ):
         """Carry out a cautious downhill fit.
 
@@ -1209,7 +1221,9 @@ class DownhillFitter(Fitter):
 
 
 class WLSState(ModelState):
-    def __init__(self, fitter, model, threshold=None):
+    def __init__(
+        self, fitter: Fitter, model: TimingModel, threshold: Optional[float] = None
+    ):
         super().__init__(fitter, model)
         self.threshold = threshold
 
@@ -1271,10 +1285,10 @@ class DownhillWLSFitter(DownhillFitter):
 
     def __init__(
         self,
-        toas,
-        model,
+        toas: TOAs,
+        model: TimingModel,
         track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
-        residuals=None,
+        residuals: Optional[Residuals] = None,
     ):
         if model.has_correlated_errors:
             raise CorrelatedErrors(model)
@@ -1283,7 +1297,13 @@ class DownhillWLSFitter(DownhillFitter):
         )
         self.method = "downhill_wls"
 
-    def fit_toas(self, maxiter=10, threshold=None, debug=False, **kwargs):
+    def fit_toas(
+        self,
+        maxiter: int = 10,
+        threshold: Optional[float] = None,
+        debug: bool = False,
+        **kwargs,
+    ):
         """Fit TOAs.
 
         This is mostly implemented in
