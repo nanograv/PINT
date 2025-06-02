@@ -8,7 +8,7 @@ import astropy.units as u
 import numpy as np
 from loguru import logger as log
 
-from pint.models.parameter import Parameter, floatParameter, maskParameter
+from pint.models.parameter import Parameter, floatParameter, intParameter, maskParameter
 from pint.models.timing_model import Component
 from pint.toa import TOAs
 
@@ -489,7 +489,8 @@ class PLDMNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Amplitude of powerlaw DM noise in tempo2 format",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
@@ -497,33 +498,33 @@ class PLDMNoise(NoiseComponent):
                 name="TNDMGAM",
                 units="",
                 aliases=[],
-                description="Spectral index of powerlaw " "DM noise in tempo2 format",
-                convert_tcb2tdb=False,
+                description="Spectral index of powerlaw DM noise in tempo2 format",
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNDMC",
                 units="",
                 aliases=[],
                 description="Number of DM noise frequencies.",
-                convert_tcb2tdb=False,
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNDMFLOG",
                 units="",
                 description="Number of logarithmically spaced DM noise frequencies in the basis.",
-                convert_tcb2tdb=False,
             )
         )
         self.add_param(
             floatParameter(
                 name="TNDMFLOG_FACTOR",
                 units="",
-                description="Factor of the log-spaced DM frequencies (2 -> [1/8, 1/4, 1/2, ...])",
-                convert_tcb2tdb=False,
+                description="Factor of the log-spaced DM frequencies (2 -> [1/8, 1/4, 1/2, ...]).",
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
@@ -531,7 +532,8 @@ class PLDMNoise(NoiseComponent):
                 name="TNDMTSPAN",
                 units="year",
                 description="Time span corresponding to the fundamental frequency of the DM noise Fourier series.",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
 
@@ -664,7 +666,8 @@ class PLChromNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Amplitude of powerlaw chromatic noise in tempo2 format",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
@@ -673,24 +676,23 @@ class PLChromNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Spectral index of powerlaw chromatic noise in tempo2 format",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNCHROMC",
                 units="",
                 aliases=[],
                 description="Number of chromatic noise frequencies.",
-                convert_tcb2tdb=False,
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNCHROMFLOG",
                 units="",
                 description="Number of logarithmically spaced chromatic noise frequencies in the basis.",
-                convert_tcb2tdb=False,
             )
         )
         self.add_param(
@@ -698,7 +700,8 @@ class PLChromNoise(NoiseComponent):
                 name="TNCHROMFLOG_FACTOR",
                 units="",
                 description="Factor of the log-spaced chromatic frequencies (2 -> [1/8,1/4,1/2,...])",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
@@ -706,7 +709,8 @@ class PLChromNoise(NoiseComponent):
                 name="TNCHROMTSPAN",
                 units="year",
                 description="Time span corresponding to the fundamental frequency of the chromatic noise Fourier series.",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
 
@@ -838,7 +842,8 @@ class PLRedNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Amplitude of powerlaw red noise.",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
@@ -847,7 +852,8 @@ class PLRedNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Spectral index of powerlaw red noise.",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
 
@@ -857,7 +863,8 @@ class PLRedNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Amplitude of powerlaw red noise in tempo2 format",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
@@ -870,20 +877,18 @@ class PLRedNoise(NoiseComponent):
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNREDC",
                 units="",
                 aliases=[],
                 description="Number of red noise frequencies.",
-                convert_tcb2tdb=False,
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNREDFLOG",
                 units="",
                 description="Number of logarithmically spaced red noise frequencies in the basis.",
-                convert_tcb2tdb=False,
             )
         )
         self.add_param(
@@ -891,7 +896,8 @@ class PLRedNoise(NoiseComponent):
                 name="TNREDFLOG_FACTOR",
                 units="",
                 description="Factor of the log-spaced frequencies (2 -> [1/8,1/4,1/2,...])",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
@@ -899,7 +905,8 @@ class PLRedNoise(NoiseComponent):
                 name="TNREDTSPAN",
                 units="year",
                 description="Time span corresponding to the fundamental frequency of the achromatic red noise Fourier series.",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
 
