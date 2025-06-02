@@ -18,6 +18,7 @@
 # %%
 from pint import DMconst
 from pint.models import get_model
+from pint.noise_analysis import find_optimal_nharms
 from pint.simulation import make_fake_toas_uniform
 from pint.logging import setup as setup_log
 from pint.fitter import WLSFitter
@@ -102,7 +103,11 @@ t = make_fake_toas_uniform(
 m1 = deepcopy(m)
 m1.remove_component("PLRedNoise")
 
-nharm_opt, d_aics = find_optimal_nharms(m1, t, "WaveX", 30)
+aics, nharm_opt = find_optimal_nharms(
+    m1, t, include_components=["WaveX"], nharms_max=30
+)
+d_aics = aics - np.min(aics)
+nharm_opt = nharm_opt[0]
 
 print("Optimum no of harmonics = ", nharm_opt)
 
@@ -120,7 +125,7 @@ plt.xlabel("Number of harmonics")
 plt.ylabel("AIC - AIC$_\\min{} + 1$")
 plt.legend()
 plt.yscale("log")
-# plt.savefig("sim3-aic.pdf")
+plt.show()
 
 # %%
 # Now create a new model with the optimum number of harmonics
@@ -183,7 +188,7 @@ plt.errorbar(
 )
 plt.axvline(fyr, color="black", ls="dotted")
 plt.axhline(0, color="grey", ls="--")
-plt.ylabel("Fourier coeffs ($\mu$s)")
+plt.ylabel("Fourier coeffs ($\\mu$s)")
 plt.xscale("log")
 plt.legend(fontsize=8)
 
@@ -202,6 +207,7 @@ plt.ylabel("Spectral power (s$^2$)")
 plt.xlabel("Frequency (Hz)")
 plt.axvline(fyr, color="black", ls="dotted", label="1 yr$^{-1}$")
 plt.legend()
+plt.show()
 
 # %% [markdown]
 # Note the outlier in the 1 year^-1 bin. This is caused by the covariance with RA and DEC, which introduce a delay with the same frequency.
@@ -261,7 +267,12 @@ m1.remove_component("PLDMNoise")
 
 m2 = deepcopy(m1)
 
-nharm_opt, d_aics = find_optimal_nharms(m2, t, "DMWaveX", 30)
+aics, nharm_opt = find_optimal_nharms(
+    m2, t, include_components=["DMWaveX"], nharms_max=30
+)
+d_aics = aics - np.min(aics)
+nharm_opt = nharm_opt[0]
+
 print("Optimum no of harmonics = ", nharm_opt)
 
 # %%
@@ -275,7 +286,7 @@ plt.xlabel("Number of harmonics")
 plt.ylabel("AIC - AIC$_\\min{} + 1$")
 plt.legend()
 plt.yscale("log")
-# plt.savefig("sim3-aic.pdf")
+plt.show()
 
 # %%
 # Now create a new model with the optimum number of
@@ -353,7 +364,7 @@ plt.errorbar(
 )
 plt.axvline(fyr, color="black", ls="dotted")
 plt.axhline(0, color="grey", ls="--")
-plt.ylabel("Fourier coeffs ($\mu$s)")
+plt.ylabel("Fourier coeffs ($\\mu$s)")
 plt.xscale("log")
 plt.legend(fontsize=8)
 
@@ -372,6 +383,7 @@ plt.ylabel("Spectral power (s$^2$)")
 plt.xlabel("Frequency (Hz)")
 plt.axvline(fyr, color="black", ls="dotted", label="1 yr$^{-1}$")
 plt.legend()
+plt.show()
 
 
 # %% [markdown]

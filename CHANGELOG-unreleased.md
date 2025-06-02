@@ -9,6 +9,8 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Replaced `pint.utils.find_optimal_nharms` by a more general function `pint.noise_analysis.find_optimal_nharms` which optimizes the `Nharms` for multiple noise components simultaneously. 
+- Updated the example `rednoise-fit-example.py`
 ### Added
 ### Fixed
 ### Removed
