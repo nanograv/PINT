@@ -5,7 +5,6 @@ from typing import Callable, List, Optional, Tuple
 import warnings
 
 import astropy.units as u
-from astropy.table import Table
 import numpy as np
 from loguru import logger as log
 
@@ -523,7 +522,15 @@ class PLDMNoise(NoiseComponent):
             floatParameter(
                 name="TNDMFLOG_FACTOR",
                 units="",
-                description="Factor of the log-spaced DM frequencies (2 -> [1/8,1/4,1/2,...])",
+                description="Factor of the log-spaced DM frequencies (2 -> [1/8, 1/4, 1/2, ...])",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNDMTSPAN",
+                units="year",
+                description="Time span corresponding to the fundamental frequency of the DM noise Fourier series.",
                 convert_tcb2tdb=False,
             )
         )
@@ -553,7 +560,11 @@ class PLDMNoise(NoiseComponent):
 
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        T = np.max(t) - np.min(t)
+        T = (
+            np.max(t) - np.min(t)
+            if self.TNDMTSPAN.quantity is None
+            else self.TNDMTSPAN.quantity
+        )
 
         (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
         f_min = f_min_ratio / T
@@ -690,6 +701,14 @@ class PLChromNoise(NoiseComponent):
                 convert_tcb2tdb=False,
             )
         )
+        self.add_param(
+            floatParameter(
+                name="TNCHROMTSPAN",
+                units="year",
+                description="Time span corresponding to the fundamental frequency of the chromatic noise Fourier series.",
+                convert_tcb2tdb=False,
+            )
+        )
 
         self.covariance_matrix_funcs += [self.pl_chrom_cov_matrix]
         self.basis_funcs += [self.pl_chrom_basis_weight_pair]
@@ -720,7 +739,11 @@ class PLChromNoise(NoiseComponent):
 
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        T = np.max(t) - np.min(t)
+        T = (
+            np.max(t) - np.min(t)
+            if self.TNCHROMTSPAN.quantity is None
+            else self.TNCHROMTSPAN.quantity
+        )
 
         (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
         f_min = f_min_ratio / T
@@ -871,6 +894,14 @@ class PLRedNoise(NoiseComponent):
                 convert_tcb2tdb=False,
             )
         )
+        self.add_param(
+            floatParameter(
+                name="TNREDTSPAN",
+                units="year",
+                description="Time span corresponding to the fundamental frequency of the achromatic red noise Fourier series.",
+                convert_tcb2tdb=False,
+            )
+        )
 
         self.covariance_matrix_funcs += [self.pl_rn_cov_matrix]
         self.basis_funcs += [self.pl_rn_basis_weight_pair]
@@ -905,7 +936,11 @@ class PLRedNoise(NoiseComponent):
 
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        T = np.max(t) - np.min(t)
+        T = (
+            np.max(t) - np.min(t)
+            if self.TNREDTSPAN.quantity is None
+            else self.TNREDTSPAN.quantity
+        )
 
         (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
         f_min = f_min_ratio / T
