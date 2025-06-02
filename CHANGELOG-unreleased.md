@@ -10,6 +10,6 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
-- `WidebandTOAResiduals.calc_wideband_resids()` method
+- `WidebandTOAResiduals.calc_wideband_resids()` and `TimingModel.scaled_wideband_uncertainty()` methods
 ### Fixed
 ### Removed
