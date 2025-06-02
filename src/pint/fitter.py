@@ -1385,10 +1385,10 @@ class DownhillGLSFitter(DownhillFitter):
 
     def __init__(
         self,
-        toas,
-        model,
+        toas: TOAs,
+        model: TimingModel,
         track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
-        residuals=None,
+        residuals: Optional[Residuals] = None,
     ):
         if not model.has_correlated_errors:
             log.info(
@@ -1407,7 +1407,14 @@ class DownhillGLSFitter(DownhillFitter):
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
 
-    def fit_toas(self, maxiter=10, threshold=0, full_cov=False, debug=False, **kwargs):
+    def fit_toas(
+        self,
+        maxiter: int = 10,
+        threshold: float = 0,
+        full_cov: bool = False,
+        debug: bool = False,
+        **kwargs,
+    ):
         """Fit TOAs.
 
         This is mostly implemented in
@@ -1463,7 +1470,13 @@ class DownhillGLSFitter(DownhillFitter):
 
 
 class WidebandState(ModelState):
-    def __init__(self, fitter, model, full_cov=False, threshold=None):
+    def __init__(
+        self,
+        fitter: Fitter,
+        model: TimingModel,
+        full_cov: bool = False,
+        threshold: Optional[float] = None,
+    ):
         super().__init__(fitter, model)
         self.threshold = threshold
         self.full_cov = full_cov
@@ -1666,7 +1679,7 @@ class WidebandDownhillFitter(DownhillFitter):
         )
         self.is_wideband = True
 
-    def make_resids(self, model):
+    def make_resids(self, model: TimingModel):
         return WidebandTOAResiduals(
             self.toas,
             model,
@@ -1680,7 +1693,12 @@ class WidebandDownhillFitter(DownhillFitter):
         )
 
     def fit_toas(
-        self, maxiter=10, threshold=1e-14, full_cov=False, debug=False, **kwargs
+        self,
+        maxiter: int = 10,
+        threshold: float = 1e-14,
+        full_cov: bool = False,
+        debug: bool = False,
+        **kwargs,
     ):
         """Fit TOAs.
 
@@ -1755,7 +1773,7 @@ class PowellFitter(Fitter):
         super().__init__(toas, model, residuals=residuals, track_mode=track_mode)
         self.method = "Powell"
 
-    def fit_toas(self, maxiter=20, debug=False):
+    def fit_toas(self, maxiter: int = 20, debug: bool = False):
         """Carry out the fitting procedure."""
         # check that params of timing model have necessary components
         self.model.validate()
@@ -1809,7 +1827,9 @@ class WLSFitter(Fitter):
         )
         self.method = "weighted_least_square"
 
-    def fit_toas(self, maxiter=1, threshold=None, debug=False):
+    def fit_toas(
+        self, maxiter: int = 1, threshold: Optional[float] = None, debug: bool = False
+    ):
         """Run a linear weighted least-squared fitting method.
 
         Parameters
@@ -1914,7 +1934,13 @@ class GLSFitter(Fitter):
         )
         self.method = "generalized_least_square"
 
-    def fit_toas(self, maxiter=1, threshold=0, full_cov=False, debug=False):
+    def fit_toas(
+        self,
+        maxiter: int = 1,
+        threshold: float = 0,
+        full_cov: bool = False,
+        debug: bool = False,
+    ):
         """Run a generalized least-squares fitting method.
 
         A first attempt is made to solve the fitting problem by Cholesky
@@ -2215,7 +2241,13 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 scaled_sigmas_no_unit.append(scaled_sigma)
         return np.hstack(scaled_sigmas_no_unit)
 
-    def fit_toas(self, maxiter=1, threshold=0, full_cov=False, debug=False):
+    def fit_toas(
+        self,
+        maxiter: int = 1,
+        threshold: float = 0,
+        full_cov: bool = False,
+        debug=False,
+    ):
         """Carry out a generalized least-squares fitting procedure.
 
         The algorithm here is essentially the same as used in
