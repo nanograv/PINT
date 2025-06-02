@@ -31,7 +31,7 @@ def zero_residuals(
     ts: pint.toa.TOAs,
     model: pint.models.timing_model.TimingModel,
     *,
-    subtract_mean: bool = True,
+    subtract_mean: bool = False,
     maxiter: int = 10,
     tolerance: Optional[u.Quantity] = None,
 ):
@@ -129,7 +129,7 @@ def make_fake_toas(
     add_noise: bool = False,
     add_correlated_noise: bool = False,
     name: str = "fake",
-    subtract_mean: bool = True,
+    subtract_mean: bool = False,
 ) -> pint.toa.TOAs:
     """Make toas from an array of TOAs
 
@@ -248,7 +248,7 @@ def make_fake_toas_uniform(
     include_bipm: bool = False,
     multi_freqs_in_epoch: bool = False,
     flags: Optional[dict] = None,
-    subtract_mean: bool = True,
+    subtract_mean: bool = False,
 ) -> pint.toa.TOAs:
     """Simulate uniformly spaced TOAs.
 
@@ -382,7 +382,7 @@ def make_fake_toas_fromMJDs(
     include_bipm: bool = False,
     multi_freqs_in_epoch: bool = False,
     flags: Optional[dict] = None,
-    subtract_mean: bool = True,
+    subtract_mean: bool = False,
 ) -> pint.toa.TOAs:
     """Simulate TOAs from a list of MJDs
 
@@ -504,7 +504,7 @@ def make_fake_toas_fromtim(
     add_noise: bool = False,
     add_correlated_noise: bool = False,
     name: str = "fake",
-    subtract_mean: bool = True,
+    subtract_mean: bool = False,
 ) -> pint.toa.TOAs:
     """Simulate fake TOAs with the same times as an input tim file
 
