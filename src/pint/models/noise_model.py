@@ -1128,9 +1128,9 @@ class PLRedNoise(NoiseComponent):
         Fmat, phi = self.pl_rn_basis_weight_pair(toas)
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
+
 class SqExpDMNoise(NoiseComponent):
-    """Squared expoentential time-domain kernel for the noise covariance matrix.
-    """
+    """Squared expoentential time-domain kernel for the noise covariance matrix."""
 
     register = True
     category = "sqexp_DM_noise"
@@ -1158,7 +1158,8 @@ class SqExpDMNoise(NoiseComponent):
                 name="TNDMLOGSIG",
                 units="",
                 aliases=[],
-                description="Amplitude of time-domain DM noise"" square exponential kernel.",
+                description="Amplitude of time-domain DM noise"
+                " square exponential kernel.",
                 convert_tcb2tdb=False,
             )
         )
@@ -1167,7 +1168,8 @@ class SqExpDMNoise(NoiseComponent):
                 name="TNDMLOGELL",
                 units="",
                 aliases=[],
-                description="Charateristic length scale of square exponential"" time-domain DM noise in days.",
+                description="Charateristic length scale of square exponential"
+                " time-domain DM noise in days.",
                 convert_tcb2tdb=False,
             )
         )
@@ -1183,8 +1185,8 @@ class SqExpDMNoise(NoiseComponent):
         if self.TNDMDT.value is None:
             log.warning(
                 "TNDMDT is not set, using default value of 30 days for SqExpDMNoise"
-                )
-            dt = 30.
+            )
+            dt = 30.0
         else:
             dt = self.TNDMDT.value
 
@@ -1207,8 +1209,8 @@ class SqExpDMNoise(NoiseComponent):
         freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
 
         _, _, dt = self.get_sqexp_vals()
-        Umat, _ = linear_interp_basis(t, dt=dt*86400)
-        D = (fref.value/freqs.value)**2.
+        Umat, _ = linear_interp_basis(t, dt=dt * 86400)
+        D = (fref.value / freqs.value) ** 2.0
 
         return Umat * D[:, None]
 
@@ -1220,8 +1222,8 @@ class SqExpDMNoise(NoiseComponent):
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
 
         (log10_sigma, log10_ell, dt) = self.get_sqexp_vals()
-        _, avetoas = linear_interp_basis(t, dt=dt*86400)
- 
+        _, avetoas = linear_interp_basis(t, dt=dt * 86400)
+
         return se_dm_kernel(avetoas, log10_sigma, log10_ell)
 
     def sq_exp_dm_basis_weight_pair(self, toas: TOAs) -> Tuple[np.ndarray, np.ndarray]:
@@ -1242,6 +1244,7 @@ class SqExpDMNoise(NoiseComponent):
     def sq_exp_dm_cov_matrix(self, toas: TOAs) -> np.ndarray:
         Umat, phi = self.sq_exp_dm_basis_weight_pair(toas)
         return np.dot(Umat * phi, Umat.T)
+
 
 def get_ecorr_epochs(toas_table: np.ndarray, dt: float = 1, nmin: int = 2) -> List[int]:
     """Find only epochs with more than 1 TOA for applying ECORR."""
