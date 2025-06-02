@@ -7,6 +7,34 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 This file contains the released changes to the codebase. See CHANGELOG-unreleased.md for
 the unreleased changes. This file should only be changed while tagging a new version.
 
+## [1.1.3] 2025-04-25
+### Changed
+- In `Residuals`, store correlated noise amplitudes instead of noise residuals. `Residuals.noise_resids` is now a `@property`.
+- Refactor `pint.fitter` to reduce code duplication
+### Added
+- Simulate correlated DM noise for wideband TOAs
+- Type hints in `pint.models.timing_model`
+- `full_designmatrix()` and `full_basis_weights()` methods in `TimingModel`
+- Added checkbox for optional subtraction of mean in `pintk`
+- Added Log-Linear Powerlaw noise parameters to `PLRedNoise`, `PLDMNoise`, `PLChromNoise`
+- `TimingModel.ntmpar` property
+- Location of NENUFAR
+### Fixed
+- Shape of `Fitter.resids.noise_ampls` (it was wrong before due to bad indexing)
+- Made `TimingModel.is_binary()` more robust.
+- Correct value of (1/year) in `powerlaw()` function
+- Fixed `TestPintk`
+- Fixed the noise realization indexing in `Fitter`s
+- Added missing newline in `tempo_polyco_table_writer()`
+- Proper warning in `read_polyco_file()`
+### Removed
+- Definition of `@cached_property` to support Python<=3.7
+- The broken `data.nanograv.org` URL from the list of solar system ephemeris mirrors
+- Broken fitter class `CompositeMCMCFitter` (this fitter was added seemingly to deal with combined radio and high-energy datasets, but has since been broken for a while.)
+
+## [1.1.2] 2024-04-25
+- Mistakenly released without updated CHANGELOG. Do not use this release.
+
 ## [1.1.1] 2024-012-18
 ### Changed
 - Command line scripts now automatically do `allow_tcb` and `allow_T2` while reading par files.

@@ -6,10 +6,9 @@ Development of PINT is partially supported by the NANOGrav_ pulsar timing array 
 
 .. _NANOGrav: http://nanograv.org/
 
-If you use PINT for your work, please cite the PINT paper_ and the ASCL entry_ .
-
-.. _paper: https://doi.org/10.3847/1538-4357/abe62f
-.. _entry: http://ascl.net/1902.007
+If you use PINT for your work, please cite the PINT `paper 1 <https://doi.org/10.3847/1538-4357/abe62f>`_, 
+`paper 2 <https://doi.org/10.3847/1538-4357/ad59f7>`_, 
+and the ASCL `entry <http://ascl.net/1902.007>`_ .
 
 Contributors
 ------------
