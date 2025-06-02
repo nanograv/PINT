@@ -11,9 +11,9 @@ from astropy import time
 from loguru import logger as log
 
 import pint.fitter
+import pint.models
 import pint.residuals
 import pint.toa
-from pint.models.noise_model import NoiseComponent
 from pint.observatory import bipm_default, get_observatory
 from pint.types import file_like, time_like
 
@@ -29,7 +29,7 @@ __all__ = [
 
 def zero_residuals(
     ts: pint.toa.TOAs,
-    model: pint.models.timing_model.TimingModel,
+    model: pint.models.TimingModel,
     *,
     subtract_mean: bool = True,
     maxiter: int = 10,
@@ -75,7 +75,7 @@ def zero_residuals(
 
 
 def get_fake_toa_clock_versions(
-    model: pint.models.timing_model.TimingModel,
+    model: pint.models.TimingModel,
     include_bipm: bool = False,
 ) -> dict:
     """Get the clock settings (corrections, etc) for fake TOAs
@@ -125,7 +125,7 @@ def get_fake_toa_clock_versions(
 
 def make_fake_toas(
     ts: pint.toa.TOAs,
-    model: pint.models.timing_model.TimingModel,
+    model: pint.models.TimingModel,
     add_noise: bool = False,
     add_correlated_noise: bool = False,
     name: str = "fake",
@@ -182,7 +182,7 @@ def make_fake_toas(
 
 
 def update_fake_dms(
-    model: pint.models.timing_model.TimingModel,
+    model: pint.models.TimingModel,
     ts: pint.toa.TOAs,
     dm_error: u.Quantity,
     add_noise: bool,
@@ -235,7 +235,7 @@ def make_fake_toas_uniform(
     startMJD: time_like,
     endMJD: time_like,
     ntoas: int,
-    model: pint.models.timing_model.TimingModel,
+    model: pint.models.TimingModel,
     fuzz: u.Quantity = 0,
     freq: u.Quantity = 1400 * u.MHz,
     obs: str = "GBT",
@@ -370,7 +370,7 @@ def make_fake_toas_uniform(
 
 def make_fake_toas_fromMJDs(
     MJDs: time_like,
-    model: pint.models.timing_model.TimingModel,
+    model: pint.models.TimingModel,
     freq: u.Quantity = 1400 * u.MHz,
     obs: str = "GBT",
     error: u.Quantity = 1 * u.us,
@@ -500,7 +500,7 @@ def make_fake_toas_fromMJDs(
 
 def make_fake_toas_fromtim(
     timfile: Union[file_like, List[str]],
-    model: pint.models.timing_model.TimingModel,
+    model: pint.models.TimingModel,
     add_noise: bool = False,
     add_correlated_noise: bool = False,
     name: str = "fake",
