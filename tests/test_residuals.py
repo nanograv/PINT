@@ -126,6 +126,7 @@ class TestResidualBuilding:
         # Make sure the model object are shared by all individual residual class
         assert wb_res.model is wb_res.toa.model
         assert wb_res.model is wb_res.dm.model
+        assert len(wb_res.calc_wideband_resids()) == 2 * len(self.toa)
 
 
 def test_residuals_scaled_uncertainties():

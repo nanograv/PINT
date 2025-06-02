@@ -10,5 +10,6 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- `WidebandTOAResiduals.calc_wideband_resids()` method
 ### Fixed
 ### Removed
