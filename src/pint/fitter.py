@@ -18,7 +18,7 @@ Fitters in use::
     Prefit residuals Wrms = 1090.5802622239905 us, Postfit residuals Wrms = 21.182038012901092 us
     Chisq = 59.574 for 56 d.o.f. for reduced Chisq of 1.064
 
-    PAR                        Prefit                  Postfit            Units
+    PAR                              Pre-fit                     Post-fit Units
     =================== ==================== ============================ =====
     PSR                           1748-2021E                              None
     EPHEM                              DE421                              None
@@ -72,9 +72,7 @@ from loguru import logger as log
 from numdifftools import Hessian
 
 import pint
-import pint.derived_quantities
 from pint.models.timing_model import TimingModel
-import pint.utils
 from pint.exceptions import (
     ConvergenceFailure,
     CorrelatedErrors,
@@ -141,7 +139,7 @@ class Fitter:
         The model the fitter is working on. Once ``fit_toas()`` has been run,
         this model will be modified to reflect the results.
     model_init : :class:`pint.models.timing_model.TimingModel`
-        The initial, prefit model.
+        The initial, pre-fit model.
 
     Parameters
     ----------
@@ -1707,7 +1705,7 @@ class WidebandDownhillFitter(DownhillFitter):
         self.full_cov = full_cov
         # FIXME: set up noise residuals et cetera
         r = super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
-        # Compute the noise realizations if possibl
+        # Compute the noise realizations if possible
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_ampls = {}
@@ -1794,7 +1792,7 @@ class WLSFitter(Fitter):
     is sufficiently close that the objective function is well-approximated by
     its derivatives, this lands very close to the correct answer. This Fitter
     can be told to repeat the process a number of times. The
-    Levenburg-Marquardt algorithm and its descendants (trust region algorithms)
+    Levenberg-Marquardt algorithm and its descendants (trust region algorithms)
     generalize this process to handle situations where the initial guess is not
     close enough that the derivatives are a good approximation.
     """
@@ -2467,7 +2465,7 @@ class LMFitter(Fitter):
             self.iterations = i
         except KeyboardInterrupt:
             # could be a finally I suppose? but I'm not sure we want to update if something
-            # seriou went wrong.
+            # serious went wrong.
             log.info("KeyboardInterrupt detected, updating Fitter")
             self.update_from_state(current_state, debug=debug)
             raise
@@ -2500,7 +2498,7 @@ class WidebandLMFitter(LMFitter):
         )
         self.is_wideband = True
 
-    def make_resids(self, model):
+    def make_resids(self, model: TimingModel):
         return WidebandTOAResiduals(
             self.toas,
             model,
@@ -2513,12 +2511,14 @@ class WidebandLMFitter(LMFitter):
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
 
-    def fit_toas(self, maxiter=50, full_cov=False, debug=False, **kwargs):
+    def fit_toas(
+        self, maxiter: int = 50, full_cov: bool = False, debug: bool = False, **kwargs
+    ):
         self.full_cov = full_cov
         # FIXME: set up noise residuals et cetera
         return super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
 
-    def update_from_state(self, state, debug=False):
+    def update_from_state(self, state: ModelState, debug: bool = False) -> None:
         # Nicer not to keep this if we have a choice, it introduces reference cycles
         self.current_state = state
         self.model = state.model
