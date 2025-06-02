@@ -12,4 +12,5 @@ the released changes.
 ### Added
 - `WidebandTOAResiduals.calc_wideband_resids()` and `TimingModel.scaled_wideband_uncertainty()` methods
 ### Fixed
+- `TimingModel.total_dm()` now returns zero when no DM component is present in the model.
 ### Removed

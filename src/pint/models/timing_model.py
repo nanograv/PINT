@@ -1628,6 +1628,9 @@ class TimingModel:
         """Calculate dispersion measure from all the dispersion type of components."""
         # Here we assume the unit would be the same for all the dm value function.
         # By doing so, we do not have to hard code an unit here.
+        if len(self.dm_funcs) == 0:
+            return np.zeros(len(toas)) << pint.dmu
+
         dm = self.dm_funcs[0](toas)
 
         for dm_f in self.dm_funcs[1::]:
