@@ -37,6 +37,7 @@ parfile_contents = """
     TNRedAmp -13.3087
     TNRedGam 0.125393
     TNRedC 14
+    TNRedTspan 1
 """
 
 
