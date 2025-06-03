@@ -9,6 +9,7 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Simulation functions no longer subtract the residual mean by default.
 ### Added
 - Explicitly specify the Tspan for power-law GP noise parameters (TN*TSPAN)
 - TCB <-> TDB conversion for power-law GP noise parameters.
