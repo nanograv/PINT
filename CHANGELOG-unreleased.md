@@ -9,6 +9,7 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Simulation functions no longer subtract the residual mean by default.
 ### Added
 - Type hints in `pint.fitter`
 ### Fixed
