@@ -5,7 +5,6 @@ from typing import Callable, List, Optional, Tuple
 import warnings
 
 import astropy.units as u
-import astropy.constants as const
 from astropy.table import Table
 import numpy as np
 from loguru import logger as log
@@ -13,9 +12,6 @@ from loguru import logger as log
 from pint.models.parameter import Parameter, floatParameter, maskParameter
 from pint.models.timing_model import Component
 from pint.toa import TOAs
-
-AU_light_sec = const.au.to("lightyear").value * u.year.to("s")  # 1 AU in light seconds
-AU_pc = const.au.to("parsec").value  # 1 AU in parsecs (for DM normalization)
 
 
 class NoiseComponent(Component):
@@ -736,18 +732,17 @@ class PLSWNoise(NoiseComponent):
         Fmat = create_fourier_design_matrix(t, f)
         # get solar wind geometry from pint.models.solar_wind_dispersion.SolarWindDispersion
         solar_wind_geometry = self._parent.solar_wind_geometry(toas)
-        # dispersion constant taken from Handbook of Pulsar Astronomy, eq. 4.5
-        # the cm**-3 at the end reflect the units of the GP perturbations which are solar electron number density
         # since this is the SW DM value if n_earth = 1 cm^-3. the GP will scale it.
         dt_DM = (
             solar_wind_geometry
-            * 4.148808e3
+            * 4.148808e3  # dispersion constant taken from Handbook of Pulsar Astronomy, eq. 4.5
             * u.MHz**2
             / u.pc
             * u.cm**3
             * u.s
             / (freqs**2)
             * u.cm**-3
+            # the cm**-3 reflect the units of the GP perturbations which are solar electron number density
         ).value
 
         return Fmat * dt_DM[:, None]
