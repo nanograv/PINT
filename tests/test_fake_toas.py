@@ -259,12 +259,14 @@ def test_fake_fromMJDs_keepmean():
         model=model,
         error=1 * u.us,
         add_noise=True,
+        subtract_mean=True,
     )
     toas2 = pint.simulation.make_fake_toas_fromMJDs(
         t2,
         model=model,
         error=1 * u.us,
         add_noise=True,
+        subtract_mean=True,
     )
     r = pint.residuals.Residuals(toas1 + toas2, model)
     toas1m = pint.simulation.make_fake_toas_fromMJDs(
