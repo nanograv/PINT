@@ -1153,8 +1153,7 @@ class RidgeDMNoise(NoiseComponent):
                 name="TNDMLOGSIG",
                 units="",
                 aliases=[],
-                description="Amplitude of time-domain DM noise"
-                " ridge kernel.",
+                description="Amplitude of time-domain DM noise" " ridge kernel.",
                 convert_tcb2tdb=False,
             )
         )
@@ -1426,7 +1425,7 @@ class QuasiPeriodicDMNoise(NoiseComponent):
             dt = self.TNDMDT.value
 
         if (
-            self.TNDMLOGP.value is not None 
+            self.TNDMLOGP.value is not None
             or self.TNDMLOGSIG.value is not None
             or self.TNDMLOGELL.value is not None
             or self.TNDMLOGGAMP.value is not None
@@ -1437,14 +1436,17 @@ class QuasiPeriodicDMNoise(NoiseComponent):
             log10_gamma_p = self.TNDMLOGGAMP.value
             log10_p = self.TNDMLOGP.value
         else:
-            raise ValueError("TNDMDT, TNDMLOGSIG, TNDMLOGELL, TNDMLOGGAMP, and TNDMLOGP must be set for QuasiPeriodicDMNoise")
+            raise ValueError(
+                "TNDMDT, TNDMLOGSIG, TNDMLOGELL, TNDMLOGGAMP, and TNDMLOGP must be set for QuasiPeriodicDMNoise"
+            )
 
         return log10_sigma, log10_ell, log10_gamma_p, log10_p, dt
 
     def get_noise_basis(self, toas: TOAs) -> np.ndarray:
         """Return a linear interpolation matrix for QuasiPeriodicDMNoise.
 
-        See the documentation for quasi_periodic_dm_basis_weight_pair function for details."""
+        See the documentation for quasi_periodic_dm_basis_weight_pair function for details.
+        """
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
 
@@ -1464,12 +1466,16 @@ class QuasiPeriodicDMNoise(NoiseComponent):
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
 
-        (log10_sigma, log10_ell, log10_gamma_p, log10_p, dt) = self.get_quasi_periodic_vals()
+        (log10_sigma, log10_ell, log10_gamma_p, log10_p, dt) = (
+            self.get_quasi_periodic_vals()
+        )
         _, avetoas = linear_interp_basis(t, dt=dt * 86400)
 
         return periodic_kernel(avetoas, log10_sigma, log10_ell, log10_gamma_p, log10_p)
 
-    def quasi_periodic_dm_basis_weight_pair(self, toas: TOAs) -> Tuple[np.ndarray, np.ndarray]:
+    def quasi_periodic_dm_basis_weight_pair(
+        self, toas: TOAs
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Return a chromatic linear interpolation basis and quasi-periodic dm noise weights.
 
         Uses chromatic linear interpolation basis in the time domain to model dispersive delays.
@@ -1477,7 +1483,7 @@ class QuasiPeriodicDMNoise(NoiseComponent):
         The periodic covariance function is a common choice for modeling
         smooth functions. It is defined as:
         .. math::
-            K(t_i, t_j) = K_{SE}(t_i, t_j) * 
+            K(t_i, t_j) = K_{SE}(t_i, t_j) *
             \\exp\\left(-\\Gamma_p\\sin\\left(\\frac{\\pi(t_i - t_j)^2}{p}\\right)^2\\right)
         where :math:`K_{SE}` is the square exponential kernel, and :math:`p` is the periodicity.
 

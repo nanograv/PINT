@@ -79,6 +79,7 @@ def model_and_toas():
     add_SW_noise_to_model(model)
     return model, toas
 
+
 @pytest.fixture()
 def time_domain_model_and_toas():
     parfile = examplefile("B1855+09_NANOGrav_9yv1.gls.par")
