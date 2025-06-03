@@ -63,7 +63,7 @@ def test_sini_fit():
     """
     m = get_model(io.StringIO(s))
     t = pint.simulation.make_fake_toas_uniform(
-        55731, 59051, 100, m, obs="axis", error=1 * u.us, add_noise=True
+        55731, 59051, 100, m, obs="gbt", error=1 * u.us, add_noise=True
     )
     f = pint.fitter.Fitter.auto(t, m)
     f.fit_toas()
