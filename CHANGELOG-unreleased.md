@@ -9,6 +9,7 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Simulation functions no longer subtract the residual mean by default.
 ### Added
 - `WidebandTOAResiduals.calc_wideband_resids()` and `TimingModel.scaled_wideband_uncertainty()` methods
 - New abstract base classes `WhiteNoiseComponent` and `CorrelatedNoiseComponent` (changed the type hierarchy of `NoiseComponent`s)
