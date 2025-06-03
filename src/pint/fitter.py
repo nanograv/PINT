@@ -60,7 +60,7 @@ To automatically select a fitter based on the properties of the data and model::
 
 import contextlib
 import copy
-from typing import List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 from warnings import warn
 from functools import cached_property
 
@@ -533,7 +533,7 @@ class Fitter:
 
     def get_parameter_covariance_matrix(
         self, with_phase: bool = False, pretty_print: bool = False, prec: int = 3
-    ) -> Union[CovarianceMatrix, CorrelationMatrix, str]:
+    ) -> Union[CovarianceMatrix, str]:
         """Show the parameter covariance matrix post-fit.
 
         If with_phase, then show and return the phase column as well.
@@ -550,7 +550,7 @@ class Fitter:
         pretty_print: bool = False,
         prec: int = 3,
         usecolor: bool = True,
-    ):
+    ) -> Union[CorrelationMatrix, str]:
         """Show the parameter correlation matrix post-fit.
 
         If with_phase, then show and return the phase column as well.
@@ -569,7 +569,7 @@ class Fitter:
         remove: bool = False,
         full_output: bool = False,
         maxiter: int = 1,
-    ):
+    ) -> Dict[str, Union[int, float, u.Quantity]]:
         """Compare the significance of adding/removing parameters to a timing model.
 
         Parameters
@@ -1060,7 +1060,7 @@ class DownhillFitter(Fitter):
         noisefit_method: str = "Newton-CG",
         compute_noise_uncertainties: bool = True,
         debug: bool = False,
-    ):
+    ) -> bool:
         """Carry out a cautious downhill fit.
 
         This tries to take the same steps as
