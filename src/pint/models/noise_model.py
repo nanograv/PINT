@@ -1174,8 +1174,8 @@ class SqExpDMNoise(NoiseComponent):
             )
         )
 
-        self.covariance_matrix_funcs += [self.pl_dm_cov_matrix]
-        self.basis_funcs += [self.pl_dm_basis_weight_pair]
+        self.covariance_matrix_funcs += [self.sq_exp_dm_cov_matrix]
+        self.basis_funcs += [self.sq_exp_dm_basis_weight_pair]
 
     def get_sqexp_vals(self) -> Tuple[float, float, float]:
         """
