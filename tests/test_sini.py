@@ -51,7 +51,7 @@ def test_sini_fit():
     OM                  346.60040313716600618 1 0.03110468777178034688
     OMDOT                                 0.0
     M2                    0.18373369620702712 1 0.19097347492091507
-    SINI                   0.8630519453652643 1 0.14457246899831822
+    SINI                                  0.2 1 0.14457246899831822
     A0                                    0.0
     B0                                    0.0
     GAMMA                                 0.0
@@ -66,5 +66,4 @@ def test_sini_fit():
         55731, 59051, 100, m, obs="axis", error=1 * u.us, add_noise=True
     )
     f = pint.fitter.Fitter.auto(t, m)
-    with contextlib.suppress(pint.fitter.MaxiterReached):
-        f.fit_toas()
+    f.fit_toas()
