@@ -946,7 +946,7 @@ class DownhillFitter(Fitter):
         max_chi2_increase=1e-2,
         min_lambda=1e-3,
         debug=False,
-    ):
+    ) -> bool:
         """Downhill fit implementation for fitting the timing model parameters.
         The `fit_toas()` calls this method iteratively to fit the timing model parameters
         while also fitting for white noise parameters.
@@ -1230,7 +1230,7 @@ class WLSState(ModelState):
         self.threshold = threshold
 
     @cached_property
-    def step(self):
+    def step(self) -> np.ndarray:
         # Define the linear system
         M, params, units = self.model.designmatrix(
             toas=self.fitter.toas, incfrozen=False, incoffset=True
@@ -1260,13 +1260,13 @@ class WLSState(ModelState):
 
         return dpars
 
-    def take_step(self, step, lambda_=1):
+    def take_step(self, step, lambda_=1) -> "WLSState":
         return WLSState(
             self.fitter, self.take_step_model(step, lambda_), threshold=self.threshold
         )
 
     @cached_property
-    def parameter_covariance_matrix(self):
+    def parameter_covariance_matrix(self) -> CovarianceMatrix:
         # make sure we compute the SVD
         self.step
         # Sigma = np.dot(Vt.T / s, U.T)
@@ -1305,7 +1305,7 @@ class DownhillWLSFitter(DownhillFitter):
         threshold: Optional[float] = None,
         debug: bool = False,
         **kwargs,
-    ):
+    ) -> bool:
         """Fit TOAs.
 
         This is mostly implemented in
@@ -1325,7 +1325,7 @@ class DownhillWLSFitter(DownhillFitter):
         self.threshold = threshold
         super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
 
-    def create_state(self):
+    def create_state(self) -> WLSState:
         return WLSState(self, self.model)
 
 
@@ -1342,7 +1342,7 @@ class GLSState(ModelState):
         self.full_cov = full_cov
 
     @cached_property
-    def step(self):
+    def step(self) -> np.ndarray:
         residuals = self.resids.time_resids.to(u.s).value
 
         # compute covariance matrices
@@ -1378,7 +1378,7 @@ class GLSState(ModelState):
 
         return self.xhat / norm
 
-    def take_step(self, step, lambda_=1):
+    def take_step(self, step, lambda_=1) -> "GLSState":
         return GLSState(
             self.fitter,
             self.take_step_model(step, lambda_),
@@ -1387,7 +1387,7 @@ class GLSState(ModelState):
         )
 
     @cached_property
-    def parameter_covariance_matrix(self):
+    def parameter_covariance_matrix(self) -> CovarianceMatrix:
         # make sure we compute the SVD
         self.step
         return CovarianceMatrix(
@@ -1424,7 +1424,7 @@ class DownhillGLSFitter(DownhillFitter):
         self.full_cov = False
         self.threshold = 0
 
-    def create_state(self):
+    def create_state(self) -> GLSState:
         return GLSState(
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
@@ -1436,7 +1436,7 @@ class DownhillGLSFitter(DownhillFitter):
         full_cov: bool = False,
         debug: bool = False,
         **kwargs,
-    ):
+    ) -> bool:
         """Fit TOAs.
 
         This is mostly implemented in
@@ -1649,17 +1649,17 @@ class WidebandState(ModelState):
         return self.U_s_Vt_xhat[3]
 
     @cached_property
-    def step(self):
+    def step(self) -> np.ndarray:
         # compute absolute estimates, normalized errors, covariance matrix
         return self.xhat / self.norm
 
-    def take_step(self, step, lambda_=1):
+    def take_step(self, step, lambda_=1) -> "WidebandState":
         return WidebandState(
             self.fitter, self.take_step_model(step, lambda_), threshold=self.threshold
         )
 
     @cached_property
-    def parameter_covariance_matrix(self):
+    def parameter_covariance_matrix(self) -> CovarianceMatrix:
         # make sure we compute the SVD
         xvar = np.dot(self.Vt.T / self.s, self.Vt)
         # is this the best place to do this?
@@ -1709,7 +1709,7 @@ class WidebandDownhillFitter(DownhillFitter):
             dm_resid_args=self.add_args.get("dm", {}),
         )
 
-    def create_state(self):
+    def create_state(self) -> WidebandState:
         return WidebandState(
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
@@ -1721,7 +1721,7 @@ class WidebandDownhillFitter(DownhillFitter):
         full_cov: bool = False,
         debug: bool = False,
         **kwargs,
-    ):
+    ) -> bool:
         """Fit TOAs.
 
         This is mostly implemented in
@@ -1795,7 +1795,7 @@ class PowellFitter(Fitter):
         super().__init__(toas, model, residuals=residuals, track_mode=track_mode)
         self.method = "Powell"
 
-    def fit_toas(self, maxiter: int = 20, debug: bool = False):
+    def fit_toas(self, maxiter: int = 20, debug: bool = False) -> float:
         """Carry out the fitting procedure."""
         # check that params of timing model have necessary components
         self.model.validate()
@@ -1851,7 +1851,7 @@ class WLSFitter(Fitter):
 
     def fit_toas(
         self, maxiter: int = 1, threshold: Optional[float] = None, debug: bool = False
-    ):
+    ) -> float:
         """Run a linear weighted least-squared fitting method.
 
         Parameters
@@ -1962,7 +1962,7 @@ class GLSFitter(Fitter):
         threshold: float = 0,
         full_cov: bool = False,
         debug: bool = False,
-    ):
+    ) -> float:
         """Run a generalized least-squares fitting method.
 
         A first attempt is made to solve the fitting problem by Cholesky
@@ -2269,7 +2269,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         threshold: float = 0,
         full_cov: bool = False,
         debug=False,
-    ):
+    ) -> float:
         """Carry out a generalized least-squares fitting procedure.
 
         The algorithm here is essentially the same as used in
@@ -2435,7 +2435,7 @@ class LMFitter(Fitter):
         threshold: float = 1e-14,
         min_lambda: float = 0.5,
         debug: bool = False,
-    ):
+    ) -> bool:
         current_state = self.create_state()
         try:
             try:
@@ -2552,7 +2552,7 @@ class WidebandLMFitter(LMFitter):
         )
         self.is_wideband = True
 
-    def make_resids(self, model: TimingModel):
+    def make_resids(self, model: TimingModel) -> WidebandTOAResiduals:
         return WidebandTOAResiduals(
             self.toas,
             model,
@@ -2560,14 +2560,14 @@ class WidebandLMFitter(LMFitter):
             dm_resid_args=self.add_args.get("dm", {}),
         )
 
-    def create_state(self):
+    def create_state(self) -> WidebandState:
         return WidebandState(
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
 
     def fit_toas(
         self, maxiter: int = 50, full_cov: bool = False, debug: bool = False, **kwargs
-    ):
+    ) -> bool:
         self.full_cov = full_cov
         # FIXME: set up noise residuals et cetera
         return super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
