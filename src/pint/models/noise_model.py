@@ -1124,6 +1124,111 @@ class PLRedNoise(NoiseComponent):
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
+class RidgeDMNoise(NoiseComponent):
+    """Ridge regression (white noise) time-domain kernel for the noise covariance matrix."""
+
+    register = True
+    category = "ridge_DM_noise"
+
+    introduces_correlated_errors = True
+    introduces_dm_errors = True
+    is_time_correlated = True
+
+    def __init__(
+        self,
+    ):
+        super().__init__()
+
+        self.add_param(
+            floatParameter(
+                name="TNDMDT",
+                units="",
+                aliases=[],
+                description="Linear interpolation time step for time-domain DM noise.",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNDMLOGSIG",
+                units="",
+                aliases=[],
+                description="Amplitude of time-domain DM noise"
+                " ridge kernel.",
+                convert_tcb2tdb=False,
+            )
+        )
+
+        self.covariance_matrix_funcs += [self.ridge_dm_cov_matrix]
+        self.basis_funcs += [self.ridge_dm_basis_weight_pair]
+
+    def get_ridge_vals(self) -> Tuple[float, float, float]:
+        """
+        Retrieve ridge regression and time-domain parameters
+        from the model, substituting defaults if unspecified.
+        """
+        if self.TNDMDT.value is None:
+            log.warning(
+                "TNDMDT is not set, using default value of 30 days for RidgeDMNoise"
+            )
+            dt = 30.0
+        else:
+            dt = self.TNDMDT.value
+
+        if self.TNDMLOGSIG.value is not None:
+            log10_sigma = self.TNDMLOGSIG.value
+        else:
+            raise ValueError("TNDMDT and TNDMSIG must be set for RidgeDMNoise")
+
+        return log10_sigma, dt
+
+    def get_noise_basis(self, toas: TOAs) -> np.ndarray:
+        """Return a chromatic linear interpolation matrix for RidgeDMNoise.
+
+        See the documentation for ridge_dm_basis_weight_pair function for details."""
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+
+        fref = 1400 * u.MHz
+        freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
+
+        _, dt = self.get_ridge_vals()
+        Umat, _ = linear_interp_basis(t, dt=dt * 86400)
+        D = (fref.value / freqs.value) ** 2.0
+
+        return Umat * D[:, None]
+
+    def get_noise_weights(self, toas: TOAs) -> np.ndarray:
+        """Return ridge regression time domain DM noise weights.
+
+        See the documentation for ridge_dm_basis_weight_pair for details."""
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+
+        log10_sigma, dt = self.get_ridge_vals()
+        _, avetoas = linear_interp_basis(t, dt=dt * 86400)
+
+        return ridge_kernel(avetoas, log10_sigma)
+
+    def ridge_dm_basis_weight_pair(self, toas: TOAs) -> Tuple[np.ndarray, np.ndarray]:
+        """Return a chromatic linear interpolation basis and ridge dm noise weights.
+
+        Uses chromatic linear interpolation basis in the time domain to model dispersive delays.
+        Time domain GPs have associated covariance functions which are priors over functions.
+        The ridge regression or white noise covariance function is a common choice for modeling
+        smooth functions. It is defined as:
+        .. math::
+            K(t_i, t_j) = \\sigma^2 * \\delta(t_i - t_j)
+        where :math:`\\sigma` is the amplitude of the noise, and :math:`\\delta(t_i - t_j)` is a delta function.
+
+        """
+        return (self.get_noise_basis(toas), self.get_noise_weights(toas))
+
+    def ridge_dm_cov_matrix(self, toas: TOAs) -> np.ndarray:
+        Umat, phi = self.ridge_dm_basis_weight_pair(toas)
+        return np.dot(Umat * phi, Umat.T)
+
+
 class SqExpDMNoise(NoiseComponent):
     """Squared expoentential time-domain kernel for the noise covariance matrix."""
 
@@ -1238,6 +1343,149 @@ class SqExpDMNoise(NoiseComponent):
 
     def sq_exp_dm_cov_matrix(self, toas: TOAs) -> np.ndarray:
         Umat, phi = self.sq_exp_dm_basis_weight_pair(toas)
+        return np.dot(Umat * phi, Umat.T)
+
+
+class QuasiPeriodicDMNoise(NoiseComponent):
+    """Quasi-periodic time-domain kernel for the noise covariance matrix."""
+
+    register = True
+    category = "qp_DM_noise"
+
+    introduces_correlated_errors = True
+    introduces_dm_errors = True
+    is_time_correlated = True
+
+    def __init__(
+        self,
+    ):
+        super().__init__()
+
+        self.add_param(
+            floatParameter(
+                name="TNDMDT",
+                units="",
+                aliases=[],
+                description="Linear interpolation time step for time-domain noise.",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNDMLOGSIG",
+                units="",
+                aliases=[],
+                description="Amplitude of time-domain DM noise"
+                " quasi-periodic kernel.",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNDMLOGELL",
+                units="",
+                aliases=[],
+                description="Charateristic length scale of quasi-periodic"
+                " time-domain DM noise in days.",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNDMLOGGAMP",
+                units="",
+                aliases=[],
+                description="Mixing parameter for quasi-periodic time-domain DM noise.",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNDMLOGP",
+                units="",
+                aliases=[],
+                description="Periodicity of quasi-periodic time-domain DM noise in years.",
+                convert_tcb2tdb=False,
+            )
+        )
+
+        self.covariance_matrix_funcs += [self.quasi_periodic_dm_cov_matrix]
+        self.basis_funcs += [self.quasi_periodic_dm_basis_weight_pair]
+
+    def get_quasi_periodic_vals(self) -> Tuple[float, float, float]:
+        """
+        Retrieve quasi-periodic and time-domain parameters
+        from the model, substituting defaults if unspecified.
+        """
+        if self.TNDMDT.value is None:
+            log.warning(
+                "TNDMDT is not set, using default value of 30 days for QuasiPeriodicDMNoise"
+            )
+            dt = 30.0
+        else:
+            dt = self.TNDMDT.value
+
+        if (
+            self.TNDMLOGP.value is not None 
+            or self.TNDMLOGSIG.value is not None
+            or self.TNDMLOGELL.value is not None
+            or self.TNDMLOGGAMP.value is not None
+            or self.TNDMLOGP.value is not None
+        ):
+            log10_sigma = self.TNDMLOGSIG.value
+            log10_ell = self.TNDMLOGELL.value
+            log10_gamma_p = self.TNDMLOGGAMP.value
+            log10_p = self.TNDMLOGP.value
+        else:
+            raise ValueError("TNDMDT, TNDMLOGSIG, TNDMLOGELL, TNDMLOGGAMP, and TNDMLOGP must be set for QuasiPeriodicDMNoise")
+
+        return log10_sigma, log10_ell, log10_gamma_p, log10_p, dt
+
+    def get_noise_basis(self, toas: TOAs) -> np.ndarray:
+        """Return a linear interpolation matrix for QuasiPeriodicDMNoise.
+
+        See the documentation for quasi_periodic_dm_basis_weight_pair function for details."""
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+
+        fref = 1400 * u.MHz
+        freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
+
+        _, _, dt = self.get_quasi_periodic_vals()
+        Umat, _ = linear_interp_basis(t, dt=dt * 86400)
+        D = (fref.value / freqs.value) ** 2.0
+
+        return Umat * D[:, None]
+
+    def get_noise_weights(self, toas: TOAs) -> np.ndarray:
+        """Return square exponential time domain DM noise weights.
+
+        See the documentation for sq_exp_dm_basis_weight_pair for details."""
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+
+        (log10_sigma, log10_ell, log10_gamma_p, log10_p, dt) = self.get_quasi_periodic_vals()
+        _, avetoas = linear_interp_basis(t, dt=dt * 86400)
+
+        return periodic_kernel(avetoas, log10_sigma, log10_ell, log10_gamma_p, log10_p)
+
+    def quasi_periodic_dm_basis_weight_pair(self, toas: TOAs) -> Tuple[np.ndarray, np.ndarray]:
+        """Return a chromatic linear interpolation basis and quasi-periodic dm noise weights.
+
+        Uses chromatic linear interpolation basis in the time domain to model dispersive delays.
+        Time domain GPs have associated covariance functions which are priors over functions.
+        The periodic covariance function is a common choice for modeling
+        smooth functions. It is defined as:
+        .. math::
+            K(t_i, t_j) = K_{SE}(t_i, t_j) * 
+            \\exp\\left(-\\Gamma_p\\sin\\left(\\frac{\\pi(t_i - t_j)^2}{p}\\right)^2\\right)
+        where :math:`K_{SE}` is the square exponential kernel, and :math:`p` is the periodicity.
+
+        """
+        return (self.get_noise_basis(toas), self.get_noise_weights(toas))
+
+    def quasi_periodic_dm_cov_matrix(self, toas: TOAs) -> np.ndarray:
+        Umat, phi = self.quasi_periodic_dm_basis_weight_pair(toas)
         return np.dot(Umat * phi, Umat.T)
 
 
@@ -1481,8 +1729,8 @@ def linear_interp_basis_freq(freqs, df=64):
     return linear_interp_basis(freqs, dt=df)
 
 
-def dmx_ridge_prior(avetoas, log10_sigma=-7):
-    """DMX-like signal with Gaussian prior"""
+def ridge_kernel(avetoas, log10_sigma=-7):
+    """Ridge regression kernel"""
     sigma = 10**log10_sigma
     return sigma**2 * np.ones_like(avetoas)
 
