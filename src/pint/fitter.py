@@ -443,7 +443,7 @@ class Fitter:
         """Write a summary of the TOAs to stdout."""
         print(self.get_summary())
 
-    def plot(self):
+    def plot(self) -> None:
         """Make residuals plot.
 
         This produces a time residual plot.
@@ -467,7 +467,7 @@ class Fitter:
         ax.grid(True)
         plt.show()
 
-    def update_model(self, chi2: Optional[float] = None):
+    def update_model(self, chi2: Optional[float] = None) -> None:
         """Update the model to reflect fit results and TOA properties.
 
         This is called by ``fit_toas`` to ensure that parameters like
@@ -494,20 +494,20 @@ class Fitter:
                 self.model["TRES"].quantity = self.resids.rms_weighted()["toa"]
                 self.model["DMRES"].quantity = self.resids.rms_weighted()["dm"]
 
-    def reset_model(self):
+    def reset_model(self) -> None:
         """Reset the current model to the initial model."""
         self.model = copy.deepcopy(self.model_init)
         self.update_resids()
         self.fitresult = []
 
-    def update_resids(self):
+    def update_resids(self) -> None:
         """Update the residuals.
 
         Run after updating a model parameter.
         """
         self.resids = self.make_resids(self.model)
 
-    def make_resids(self, model: TimingModel):
+    def make_resids(self, model: TimingModel) -> Residuals:
         return Residuals(toas=self.toas, model=model, track_mode=self.track_mode)
 
     def get_designmatrix(self):
@@ -1699,7 +1699,7 @@ class WidebandDownhillFitter(DownhillFitter):
         )
         self.is_wideband = True
 
-    def make_resids(self, model: TimingModel):
+    def make_resids(self, model: TimingModel) -> WidebandTOAResiduals:
         return WidebandTOAResiduals(
             self.toas,
             model,

@@ -2052,7 +2052,11 @@ def weighted_mean(
 
 @u.quantity_input
 def ELL1_check(
-    A1: u.cm, E: u.dimensionless_unscaled, TRES: u.us, NTOA: int, outstring=True
+    A1: u.Quantity[u.cm],
+    E: u.Quantity[u.dimensionless_unscaled],
+    TRES: u.Quantity[u.us],
+    NTOA: int,
+    outstring=True,
 ):
     """Check for validity of assumptions in ELL1 binary model
 
