@@ -60,7 +60,7 @@ To automatically select a fitter based on the properties of the data and model::
 
 import contextlib
 import copy
-from typing import List, Literal, Optional, Tuple
+from typing import List, Literal, Optional, Tuple, Union
 from warnings import warn
 from functools import cached_property
 
@@ -516,9 +516,11 @@ class Fitter:
 
     def _get_corr_cov_matrix(
         self, matrix_type, with_phase, pretty_print, prec, usecolor
-    ):
+    ) -> Union[CovarianceMatrix, CorrelationMatrix, str]:
         if hasattr(self, f"parameter_{matrix_type}_matrix"):
-            cm = getattr(self, f"parameter_{matrix_type}_matrix")
+            cm: Union[CovarianceMatrix, CorrelationMatrix] = getattr(
+                self, f"parameter_{matrix_type}_matrix"
+            )
             if not pretty_print:
                 return cm.prettyprint(prec=prec, offset=with_phase)
             else:
@@ -531,7 +533,7 @@ class Fitter:
 
     def get_parameter_covariance_matrix(
         self, with_phase: bool = False, pretty_print: bool = False, prec: int = 3
-    ):
+    ) -> Union[CovarianceMatrix, CorrelationMatrix, str]:
         """Show the parameter covariance matrix post-fit.
 
         If with_phase, then show and return the phase column as well.
