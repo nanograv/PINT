@@ -1,4 +1,4 @@
-import contextlib
+import pytest
 import io
 from astropy import units as u
 import pint.logging
@@ -51,7 +51,7 @@ def test_sini_fit():
     OM                  346.60040313716600618 1 0.03110468777178034688
     OMDOT                                 0.0
     M2                    0.18373369620702712 1 0.19097347492091507
-    SINI                                  0.2 1 0.14457246899831822
+    SINI                   0.8630519453652643 1 0.14457246899831822
     A0                                    0.0
     B0                                    0.0
     GAMMA                                 0.0
@@ -63,7 +63,7 @@ def test_sini_fit():
     """
     m = get_model(io.StringIO(s))
     t = pint.simulation.make_fake_toas_uniform(
-        55731, 56051, 1000, m, obs="gbt", error=1 * u.us, add_noise=True
+        55731, 59051, 1000, m, obs="ao", error=1 * u.us, add_noise=True
     )
     f = pint.fitter.Fitter.auto(t, m)
-    f.fit_toas()
+    f.fit_toas(maxiter=50)
