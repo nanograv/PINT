@@ -15,4 +15,7 @@ the released changes.
 - TCB <-> TDB conversion for power-law GP noise parameters.
 ### Fixed
 - TN*C parameter are now `intParameters`
+- Type hints in `pint.fitter`
+- Made `TimingModel.is_binary()` more robust. 
+- Bug in `Fitter.plot()`
 ### Removed
