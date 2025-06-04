@@ -11,8 +11,8 @@ the released changes.
 ### Changed
 - Simulation functions no longer subtract the residual mean by default.
 ### Added
+- PLSWNoise: a Fourier basis stochastic solar wind model. See Hazboun et al. 2022 for details.
 - Type hints in `pint.fitter`
 ### Fixed
-- Made `TimingModel.is_binary()` more robust. 
 - Bug in `Fitter.plot()`
 ### Removed
