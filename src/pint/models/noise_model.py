@@ -734,11 +734,7 @@ class PLSWNoise(NoiseComponent):
         # get solar wind geometry from pint.models.solar_wind_dispersion.SolarWindDispersion
         solar_wind_geometry = self._parent.solar_wind_geometry(toas)
         # since this is the SW DM value if n_earth = 1 cm^-3. the GP will scale it.
-        dt_DM = (
-            solar_wind_geometry
-            * DMconst
-            / (freqs**2)
-        ).value
+        dt_DM = (solar_wind_geometry * DMconst / (freqs**2)).value
 
         return Fmat * dt_DM[:, None]
 
