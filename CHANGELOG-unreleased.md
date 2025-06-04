@@ -11,5 +11,8 @@ the released changes.
 ### Changed
 - Simulation functions no longer subtract the residual mean by default.
 ### Added
+- Type hints in `pint.fitter`
 ### Fixed
+- Made `TimingModel.is_binary()` more robust. 
+- Bug in `Fitter.plot()`
 ### Removed
