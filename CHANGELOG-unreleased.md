@@ -19,4 +19,6 @@ the released changes.
 - `TimingModel.total_dm()` now returns zero when no DM component is present in the model.
 - Made `TimingModel.toa_covariance_matrix()` not explicitly dependent on `ScaleToaError`
 - Simulate DM noise in wideband TOAs correctly (Moved the functionality of `update_fake_dms()` to `make_fake_toas()`)
+- Type hints in `pint.fitter`
+- Bug in `Fitter.plot()`
 ### Removed
