@@ -523,7 +523,7 @@ class PLDMNoise(NoiseComponent):
             floatParameter(
                 name="TNDMFLOG_FACTOR",
                 units="",
-                description="Factor of the log-spaced DM frequencies (2 -> [1/8, 1/4, 1/2, ...]).",
+                description="Scaling factor for the log-spaced DM frequencies (2 -> [1/8, 1/4, 1/2, ...]).",
                 convert_tcb2tdb=True,
                 tcb2tdb_scale_factor=1,
             )
@@ -696,7 +696,7 @@ class PLSWNoise(NoiseComponent):
             floatParameter(
                 name="TNSWFLOG_FACTOR",
                 units="",
-                description="Factor of the log-spaced solar wind frequencies (2 -> [1/8,1/4,1/2,...])",
+                description="Scaling factor for the log-spaced solar wind frequencies (2 -> [1/8,1/4,1/2,...])",
                 convert_tcb2tdb=False,
             )
         )
@@ -862,7 +862,7 @@ class PLChromNoise(NoiseComponent):
             floatParameter(
                 name="TNCHROMFLOG_FACTOR",
                 units="",
-                description="Factor of the log-spaced chromatic frequencies (2 -> [1/8,1/4,1/2,...])",
+                description="Scaling factor for the log-spaced chromatic frequencies (2 -> [1/8,1/4,1/2,...])",
                 convert_tcb2tdb=True,
                 tcb2tdb_scale_factor=1,
             )
@@ -1058,7 +1058,7 @@ class PLRedNoise(NoiseComponent):
             floatParameter(
                 name="TNREDFLOG_FACTOR",
                 units="",
-                description="Factor of the log-spaced frequencies (2 -> [1/8,1/4,1/2,...])",
+                description="Scaling factor for the log-spaced frequencies (2 -> [1/8,1/4,1/2,...])",
                 convert_tcb2tdb=True,
                 tcb2tdb_scale_factor=1,
             )
