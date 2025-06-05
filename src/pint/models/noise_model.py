@@ -532,7 +532,7 @@ class PLDMNoise(NoiseComponent):
             floatParameter(
                 name="TNDMTSPAN",
                 units="year",
-                description="Time span corresponding to the fundamental frequency of the DM noise Fourier series.",
+                description="Time span corresponding to the fundamental frequency of the DM noise Fourier series (data span is used by default).",
                 convert_tcb2tdb=True,
                 tcb2tdb_scale_factor=1,
             )
@@ -871,7 +871,7 @@ class PLChromNoise(NoiseComponent):
             floatParameter(
                 name="TNCHROMTSPAN",
                 units="year",
-                description="Time span corresponding to the fundamental frequency of the chromatic noise Fourier series.",
+                description="Time span corresponding to the fundamental frequency of the chromatic noise Fourier series (data span is used by default).",
                 convert_tcb2tdb=True,
                 tcb2tdb_scale_factor=1,
             )
@@ -1067,7 +1067,7 @@ class PLRedNoise(NoiseComponent):
             floatParameter(
                 name="TNREDTSPAN",
                 units="year",
-                description="Time span corresponding to the fundamental frequency of the achromatic red noise Fourier series.",
+                description="Time span corresponding to the fundamental frequency of the achromatic red noise Fourier series (data span is used by default).",
                 convert_tcb2tdb=True,
                 tcb2tdb_scale_factor=1,
             )
