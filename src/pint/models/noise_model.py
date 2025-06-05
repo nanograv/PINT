@@ -642,6 +642,168 @@ class PLDMNoise(CorrelatedNoiseComponent):
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
+class PLSWNoise(CorrelatedNoiseComponent):
+    """Model of solar wind DM variations as radio frequency-dependent noise with a
+    power-law spectrum.
+
+    Commonly used as perturbations on top of a deterministic solar wind model.
+
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.noise_model.PLSWNoise
+
+    References
+    ----------
+    - Lentati et al. 2014, MNRAS 437(3), 3004-3023 [1]_
+    - van Haasteren & Vallisneri, 2014, MNRAS 446(2), 1170-1174 [2]_
+    - Hazboun et al. 2022, APJ, Volume 929, Issue 1, id.39, 11 pp. [3]_
+    - Susurla et al. 2024, A&A, Volume 692, id.A18, 18 pp.[4]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2014MNRAS.437.3004L/abstract
+    .. [2] https://ui.adsabs.harvard.edu/abs/2015MNRAS.446.1170V/abstract
+    .. [3] https://ui.adsabs.harvard.edu/abs/2022ApJ...929...39H/abstract
+    .. [4] https://ui.adsabs.harvard.edu/abs/2024A%26A...692A..18S/abstract
+    """
+
+    register = True
+    category = "pl_SW_noise"
+
+    introduces_dm_errors = True
+    is_time_correlated = True
+
+    def __init__(
+        self,
+    ):
+        super().__init__()
+
+        self.add_param(
+            floatParameter(
+                name="TNSWAMP",
+                units="",
+                aliases=[],
+                description="Amplitude of power-law SW DM noise in tempo2 format",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNSWGAM",
+                units="",
+                aliases=[],
+                description="Spectral index of power-law "
+                "SW DM noise in tempo2 format",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNSWC",
+                units="",
+                aliases=[],
+                description="Number of SW DM noise frequencies.",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNSWFLOG",
+                units="",
+                description="Number of logarithmically solar wind frequencies in the basis.",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNSWFLOG_FACTOR",
+                units="",
+                description="Factor of the log-spaced solar wind frequencies (2 -> [1/8,1/4,1/2,...])",
+                convert_tcb2tdb=False,
+            )
+        )
+
+        self.covariance_matrix_funcs += [self.pl_sw_cov_matrix]
+        self.basis_funcs += [self.pl_sw_basis_weight_pair]
+
+    def get_plc_vals(self) -> Tuple[float, float, int, int, float]:
+        """
+        Retrieve power-law parameters and frequency-basis parameters
+        from the model, substituting defaults if unspecified.
+        """
+        n_lin = int(self.TNSWC.value) if self.TNSWC.value is not None else 100
+        n_log = int(self.TNSWFLOG.value) if (self.TNSWFLOG.value is not None) else None
+        sw_log_factor = (
+            self.TNSWFLOG_FACTOR.value
+            if (self.TNSWFLOG_FACTOR.value is not None)
+            else 2
+        )
+        amp, gam = 10**self.TNSWAMP.value, self.TNSWGAM.value
+        f_min_ratio = 1 / (sw_log_factor**n_log) if n_log is not None else 1
+
+        return amp, gam, n_lin, n_log, f_min_ratio
+
+    def get_time_frequencies(self, toas: TOAs) -> np.ndarray:
+        """Return the frequencies of the noise model"""
+
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        T = np.max(t) - np.min(t)
+
+        (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
+        f_min = f_min_ratio / T
+
+        return t, get_rednoise_freqs(
+            t, n_lin, Tspan=T, logmode=0, f_min=f_min, nlog=n_log
+        )
+
+    def get_noise_basis(self, toas: TOAs) -> np.ndarray:
+        """Return a Fourier design matrix for SW DM noise.
+
+        See the documentation for pl_sw_basis_weight_pair function for details."""
+
+        freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
+        # get the achromatic Fourier design matrix
+        t, f = self.get_time_frequencies(toas)
+        Fmat = create_fourier_design_matrix(t, f)
+        # get solar wind geometry from pint.models.solar_wind_dispersion.SolarWindDispersion
+        solar_wind_geometry = self._parent.solar_wind_geometry(toas)
+        # since this is the SW DM value if n_earth = 1 cm^-3. the GP will scale it.
+        dt_DM = (solar_wind_geometry * DMconst / (freqs**2)).value
+
+        return Fmat * dt_DM[:, None]
+
+    def get_noise_weights(self, toas: TOAs) -> np.ndarray:
+        """Return power law SW noise weights.
+
+        See the documentation for pl_sw_basis_weight_pair for details."""
+
+        (amp, gam, _, _, _) = self.get_plc_vals()
+        _, f = self.get_time_frequencies(toas)
+        df = np.diff(np.concatenate([[0], f]))
+
+        return powerlaw(f.repeat(2), amp, gam) * df.repeat(2)
+
+    def pl_sw_basis_weight_pair(self, toas: TOAs) -> Tuple[np.ndarray, np.ndarray]:
+        """Return a Fourier design matrix and power law SW noise weights.
+
+        A Fourier design matrix contains the sine and cosine basis_functions
+        in a Fourier series expansion. Here we scale the design matrix by
+        (fref/f)**2 and a geometric factor where fref = 1400 MHz
+        to match the convention used in enterprise.
+
+        The weights used are the power-law PSD values at frequencies n/T,
+        where n is in [1, TNSWC] and T is the total observing duration of
+        the dataset.
+
+        """
+        return (self.get_noise_basis(toas), self.get_noise_weights(toas))
+
+    def pl_sw_cov_matrix(self, toas: TOAs) -> np.ndarray:
+        Fmat, phi = self.pl_sw_basis_weight_pair(toas)
+        return np.dot(Fmat * phi[None, :], Fmat.T)
+
+
 class PLChromNoise(CorrelatedNoiseComponent):
     """Model of a radio frequency-dependent noise with a power-law spectrum and arbitrary chromatic index.
 
@@ -1167,7 +1329,6 @@ def powerlaw(
     :param f_low_cut: Minimum frequency to include [Hz]
     :return: Power spectral density
     """
-
     f_low_cut = f_low_cut if f_low_cut is not None else np.min(f)
     above_fl = np.array(f >= f_low_cut, dtype=float)
 

@@ -44,6 +44,7 @@ from pint.models.noise_model import (
     EcorrNoise,
     PLChromNoise,
     PLDMNoise,
+    PLSWNoise,
     PLRedNoise,
     ScaleToaError,
 )
