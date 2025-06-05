@@ -13,9 +13,9 @@ the released changes.
 ### Added
 - Explicitly specify the Tspan for power-law GP noise parameters (TN*TSPAN)
 - TCB <-> TDB conversion for power-law GP noise parameters.
-### Fixed
-- TN*C parameter are now `intParameters`
 - Type hints in `pint.fitter`
 - PLSWNoise: a Fourier basis stochastic solar wind model. See Hazboun et al. 2022 for details.
+### Fixed
+- TN*C parameter are now `intParameters`
 - Bug in `Fitter.plot()`
 ### Removed
