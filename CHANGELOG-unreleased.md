@@ -11,8 +11,11 @@ the released changes.
 ### Changed
 - Simulation functions no longer subtract the residual mean by default.
 ### Added
-- PLSWNoise: a Fourier basis stochastic solar wind model. See Hazboun et al. 2022 for details.
+- Explicitly specify the Tspan for power-law GP noise parameters (TN*TSPAN)
+- TCB <-> TDB conversion for power-law GP noise parameters.
 - Type hints in `pint.fitter`
+- PLSWNoise: a Fourier basis stochastic solar wind model. See Hazboun et al. 2022 for details.
 ### Fixed
+- TN*C parameter are now `intParameters`
 - Bug in `Fitter.plot()`
 ### Removed
