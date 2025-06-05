@@ -16,5 +16,6 @@ the released changes.
 ### Fixed
 - TN*C parameter are now `intParameters`
 - Type hints in `pint.fitter`
+- PLSWNoise: a Fourier basis stochastic solar wind model. See Hazboun et al. 2022 for details.
 - Bug in `Fitter.plot()`
 ### Removed
