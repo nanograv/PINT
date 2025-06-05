@@ -58,7 +58,7 @@ def add_chrom_noise_to_model(model):
     model.validate()
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def model_and_toas():
     parfile = examplefile("B1855+09_NANOGrav_9yv1.gls.par")
     timfile = examplefile("B1855+09_NANOGrav_9yv1.tim")
