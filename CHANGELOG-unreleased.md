@@ -17,9 +17,12 @@ the released changes.
 - `noise_model_dm_designmatrix()`, `noise_model_wideband_designmatrix()`, `full_wideband_designmatrix()`, `dm_designmatrix()`, `wideband_designmatrix()` methods in `TimingModel`
 - Type hints in `pint.fitter`
 - PLSWNoise: a Fourier basis stochastic solar wind model. See Hazboun et al. 2022 for details.
+- Explicitly specify the Tspan for power-law GP noise parameters (TN*TSPAN)
 ### Fixed
 - `TimingModel.total_dm()` now returns zero when no DM component is present in the model.
 - Made `TimingModel.toa_covariance_matrix()` not explicitly dependent on `ScaleToaError`
 - Simulate DM noise in wideband TOAs correctly (Moved the functionality of `update_fake_dms()` to `make_fake_toas()`)
+- TCB <-> TDB conversion for power-law GP noise parameters.
+- TN*C parameter are now `intParameters`
 - Bug in `Fitter.plot()`
 ### Removed

@@ -54,6 +54,7 @@ parfile_contents = """
     TNChromFlog 4
     TNChromFlog_Factor 2
     TNChromIdx 4
+    TNCHROMTSPAN 1
     CM0 0 1
     CM1 0 1
 """
