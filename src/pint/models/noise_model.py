@@ -9,6 +9,7 @@ from astropy.table import Table
 import numpy as np
 from loguru import logger as log
 
+from pint import DMconst
 from pint.models.parameter import Parameter, floatParameter, maskParameter
 from pint.models.timing_model import Component
 from pint.toa import TOAs
@@ -733,17 +734,7 @@ class PLSWNoise(NoiseComponent):
         # get solar wind geometry from pint.models.solar_wind_dispersion.SolarWindDispersion
         solar_wind_geometry = self._parent.solar_wind_geometry(toas)
         # since this is the SW DM value if n_earth = 1 cm^-3. the GP will scale it.
-        dt_DM = (
-            solar_wind_geometry
-            * 4.148808e3  # dispersion constant taken from Handbook of Pulsar Astronomy, eq. 4.5
-            * u.MHz**2
-            / u.pc
-            * u.cm**3
-            * u.s
-            / (freqs**2)
-            * u.cm**-3
-            # the cm**-3 reflect the units of the GP perturbations which are solar electron number density
-        ).value
+        dt_DM = (solar_wind_geometry * DMconst / (freqs**2)).value
 
         return Fmat * dt_DM[:, None]
 
