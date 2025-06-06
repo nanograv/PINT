@@ -115,7 +115,7 @@ jobs:
           shell: bash -el {0}
           run: |
             python -m pip install --upgrade pip
-            python -m pip install tox pytest hypothesis numdifftools pathos setuptools statsmodels
+            python -m pip install tox pytest hypothesis numdifftools pathos setuptools statsmodels pytest-xdist
         - name: Print OS, machine info
           shell: bash -el {0}
           run: |
@@ -136,5 +136,5 @@ jobs:
             python -m pip install --force-reinstall --no-deps .
         - name: Run tests
           shell: bash -el {0}
-          run: pytest -v --pyargs tests --reruns 5
+          run: pytest -v --pyargs tests --reruns 5 -n auto
           
