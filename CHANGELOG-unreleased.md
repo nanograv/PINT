@@ -18,4 +18,5 @@ the released changes.
 ### Fixed
 - TN*C parameter are now `intParameters`
 - Bug in `Fitter.plot()`
+- `np.NaN` -> `np.nan`
 ### Removed
