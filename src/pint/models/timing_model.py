@@ -1764,6 +1764,11 @@ class TimingModel:
         vector for wideband TOAs. The TOA uncertainties are in s and the DM uncertainties
         are in dmu. The output is an `ndarray` rather than a `Quantity`.
         Raises an exception if the input TOAs are narrowband.
+
+        Use :func:`pint.models.timing_model.TimingModel.scaled_toa_uncertainty` and
+        :func:`pint.models.timing_model.TimingModel.scaled_dm_uncertainty` methods to get
+        the scaled TOA and DM uncertainties as quantities.
+
         Parameters
         ----------
         toas: pint.toa.TOAs

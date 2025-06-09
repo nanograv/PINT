@@ -1291,7 +1291,12 @@ class WidebandTOAResiduals(CombinedResiduals):
 
     def calc_wideband_resids(self) -> np.ndarray:
         """Returns the combined TOA and DM residuals as a numpy array.
-        The TOA residuals are in s and the DM residuals are in dmu."""
+        The TOA residuals are in s and the DM residuals are in dmu.
+
+        Use :func:`pint.residuals.Residuals.calc_time_resids` and
+        :func:`pint.residuals.WidebandDMResiduals.calc_dm_resids` to get
+        time and DM residuals respectively as quantities.
+        """
         tres = self.toa.calc_time_resids().to_value(u.s)
         dres = self.dm.calc_resids().to_value(dmu)
         return np.hstack((tres, dres)).astype(float)
