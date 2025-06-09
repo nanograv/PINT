@@ -25,4 +25,5 @@ the released changes.
 - TCB <-> TDB conversion for power-law GP noise parameters.
 - TN*C parameter are now `intParameters`
 - Bug in `Fitter.plot()`
+- `np.NaN` -> `np.nan`
 ### Removed
