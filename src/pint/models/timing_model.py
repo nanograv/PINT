@@ -1840,7 +1840,14 @@ class TimingModel:
     ) -> Tuple[np.ndarray, List[str], List[u.Unit], List[u.Unit]]:
         """Returns the full design matrix containing both the timing model design
         matrix and the noise basis matrix. If the TOAs are wideband, the DM partial
-        derivatives are also included. The units are not returned."""
+        derivatives are also included. The units are not returned.
+
+        The TOA and DM timing model design matrices can be obtained separately using
+        :func:`pint.model.timing_model.TimingModel.designmatrix` and
+        :func:`pint.model.timing_model.TimingModel.dm_designmatrix` respectively. The
+        noise model designmatrices are available through `pint.model.timing_model.TimingModel.noise_model_designmatrix`
+        and `pint.model.timing_model.TimingModel.noise_model_dm_designmatrix`.
+        """
 
         M_tm, par, M_units, Md_units = self.wideband_designmatrix(toas)
         M_nm = self.noise_model_wideband_designmatrix(toas)
