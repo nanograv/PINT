@@ -52,7 +52,7 @@ class TestFD:
         ), "FD component did not compute infinite frequency delay right"
         d_d_d_fd = self.FDm.d_delay_FD_d_FDX(test_toas, "FD1")
         assert np.all(np.isfinite(d_d_d_fd)), (
-            "FD component is not handling infinite frequency right when doning"
+            "FD component is not handling infinite frequency right when doing"
             + " derivatives."
         )
 
