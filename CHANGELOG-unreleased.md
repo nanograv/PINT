@@ -15,6 +15,7 @@ the released changes.
 - TCB <-> TDB conversion for power-law GP noise parameters.
 - Type hints in `pint.fitter`
 - PLSWNoise: a Fourier basis stochastic solar wind model. See Hazboun et al. 2022 for details.
+- Parallel execution and work stealing in CI tests
 ### Fixed
 - TN*C parameter are now `intParameters`
 - Bug in `Fitter.plot()`
