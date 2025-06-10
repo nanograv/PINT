@@ -5,24 +5,29 @@ from pint.output.publish import publish
 from pint.scripts import pintpublish
 import os
 
-data_NGC6440E = get_model_and_toas(datadir / "NGC6440E.par", datadir / "NGC6440E.tim")
+
+@pytest.fixture(scope="module")
+def data_NGC6440E():
+    return get_model_and_toas(datadir / "NGC6440E.par", datadir / "NGC6440E.tim")
 
 
-def test_NGC6440E():
+def test_NGC6440E(data_NGC6440E):
     m, t = data_NGC6440E
     output = publish(m, t)
     assert "1748-2021E" in output
     assert "DE421" in output
 
 
-data_J0613m0200_NANOGrav_9yv1 = get_model_and_toas(
-    datadir / "J0613-0200_NANOGrav_9yv1.gls.par",
-    datadir / "J0613-0200_NANOGrav_9yv1.tim",
-)
+@pytest.fixture(scope="module")
+def data_J0613m0200_NANOGrav_9yv1():
+    return get_model_and_toas(
+        datadir / "J0613-0200_NANOGrav_9yv1.gls.par",
+        datadir / "J0613-0200_NANOGrav_9yv1.tim",
+    )
 
 
 @pytest.mark.parametrize("full", [True, False])
-def test_J0613m0200_NANOGrav_9yv1(full):
+def test_J0613m0200_NANOGrav_9yv1(full, data_J0613m0200_NANOGrav_9yv1):
     m, t = data_J0613m0200_NANOGrav_9yv1
     output = publish(
         m, t, include_dmx=full, include_fd=full, include_noise=full, include_jumps=full
@@ -39,14 +44,16 @@ def test_J0613m0200_NANOGrav_9yv1(full):
     assert not full or "RNAMP" in output
 
 
-data_J1614m2230_NANOGrav_12yv3_wb = get_model_and_toas(
-    datadir / "J1614-2230_NANOGrav_12yv3.wb.gls.par",
-    datadir / "J1614-2230_NANOGrav_12yv3.wb.tim",
-)
+@pytest.fixture(scope="module")
+def data_J1614m2230_NANOGrav_12yv3_wb():
+    return get_model_and_toas(
+        datadir / "J1614-2230_NANOGrav_12yv3.wb.gls.par",
+        datadir / "J1614-2230_NANOGrav_12yv3.wb.tim",
+    )
 
 
 @pytest.mark.parametrize("full", [True, False])
-def test_J1614m2230_NANOGrav_12yv3_wb(full):
+def test_J1614m2230_NANOGrav_12yv3_wb(full, data_J1614m2230_NANOGrav_12yv3_wb):
     m, t = data_J1614m2230_NANOGrav_12yv3_wb
     output = publish(
         m, t, include_dmx=full, include_fd=full, include_noise=full, include_jumps=full
