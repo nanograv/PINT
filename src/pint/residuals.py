@@ -9,7 +9,7 @@ dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 
 import collections
 import copy
-from typing import Dict, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 import warnings
 
 import astropy.units as u
@@ -1108,7 +1108,7 @@ class CombinedResiduals:
     residuals will have no units.
     """
 
-    def __init__(self, residuals: Residuals):
+    def __init__(self, residuals: List[Residuals]):
         self.residual_objs = collections.OrderedDict()
         for res in residuals:
             res._is_combined = True

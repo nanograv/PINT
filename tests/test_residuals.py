@@ -132,6 +132,9 @@ class TestResidualBuilding:
         )
         assert np.all(self.model.scaled_wideband_uncertainty(self.toa) > 0)
 
+        cres = CombinedResiduals([wb_res.toa, wb_res.dm])
+        assert np.allclose(cres._combined_resids, wb_res.calc_wideband_resids())
+
 
 def test_residuals_scaled_uncertainties():
     model = get_model(
