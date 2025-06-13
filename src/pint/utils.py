@@ -1640,6 +1640,7 @@ def cmwavex_setup(
     freqs: Optional[Iterable[Union[float, u.Quantity]]] = None,
     n_freqs: Optional[int] = None,
     freeze_params: bool = False,
+    chromatic_index: Optional[float] = None,
 ) -> List[int]:
     """
     Set-up a CMWaveX model based on either an array of user-provided frequencies or the wave number
@@ -1672,6 +1673,17 @@ def cmwavex_setup(
             Indices that have been assigned to new WaveX components
     """
     from pint.models.cmwavex import CMWaveX
+    from pint.models.chromatic_model import ChromaticCM
+
+    if "ChromaticCM" not in model.components:
+        model.add_component(ChromaticCM())
+        model["CM"].value = 0
+        model["CM1"].value = 0
+        model["TNCHROMIDX"].value = chromatic_index
+    else:
+        assert (
+            chromatic_index is None
+        ), "ChromaticCM is already present in the timing model. Use `chromatic_index=None`."
 
     if (freqs is None) and (n_freqs is None):
         raise ValueError(
