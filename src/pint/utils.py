@@ -1675,7 +1675,7 @@ def cmwavex_setup(
     from pint.models.cmwavex import CMWaveX
     from pint.models.chromatic_model import ChromaticCM
 
-    if "ChromaticCM" not in model.components:
+    if "ChromaticCM" not in model.components and chromatic_index is not None:
         model.add_component(ChromaticCM())
         model["CM"].value = 0
         model["CM1"].value = 0
