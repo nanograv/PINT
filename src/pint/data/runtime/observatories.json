@@ -1537,5 +1537,14 @@
         ],
         "fullname": "High Altitude Water Cherenkov Experiment (HAWC)",
         "origin": "Coordinates provided (as geodetic coordinates : 18:59:41.63 N, 97:18:27.39 W, 4096 m) by the spokesperson Ke Fang on behalf of the HAWC Collabotation, 2023 April 21."
+    },
+    "nenufar": {
+        "itrf_xyz": [
+            4323980.285,
+            165608.799,
+            4670302.65
+        ],
+        "fullname": "New Extension in Nançay Upgrading LOFAR (NENUFAR)",
+        "origin": "Retrieved from tempo2 bitbucket on 2025-04-18.  Note that coordinates are RGF93 rather than ITRF."
     }
 }

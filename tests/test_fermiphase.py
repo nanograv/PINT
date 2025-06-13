@@ -49,9 +49,6 @@ def test_GEO_Htest_result(tmp_path):
         os.chdir(p)
 
 
-@pytest.mark.skipif(
-    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
-)
 def test_process_and_accuracy():
     # Checks that instantiating an observatory and phasing of
     # topocentric times works.  Verifies accuracy to the sub-mus

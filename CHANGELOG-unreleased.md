@@ -9,25 +9,22 @@ the released changes.
 
 ## Unreleased
 ### Changed
-- In `Residuals`, store correlated noise amplitudes instead of noise residuals. `Residuals.noise_resids` is now a `@property`.
-- Reorder `TimingModel.scaled_toa_uncertainty()` and `TimingModel.scaled_dm_uncertainty()` to improve performance.
-- Refactor `pint.fitter` to reduce code duplication
+- Simulation functions no longer subtract the residual mean by default.
 ### Added
-- Simulate correlated DM noise for wideband TOAs
-- Type hints in `pint.models.timing_model`
-- `full_designmatrix()` and `full_basis_weights()` methods in `TimingModel`
-- Added checkbox for optional subtraction of mean in `pintk`
-- Added Log-Linear Powerlaw noise parameters to PLRedNoise, PLDMNoise, PLChromNoise
-- `TimingModel.ntmpar` property
+- `WidebandTOAResiduals.calc_wideband_resids()` and `TimingModel.scaled_wideband_uncertainty()` methods
+- New abstract base classes `WhiteNoiseComponent` and `CorrelatedNoiseComponent` (changed the type hierarchy of `NoiseComponent`s)
+- `get_dm_noise_basis()` and `get_wideband_noise_basis()` methods in `CorrelatedNoiseComponent`
+- `noise_model_dm_designmatrix()`, `noise_model_wideband_designmatrix()`, `full_wideband_designmatrix()`, `dm_designmatrix()`, `wideband_designmatrix()` methods in `TimingModel`
+- Type hints in `pint.fitter`
+- PLSWNoise: a Fourier basis stochastic solar wind model. See Hazboun et al. 2022 for details.
+- Explicitly specify the Tspan for power-law GP noise parameters (TN*TSPAN)
+- Parallel execution and work stealing in CI tests
 ### Fixed
-- Shape of `Fitter.resids.noise_ampls` (it was wrong before due to bad indexing)
-- Made `TimingModel.is_binary()` more robust.
-- Correct value of (1/year) in `powerlaw()` function
-- Fixed `TestPintk`
-- Fixed the noise realization indexing in `Fitter`s
-- Added missing newline in `tempo_polyco_table_writer()`
-- Proper warning in `read_polyco_file()`
+- `TimingModel.total_dm()` now returns zero when no DM component is present in the model.
+- Made `TimingModel.toa_covariance_matrix()` not explicitly dependent on `ScaleToaError`
+- Simulate DM noise in wideband TOAs correctly (Moved the functionality of `update_fake_dms()` to `make_fake_toas()`)
+- TCB <-> TDB conversion for power-law GP noise parameters.
+- TN*C parameter are now `intParameters`
+- Bug in `Fitter.plot()`
+- `np.NaN` -> `np.nan`
 ### Removed
-- Definition of `@cached_property` to support Python<=3.7
-- The broken `data.nanograv.org` URL from the list of solar system ephemeris mirrors
-- Broken fitter class `CompositeMCMCFitter` (this fitter was added seemingly to deal with combined radio and high-energy datasets, but has since been broken for a while.)

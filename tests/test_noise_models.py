@@ -17,9 +17,7 @@ noise_component_labels = [
 correlated_noise_component_labels = [
     cl
     for cl, c in Component.component_types.items()
-    if issubclass(c, NoiseComponent)
-    and hasattr(c, "introduces_correlated_errors")
-    and c.introduces_correlated_errors
+    if issubclass(c, NoiseComponent) and c().introduces_correlated_errors
 ]
 
 
@@ -31,6 +29,17 @@ def add_DM_noise_to_model(model):
     model["TNDMC"].value = 30
     model["TNDMFLOG"].value = 4
     model["TNDMFLOG_FACTOR"].value = 2
+    model.validate()
+
+
+def add_SW_noise_to_model(model):
+    all_components = Component.component_types
+    model.add_component(all_components["PLSWNoise"](), validate=False)
+    model["TNSWAMP"].quantity = -12
+    model["TNSWGAM"].quantity = -2.0  # blue spectrum
+    model["TNSWC"].value = 50
+    model["TNSWFLOG"].value = 4
+    model["TNSWFLOG_FACTOR"].value = 2
     model.validate()
 
 
@@ -49,13 +58,14 @@ def add_chrom_noise_to_model(model):
     model.validate()
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def model_and_toas():
     parfile = examplefile("B1855+09_NANOGrav_9yv1.gls.par")
     timfile = examplefile("B1855+09_NANOGrav_9yv1.tim")
     model, toas = get_model_and_toas(parfile, timfile)
     add_DM_noise_to_model(model)
     add_chrom_noise_to_model(model)
+    add_SW_noise_to_model(model)
     return model, toas
 
 
@@ -65,7 +75,7 @@ def test_introduces_correlated_errors(component_label):
 
     component = Component.component_types[component_label]
     assert hasattr(component, "introduces_correlated_errors") and isinstance(
-        component.introduces_correlated_errors, bool
+        component().introduces_correlated_errors, bool
     )
 
 

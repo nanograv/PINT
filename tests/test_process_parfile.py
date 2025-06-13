@@ -81,7 +81,7 @@ def test_pintify_parfile_repeat_line_mix_alises():
     pint_dict, original_name, unknow = m._pintify_parfile(
         StringIO(repeat_par), allow_name_mixing=True
     )
-    # The list order is swaped since parse_parfile will pack EQUADs first and
+    # The list order is swapped since parse_parfile will pack EQUADs first and
     # then the pintify will add T2ECORR to the list.
     assert pint_dict["EQUAD1"] == ["-fe 1 1 3", "-fe 4 2 2", "-fe 2 1 3"]
     assert "T2EQUAD" not in pint_dict.keys()

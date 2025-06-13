@@ -1,5 +1,6 @@
 import astropy.units as u
 import astropy.time
+from pint import DMconst
 import pint.simulation
 from pint.models.model_builder import get_model, get_model_and_toas
 from pint.toa import get_TOAs
@@ -259,12 +260,14 @@ def test_fake_fromMJDs_keepmean():
         model=model,
         error=1 * u.us,
         add_noise=True,
+        subtract_mean=True,
     )
     toas2 = pint.simulation.make_fake_toas_fromMJDs(
         t2,
         model=model,
         error=1 * u.us,
         add_noise=True,
+        subtract_mean=True,
     )
     r = pint.residuals.Residuals(toas1 + toas2, model)
     toas1m = pint.simulation.make_fake_toas_fromMJDs(
@@ -568,3 +571,53 @@ def test_simulate_wideband_dmgp():
     )
 
     assert all(acorr_ljungbox(t.get_dms() - m.total_dm(t)).lb_pvalue < 1e-5)
+
+
+def test_simulate_wideband_dmgp_consistency():
+    par = """
+        PSRJ           J0023+0923
+        RAJ             00:23:16.8790858         1  0.00002408141295805134   
+        DECJ           +09:23:23.86936           1  0.00082010713730773120   
+        F0             327.84702062954047136     1  0.00000000000295205483   
+        F1             -1.2278326306812866375e-15 1  3.8219244605614075223e-19
+        PEPOCH         56199.999797564144902       
+        POSEPOCH       56199.999797564144902       
+        DMEPOCH        56200                       
+        DM             14.327978186774068347     1  0.00006751663559857748   
+        BINARY         ELL1
+        PB             0.13879914244858396754    1  0.00000000003514075083   
+        A1             0.034841158415224894973   1  0.00000012173038389247   
+        TASC           56178.804891768506529     1  0.00000007765191894742   
+        EPS1           1.6508830631753595232e-05 1  0.00000477568412215803   
+        EPS2           3.9656838708709247373e-06 1  0.00000458951091435993   
+        CLK            TT(BIPM2015)
+        MODE 1
+        UNITS          TDB
+        TIMEEPH        FB90
+        DILATEFREQ     N
+        PLANET_SHAPIRO N
+        CORRECT_TROPOSPHERE  N
+        EPHEM          DE436
+        TNDMAMP -12.2
+        TNDMGAM 3.5
+        TNDMC 15
+    """
+
+    m = get_model(io.StringIO(par))
+    t = pint.simulation.make_fake_toas_uniform(
+        startMJD=54000,
+        endMJD=56000,
+        ntoas=200,
+        model=m,
+        add_noise=False,
+        wideband=True,
+        add_correlated_noise=True,
+    )
+
+    wb_res = pint.residuals.WidebandTOAResiduals(t, m)
+    tres = wb_res.toa.calc_time_resids()
+    dres = wb_res.dm.calc_resids()
+    freqs = m.barycentric_radio_freq(t)
+    assert np.allclose(
+        (DMconst * dres / freqs**2).to_value("s"), tres.to_value("s"), atol=1e-7
+    )  # Matches up to third significant figure.
