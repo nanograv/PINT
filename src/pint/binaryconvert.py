@@ -543,6 +543,11 @@ def _transfer_params(
                 p,
                 copy.deepcopy(getattr(inmodel.components[inbinary_component_name], p)),
             )
+            getattr(outmodel.components[outbinary_component_name], p)._parent = (
+                outmodel.components[outbinary_component_name]
+            )
+            if not p in outmodel.components[outbinary_component_name].params:
+                outmodel.components[outbinary_component_name].params.append(p)
 
 
 def convert_binary(
