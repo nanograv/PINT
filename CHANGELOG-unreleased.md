@@ -27,4 +27,6 @@ the released changes.
 - TN*C parameter are now `intParameters`
 - Bug in `Fitter.plot()`
 - `np.NaN` -> `np.nan`
+- When converting between binary models, some parameters may not be visible
+- When converting from ELL1H, if only H3 is set should not include M2,SINI in output
 ### Removed
