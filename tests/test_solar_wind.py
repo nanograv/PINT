@@ -1,5 +1,4 @@
-""" Test for pint solar wind module
-"""
+"""Test for pint solar wind module"""
 
 import os
 import copy
@@ -143,6 +142,24 @@ def test_swx_frozen():
     model.add_swx_range(54000, 54180, swxdm=10, swxp=1.5, frozen=False)
     assert model.SWXP_0002.frozen is True
     assert model.SWXDM_0002.frozen is False
+
+
+def test_swx_empty():
+    model = get_model(
+        StringIO(
+            "\n".join(
+                [
+                    par2,
+                    "SWXDM_0001 1\nSWXP_0001 2 1\nSWXR1_0001 54000\nSWXR2_0001 55000",
+                ]
+            )
+        )
+    )
+    model.add_swx_range(55000, 55500, swxdm=10, swxp=1.5, frozen=False)
+    model.add_swx_range(55500, 55501, swxdm=10, swxp=1.5, frozen=False)
+    t = make_fake_toas_uniform(54000, 56000, 100, model)
+    tofreeze = model.find_empty_masks(t)
+    assert "SWXDM_0003" in tofreeze
 
 
 def test_swx_minmax():

@@ -27,4 +27,5 @@ the released changes.
 - TN*C parameter are now `intParameters`
 - Bug in `Fitter.plot()`
 - `np.NaN` -> `np.nan`
+- `find_empty_masks` can now handle SWX models
 ### Removed
