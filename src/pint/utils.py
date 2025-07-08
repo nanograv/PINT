@@ -449,7 +449,7 @@ def taylor_horner_deriv(
     with respect to x evaluated at 2.0, we would do::
 
         In [1]: taylor_horner_deriv(2.0, [10, 3, 4, 12], 1)
-        Out[1]: 15.0
+        Out[1]: 35.0
 
     Parameters
     ----------
