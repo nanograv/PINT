@@ -991,9 +991,15 @@ def xxxselections(
     if not any(p.startswith(f"{prefix}X") for p in model.params):
         return {}
     toas_selector = TOASelect(is_range=True)
-    X_mapping = model.get_prefix_mapping(f"{prefix}X_")
-    XR1_mapping = model.get_prefix_mapping(f"{prefix}XR1_")
-    XR2_mapping = model.get_prefix_mapping(f"{prefix}XR2_")
+    if prefix in ["SW"]:
+        # need a special case here since it looks like SWXDM_
+        X_mapping = model.get_prefix_mapping(f"{prefix}XDM_")
+        XR1_mapping = model.get_prefix_mapping(f"{prefix}XR1_")
+        XR2_mapping = model.get_prefix_mapping(f"{prefix}XR2_")
+    else:
+        X_mapping = model.get_prefix_mapping(f"{prefix}X_")
+        XR1_mapping = model.get_prefix_mapping(f"{prefix}XR1_")
+        XR2_mapping = model.get_prefix_mapping(f"{prefix}XR2_")
     condition = {}
     for ii in X_mapping:
         r1 = getattr(model, XR1_mapping[ii]).quantity
