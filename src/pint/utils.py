@@ -1681,15 +1681,19 @@ def cmwavex_setup(
     from pint.models.cmwavex import CMWaveX
     from pint.models.chromatic_model import ChromaticCM
 
-    if "ChromaticCM" not in model.components and chromatic_index is not None:
+    if (
+        "ChromaticCM" not in model.components
+        or ("ChromaticCM" in model.components and model["TNCHROMIDX"].value is None)
+    ) and chromatic_index is not None:
         model.add_component(ChromaticCM())
         model["CM"].value = 0
         model["CM1"].value = 0
         model["TNCHROMIDX"].value = chromatic_index
     else:
-        assert (
-            chromatic_index is None
-        ), "ChromaticCM is already present in the timing model. Use `chromatic_index=None`."
+        assert chromatic_index is None, (
+            "ChromaticCM is already present in the timing model and will not be rewritten."
+            "Use `chromatic_index=None`."
+        )
 
     if (freqs is None) and (n_freqs is None):
         raise ValueError(
