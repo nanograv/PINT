@@ -26,7 +26,18 @@ class SimpleExponentialDip(DelayComponent):
     def __init__(self):
         super().__init__()
 
-        self.add_exp_dip(None, 0, None, None, index=1, frozen=False)
+        self.add_param(
+            floatParameter(
+                name=f"EXPEPS",
+                units="day",
+                description="Chromatic exponential dip beginning timescale",
+                value=1e-3,
+                frozen=True,
+                tcb2tdb_scale_factor=1,
+            )
+        )
+
+        self.add_exp_dip(None, 0, None, None, index=1, frozen=True)
 
         self.delay_funcs_component += [self.expdip_delay]
 
@@ -44,7 +55,6 @@ class SimpleExponentialDip(DelayComponent):
         if index is None:
             dct = self.get_prefix_mapping_component("EXPEP_")
             index = np.max(list(dct.keys())) + 1
-            i = f"{int(index):d}"
         elif int(index) in self.get_prefix_mapping_component("EXPEP_"):
             raise ValueError(
                 f"Index '{index}' is already in use in this model. Please choose another."
@@ -57,7 +67,7 @@ class SimpleExponentialDip(DelayComponent):
 
         self.add_param(
             prefixParameter(
-                name=f"EXPEP_{i}",
+                name=f"EXPEP_{index}",
                 units="MJD",
                 description="Chromatic exponential dip epoch",
                 parameter_type="MJD",
@@ -73,7 +83,7 @@ class SimpleExponentialDip(DelayComponent):
 
         self.add_param(
             prefixParameter(
-                name=f"EXPPH_{i}",
+                name=f"EXPPH_{index}",
                 units="s",
                 value=ampl,
                 description="Chromatic exponential dip amplitude",
@@ -88,7 +98,7 @@ class SimpleExponentialDip(DelayComponent):
 
         self.add_param(
             prefixParameter(
-                name=f"EXPINDEX_{i}",
+                name=f"EXPINDEX_{index}",
                 units="",
                 value=gamma,
                 description="Chromatic exponential dip index",
@@ -103,10 +113,10 @@ class SimpleExponentialDip(DelayComponent):
 
         self.add_param(
             prefixParameter(
-                name=f"EXPTAU_{i}",
+                name=f"EXPTAU_{index}",
                 units="day",
                 value=tau,
-                description="Chromatic exponential dip timescale",
+                description="Chromatic exponential dip decay timescale",
                 parameter_type="float",
                 frozen=frozen,
                 tcb2tdb_scale_factor=1,
@@ -170,22 +180,26 @@ class SimpleExponentialDip(DelayComponent):
     def expdip_delay(self, toas: TOAs, acc_delay=None):
         indices = self.get_indices()
 
-        delay = np.zeros(len(toas))
+        delay = np.zeros(len(toas)) * u.s
 
         f = self._parent.barycentric_radio_freq(toas)
         fref = 1400 * u.MHz
         ffac = f / fref
 
-        for ii in indices():
+        eps = self.EXPEPS.quantity
+
+        for ii in indices:
             t0_mjd = getattr(self, f"EXPEP_{ii}").value
-            toa_mask = (toas.get_mjds().value >= t0_mjd).astype(int)
-            dt = (toas["tdbld"][toa_mask] - t0_mjd) * u.day
+
+            dt = (toas["tdbld"] - t0_mjd) * u.day
+
+            mask_factor = 1 / (1 + np.exp(-dt / eps))
 
             A = getattr(self, f"EXPPH_{ii}").quantity
             gamma = getattr(self, f"EXPINDEX_{ii}").quantity
             tau = getattr(self, f"EXPTAU_{ii}").quantity
 
-            delay += A * ffac**gamma * np.exp(-dt / tau) * toa_mask
+            delay += -A * ffac**gamma * np.exp(-dt / tau) * mask_factor
 
         return delay
 
@@ -196,14 +210,17 @@ class SimpleExponentialDip(DelayComponent):
         fref = 1400 * u.MHz
         ffac = f / fref
 
+        eps = self.EXPEPS.quantity
+
         t0_mjd = getattr(self, f"EXPEP_{ii}").value
-        toa_mask = (toas.get_mjds().value >= t0_mjd).astype(int)
-        dt = (toas["tdbld"][toa_mask] - t0_mjd) * u.day
+        dt = (toas["tdbld"] - t0_mjd) * u.day
+
+        mask_factor = 1 / (1 + np.exp(-dt / eps))
 
         gamma = getattr(self, f"EXPINDEX_{ii}").quantity
         tau = getattr(self, f"EXPTAU_{ii}").quantity
 
-        return ffac**gamma * np.exp(-dt / tau) * toa_mask
+        return -(ffac**gamma) * np.exp(-dt / tau) * mask_factor
 
     def d_delay_d_expindex(self, toas: TOAs, param: str, acc_delay=None):
         ii = getattr(self, param).index
@@ -212,15 +229,18 @@ class SimpleExponentialDip(DelayComponent):
         fref = 1400 * u.MHz
         ffac = f / fref
 
+        eps = self.EXPEPS.quantity
+
         t0_mjd = getattr(self, f"EXPEP_{ii}").value
-        toa_mask = (toas.get_mjds().value >= t0_mjd).astype(int)
-        dt = (toas["tdbld"][toa_mask] - t0_mjd) * u.day
+        dt = (toas["tdbld"] - t0_mjd) * u.day
+
+        mask_factor = 1 / (1 + np.exp(-dt / eps))
 
         A = getattr(self, f"EXPPH_{ii}").quantity
         gamma = getattr(self, f"EXPINDEX_{ii}").quantity
         tau = getattr(self, f"EXPTAU_{ii}").quantity
 
-        return A * ffac**gamma * np.log(ffac) * np.exp(-dt / tau) * toa_mask
+        return -A * ffac**gamma * np.log(ffac) * np.exp(-dt / tau) * mask_factor
 
     def d_delay_d_exptau(self, toas: TOAs, param: str, acc_delay=None):
         ii = getattr(self, param).index
@@ -229,15 +249,18 @@ class SimpleExponentialDip(DelayComponent):
         fref = 1400 * u.MHz
         ffac = f / fref
 
+        eps = self.EXPEPS.quantity
+
         t0_mjd = getattr(self, f"EXPEP_{ii}").value
-        toa_mask = (toas.get_mjds().value >= t0_mjd).astype(int)
-        dt = (toas["tdbld"][toa_mask] - t0_mjd) * u.day
+        dt = (toas["tdbld"] - t0_mjd) * u.day
+
+        mask_factor = 1 / (1 + np.exp(-dt / eps))
 
         A = getattr(self, f"EXPPH_{ii}").quantity
         gamma = getattr(self, f"EXPINDEX_{ii}").quantity
         tau = getattr(self, f"EXPTAU_{ii}").quantity
 
-        return A * ffac**gamma * np.exp(-dt / tau) * (dt / tau / tau) * toa_mask
+        return -A * ffac**gamma * np.exp(-dt / tau) * (dt / tau / tau) * mask_factor
 
     def d_delay_d_expep(self, toas: TOAs, param: str, acc_delay=None):
         ii = getattr(self, param).index
@@ -246,12 +269,15 @@ class SimpleExponentialDip(DelayComponent):
         fref = 1400 * u.MHz
         ffac = f / fref
 
+        eps = self.EXPEPS.quantity
+
         t0_mjd = getattr(self, f"EXPEP_{ii}").value
-        toa_mask = (toas.get_mjds().value >= t0_mjd).astype(int)
-        dt = (toas["tdbld"][toa_mask] - t0_mjd) * u.day
+        dt = (toas["tdbld"] - t0_mjd) * u.day
+
+        mask_factor = 1 / (1 + np.exp(-dt / eps))
 
         A = getattr(self, f"EXPPH_{ii}").quantity
         gamma = getattr(self, f"EXPINDEX_{ii}").quantity
         tau = getattr(self, f"EXPTAU_{ii}").quantity
 
-        return A * ffac**gamma * np.exp(-dt / tau) / tau * toa_mask
+        return -A * ffac**gamma * np.exp(-dt / tau) / tau * mask_factor
