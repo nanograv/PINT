@@ -187,3 +187,18 @@ class SimpleExponentialDip(DelayComponent):
             delay += A * (f / fref) ** gamma * np.exp(-dt / tau) * toa_mask
 
         return delay
+
+    def d_delay_d_expph(self, toas: TOAs, param: str, acc_delay=None):
+        ii = getattr(self, param).index
+
+        f = self._parent.barycentric_radio_freq(toas)
+        fref = 1400 * u.MHz
+
+        t0_mjd = getattr(self, f"EXPEP_{ii}").value
+        toa_mask = (toas.get_mjds().value >= t0_mjd).astype(int)
+        dt = (toas["tdbld"][toa_mask] - t0_mjd) * u.day
+
+        gamma = getattr(self, f"EXPINDEX_{ii}").quantity
+        tau = getattr(self, f"EXPTAU_{ii}").quantity
+
+        return (f / fref) ** gamma * np.exp(-dt / tau) * toa_mask
