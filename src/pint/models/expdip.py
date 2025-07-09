@@ -17,7 +17,7 @@ class SimpleExponentialDip(DelayComponent):
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.chromatic_model.ChromaticCM
+        :class: pint.models.expdip.SimpleExponentialDip
     """
 
     register = True
@@ -221,3 +221,37 @@ class SimpleExponentialDip(DelayComponent):
         tau = getattr(self, f"EXPTAU_{ii}").quantity
 
         return A * ffac**gamma * np.log(ffac) * np.exp(-dt / tau) * toa_mask
+
+    def d_delay_d_exptau(self, toas: TOAs, param: str, acc_delay=None):
+        ii = getattr(self, param).index
+
+        f = self._parent.barycentric_radio_freq(toas)
+        fref = 1400 * u.MHz
+        ffac = f / fref
+
+        t0_mjd = getattr(self, f"EXPEP_{ii}").value
+        toa_mask = (toas.get_mjds().value >= t0_mjd).astype(int)
+        dt = (toas["tdbld"][toa_mask] - t0_mjd) * u.day
+
+        A = getattr(self, f"EXPPH_{ii}").quantity
+        gamma = getattr(self, f"EXPINDEX_{ii}").quantity
+        tau = getattr(self, f"EXPTAU_{ii}").quantity
+
+        return A * ffac**gamma * np.exp(-dt / tau) * (dt / tau / tau) * toa_mask
+
+    def d_delay_d_expep(self, toas: TOAs, param: str, acc_delay=None):
+        ii = getattr(self, param).index
+
+        f = self._parent.barycentric_radio_freq(toas)
+        fref = 1400 * u.MHz
+        ffac = f / fref
+
+        t0_mjd = getattr(self, f"EXPEP_{ii}").value
+        toa_mask = (toas.get_mjds().value >= t0_mjd).astype(int)
+        dt = (toas["tdbld"][toa_mask] - t0_mjd) * u.day
+
+        A = getattr(self, f"EXPPH_{ii}").quantity
+        gamma = getattr(self, f"EXPINDEX_{ii}").quantity
+        tau = getattr(self, f"EXPTAU_{ii}").quantity
+
+        return A * ffac**gamma * np.exp(-dt / tau) / tau * toa_mask
