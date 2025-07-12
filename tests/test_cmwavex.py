@@ -6,7 +6,7 @@ from pint.models import get_model
 from pint.fitter import Fitter
 from pint.simulation import make_fake_toas_uniform
 from pint.utils import cmwavex_setup
-from pint.models.chromatic_model import cmu
+from pint.models.chromatic_model import ChromaticCM, cmu
 
 import pytest
 import astropy.units as u
@@ -26,15 +26,13 @@ def model():
         F1     -4.330899370129D-14  1  2.149749089617D-22
         PEPOCH        55321.000000
         DM               71.016633
-        CM                     0.1
-        TNCHROMIDX               4
         UNITS                  TDB
     """
     return get_model(StringIO(par))
 
 
 def test_cmwavex_setup(model):
-    idxs = cmwavex_setup(model, 3600, n_freqs=5)
+    idxs = cmwavex_setup(model, 3600, n_freqs=5, chromatic_index=4)
 
     assert "CMWaveX" in model.components
     assert model.num_cmwavex_freqs == len(idxs)
@@ -43,13 +41,20 @@ def test_cmwavex_setup(model):
     assert model.num_cmwavex_freqs == len(idxs) - 1
 
 
+def test_cmwavex_setup_idx_error(model):
+    model.add_component(ChromaticCM())
+
+    with pytest.raises(AssertionError):
+        idxs = cmwavex_setup(model, 3600, n_freqs=5, chromatic_index=4)
+
+
 def test_cwavex_setup_error(model):
     with pytest.raises(ValueError):
         cmwavex_setup(model, 3600)
 
 
 def test_fit_cmwavex(model):
-    cmwavex_setup(model, 3600, n_freqs=5)
+    cmwavex_setup(model, 3600, n_freqs=5, chromatic_index=4)
 
     t = make_fake_toas_uniform(54000, 56000, 200, model, add_noise=True)
 
@@ -127,7 +132,7 @@ def test_cmwavex_badpar():
 
 
 def test_add_cmwavex(model):
-    idxs = cmwavex_setup(model, 3600, n_freqs=5)
+    idxs = cmwavex_setup(model, 3600, n_freqs=5, chromatic_index=4)
 
     model.components["CMWaveX"].add_cmwavex_component(1, index=6, cmwxsin=0, cmwxcos=0)
     assert model.num_cmwavex_freqs == len(idxs) + 1
@@ -149,7 +154,7 @@ def test_add_cmwavex(model):
 
 
 def test_add_cmwavex_errors(model):
-    idxs = cmwavex_setup(model, 3600, n_freqs=5)
+    idxs = cmwavex_setup(model, 3600, n_freqs=5, chromatic_index=4)
 
     with pytest.raises(ValueError):
         model.components["CMWaveX"].add_cmwavex_components(
