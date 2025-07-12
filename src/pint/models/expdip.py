@@ -177,6 +177,7 @@ class SimpleExponentialDip(DelayComponent):
                 self.register_deriv_funcs(self.d_delay_d_gamma, prefix_par)
 
     def get_ffac(self, toas: TOAs) -> np.ndarray:
+        """Compute f/fref where f is the observing frequency."""
         f = self._parent.barycentric_radio_freq(toas)
         fref = 1400 * u.MHz
         return (f / fref).to_value(u.dimensionless_unscaled)
@@ -184,6 +185,7 @@ class SimpleExponentialDip(DelayComponent):
     def expdip_delay_term(
         self, t_mjd: np.ndarray, ffac: np.ndarray, ii: int
     ) -> u.Quantity:
+        """Compute the delay for a single exponential dip event."""
         T = getattr(self, f"EXPDIPEP_{ii}").value
         dt = (t_mjd - T) * u.day
 
@@ -208,6 +210,7 @@ class SimpleExponentialDip(DelayComponent):
         )
 
     def expdip_delay(self, toas: TOAs, acc_delay=None):
+        """Total exponential dip delay"""
         indices = self.get_indices()
 
         ffac = self.get_ffac(toas)
@@ -220,17 +223,20 @@ class SimpleExponentialDip(DelayComponent):
         return delay
 
     def d_delay_d_A(self, toas: TOAs, param: str, acc_delay=None):
+        """Derivative of delay w.r.t. exponential dip amplitude."""
         ii = getattr(self, param).index
         ffac = self.get_ffac(toas)
         A = getattr(self, f"EXPDIPAMP_{ii}").quantity
         return self.expdip_delay_term(toas["tdbld"], ffac, ii) / A
 
     def d_delay_d_gamma(self, toas: TOAs, param: str, acc_delay=None):
+        """Derivative of delay w.r.t. exponential dip chromatic index."""
         ii = getattr(self, param).index
         ffac = self.get_ffac(toas)
         return self.expdip_delay_term(toas["tdbld"], ffac, ii) * np.log(ffac)
 
     def d_delay_d_tau(self, toas: TOAs, param: str, acc_delay=None):
+        """Derivative of delay w.r.t. exponential dip decay timescale."""
         ii = getattr(self, param).index
         ffac = self.get_ffac(toas)
 
@@ -247,6 +253,7 @@ class SimpleExponentialDip(DelayComponent):
         )
 
     def d_delay_d_T(self, toas: TOAs, param: str, acc_delay=None):
+        """Derivative of delay w.r.t. exponential dip epoch."""
         ii = getattr(self, param).index
         ffac = self.get_ffac(toas)
 
