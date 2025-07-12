@@ -192,13 +192,19 @@ class SimpleExponentialDip(DelayComponent):
         tau = getattr(self, f"EXPDIPTAU_{ii}").quantity
         eps = self.EXPDIPEPS.quantity
 
+        # Done this way to avoid overflow in exp
+        expfac = np.zeros(len(dt))
+        expfac[dt >= 0] = np.exp(-dt[dt >= 0] / tau) / (1 + np.exp(-dt[dt >= 0] / eps))
+        expfac[dt < 0] = np.exp(dt[dt < 0] * (tau - eps) / (tau * eps)) / (
+            1 + np.exp(dt[dt < 0] / eps)
+        )
+
         return (
             -A
             * ffac**gamma
             * (tau / eps) ** (eps / tau)
             * (tau / (tau - eps)) ** ((tau - eps) / tau)
-            * np.exp(-dt / tau)
-            / (1 + np.exp(-dt / eps))
+            * expfac
         )
 
     def expdip_delay(self, toas: TOAs, acc_delay=None):
@@ -215,24 +221,24 @@ class SimpleExponentialDip(DelayComponent):
 
     def d_delay_d_A(self, toas: TOAs, param: str, acc_delay=None):
         ii = getattr(self, param).index
-        ffac = self.get_ffac()
+        ffac = self.get_ffac(toas)
         A = getattr(self, f"EXPDIPAMP_{ii}").quantity
         return self.expdip_delay_term(toas["tdbld"], ffac, ii) / A
 
     def d_delay_d_gamma(self, toas: TOAs, param: str, acc_delay=None):
         ii = getattr(self, param).index
-        ffac = self.get_ffac()
+        ffac = self.get_ffac(toas)
         return self.expdip_delay_term(toas["tdbld"], ffac, ii) * np.log(ffac)
 
     def d_delay_d_tau(self, toas: TOAs, param: str, acc_delay=None):
         ii = getattr(self, param).index
-        ffac = self.get_ffac()
+        ffac = self.get_ffac(toas)
 
-        t0_mjd = getattr(self, f"EXPEP_{ii}").value
+        t0_mjd = getattr(self, f"EXPDIPEP_{ii}").value
         dt = (toas["tdbld"] - t0_mjd) * u.day
 
-        tau = getattr(self, f"EXPTAU_{ii}").quantity
-        eps = self.EXPEPS.quantity
+        tau = getattr(self, f"EXPDIPTAU_{ii}").quantity
+        eps = self.EXPDIPEPS.quantity
 
         return (
             self.expdip_delay_term(toas["tdbld"], ffac, ii)
@@ -240,16 +246,21 @@ class SimpleExponentialDip(DelayComponent):
             / tau**2
         )
 
-    def d_delay_d_expep(self, toas: TOAs, param: str, acc_delay=None):
+    def d_delay_d_T(self, toas: TOAs, param: str, acc_delay=None):
         ii = getattr(self, param).index
-        ffac = self.get_ffac()
+        ffac = self.get_ffac(toas)
 
-        T = getattr(self, f"EXPEP_{ii}").value
+        T = getattr(self, f"EXPDIPEP_{ii}").value
         dt = (toas["tdbld"] - T) * u.day
 
-        tau = getattr(self, f"EXPTAU_{ii}").quantity
-        eps = self.EXPEPS.quantity
+        tau = getattr(self, f"EXPDIPTAU_{ii}").quantity
+        eps = self.EXPDIPEPS.quantity
+
+        # Done this way to avoid overflow in exp
+        expfac1 = np.zeros(len(dt))
+        expfac1[dt >= 0] = np.exp(-dt[dt >= 0] / eps) / (1 + np.exp(-dt[dt >= 0] / eps))
+        expfac1[dt < 0] = 1 / (1 + np.exp(dt[dt < 0] / eps))
 
         return self.expdip_delay_term(toas["tdbld"], ffac, ii) * (
-            (1 / tau) - (1 / eps) * (np.exp(-dt / eps) / (1 + np.exp(-dt / eps)))
+            (1 / tau) - (1 / eps) * expfac1
         )
