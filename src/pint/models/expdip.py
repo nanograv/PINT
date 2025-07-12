@@ -251,5 +251,5 @@ class SimpleExponentialDip(DelayComponent):
         eps = self.EXPEPS.quantity
 
         return self.expdip_delay_term(toas["tdbld"], ffac, ii) * (
-            1 / tau - (1 / eps) * (np.exp(-dt / eps) / (1 + np.exp(-dt / eps)))
+            (1 / tau) - (1 / eps) * (np.exp(-dt / eps) / (1 + np.exp(-dt / eps)))
         )
