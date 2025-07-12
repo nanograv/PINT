@@ -7,7 +7,6 @@ from astropy.time import Time
 from pint.models.parameter import floatParameter, prefixParameter
 from pint.models.timing_model import DelayComponent
 from pint.toa import TOAs
-from pint.types import time_like
 
 
 class SimpleExponentialDip(DelayComponent):
@@ -28,9 +27,9 @@ class SimpleExponentialDip(DelayComponent):
 
         self.add_param(
             floatParameter(
-                name=f"EXPEPS",
+                name=f"EXPDIPEPS",
                 units="day",
-                description="Chromatic exponential dip beginning timescale",
+                description="Chromatic exponential dip step timescale",
                 value=1e-3,
                 frozen=True,
                 tcb2tdb_scale_factor=1,
@@ -67,7 +66,7 @@ class SimpleExponentialDip(DelayComponent):
 
         self.add_param(
             prefixParameter(
-                name=f"EXPEP_{index}",
+                name=f"EXPDIPEP_{index}",
                 units="MJD",
                 description="Chromatic exponential dip epoch",
                 parameter_type="MJD",
@@ -83,7 +82,7 @@ class SimpleExponentialDip(DelayComponent):
 
         self.add_param(
             prefixParameter(
-                name=f"EXPPH_{index}",
+                name=f"EXPDIPAMP_{index}",
                 units="s",
                 value=ampl,
                 description="Chromatic exponential dip amplitude",
@@ -98,7 +97,7 @@ class SimpleExponentialDip(DelayComponent):
 
         self.add_param(
             prefixParameter(
-                name=f"EXPINDEX_{index}",
+                name=f"EXPDIPIDX_{index}",
                 units="",
                 value=gamma,
                 description="Chromatic exponential dip index",
@@ -113,7 +112,7 @@ class SimpleExponentialDip(DelayComponent):
 
         self.add_param(
             prefixParameter(
-                name=f"EXPTAU_{index}",
+                name=f"EXPDIPTAU_{index}",
                 units="day",
                 value=tau,
                 description="Chromatic exponential dip decay timescale",
@@ -148,7 +147,7 @@ class SimpleExponentialDip(DelayComponent):
             )
         for index in indices:
             index_rf = f"{int(index):d}"
-            for prefix in ["EXPEP_", "EXPPH_", "EXPTAU_", "EXPINDEX_"]:
+            for prefix in ["EXPDIPEP_", "EXPDIPAMP_", "EXPDIPTAU_", "EXPDIPIDX_"]:
                 self.remove_param(f"{prefix}{index_rf}")
         self.validate()
 
@@ -168,14 +167,14 @@ class SimpleExponentialDip(DelayComponent):
         # Get DMX mapping.
         # Register the DMX derivatives
         for prefix_par in self.get_params_of_type("prefixParameter"):
-            if prefix_par.startswith("EXPEP_"):
-                self.register_deriv_funcs(self.d_delay_d_expep, prefix_par)
-            elif prefix_par.startswith("EXPPH_"):
-                self.register_deriv_funcs(self.d_delay_d_expph, prefix_par)
-            elif prefix_par.startswith("EXPTAU_"):
-                self.register_deriv_funcs(self.d_delay_d_exptau, prefix_par)
-            elif prefix_par.startswith("EXPINDEX_"):
-                self.register_deriv_funcs(self.d_delay_d_expindex, prefix_par)
+            if prefix_par.startswith("EXPDIPEP_"):
+                self.register_deriv_funcs(self.d_delay_d_T, prefix_par)
+            elif prefix_par.startswith("EXPDIPAMP_"):
+                self.register_deriv_funcs(self.d_delay_d_A, prefix_par)
+            elif prefix_par.startswith("EXPDIPTAU_"):
+                self.register_deriv_funcs(self.d_delay_d_tau, prefix_par)
+            elif prefix_par.startswith("EXPDIPIDX_"):
+                self.register_deriv_funcs(self.d_delay_d_gamma, prefix_par)
 
     def expdip_delay(self, toas: TOAs, acc_delay=None):
         indices = self.get_indices()
@@ -186,41 +185,49 @@ class SimpleExponentialDip(DelayComponent):
         fref = 1400 * u.MHz
         ffac = f / fref
 
-        eps = self.EXPEPS.quantity
+        eps = self.EXPDIPEPS.quantity
 
         for ii in indices:
-            t0_mjd = getattr(self, f"EXPEP_{ii}").value
+            T = getattr(self, f"EXPDIPEP_{ii}").value
+            dt = (toas["tdbld"] - T) * u.day
 
-            dt = (toas["tdbld"] - t0_mjd) * u.day
+            A = getattr(self, f"EXPDIPAMP_{ii}").quantity
+            gamma = getattr(self, f"EXPDIPIDX_{ii}").quantity
+            tau = getattr(self, f"EXPDIPTAU_{ii}").quantity
 
-            mask_factor = 1 / (1 + np.exp(-dt / eps))
-
-            A = getattr(self, f"EXPPH_{ii}").quantity
-            gamma = getattr(self, f"EXPINDEX_{ii}").quantity
-            tau = getattr(self, f"EXPTAU_{ii}").quantity
-
-            delay += -A * ffac**gamma * np.exp(-dt / tau) * mask_factor
+            delay += (
+                -A
+                * ffac**gamma
+                * (tau / eps) ** (eps / tau)
+                * (tau / (tau - eps)) ** ((tau - eps) / tau)
+                * np.exp(-dt / tau)
+                / (1 + np.exp(-dt / eps))
+            )
 
         return delay
 
-    def d_delay_d_expph(self, toas: TOAs, param: str, acc_delay=None):
+    def d_delay_d_A(self, toas: TOAs, param: str, acc_delay=None):
         ii = getattr(self, param).index
 
         f = self._parent.barycentric_radio_freq(toas)
         fref = 1400 * u.MHz
         ffac = f / fref
 
-        eps = self.EXPEPS.quantity
+        eps = self.EXPDIPEPS.quantity
 
-        t0_mjd = getattr(self, f"EXPEP_{ii}").value
-        dt = (toas["tdbld"] - t0_mjd) * u.day
+        T = getattr(self, f"EXPDIPEP_{ii}").value
+        dt = (toas["tdbld"] - T) * u.day
 
-        mask_factor = 1 / (1 + np.exp(-dt / eps))
+        gamma = getattr(self, f"EXPDIPIDX_{ii}").quantity
+        tau = getattr(self, f"EXPDIPTAU_{ii}").quantity
 
-        gamma = getattr(self, f"EXPINDEX_{ii}").quantity
-        tau = getattr(self, f"EXPTAU_{ii}").quantity
-
-        return -(ffac**gamma) * np.exp(-dt / tau) * mask_factor
+        return (
+            -(ffac**gamma)
+            * (tau / eps) ** (eps / tau)
+            * (tau / (tau - eps)) ** ((tau - eps) / tau)
+            * np.exp(-dt / tau)
+            / (1 + np.exp(-dt / eps))
+        )
 
     def d_delay_d_expindex(self, toas: TOAs, param: str, acc_delay=None):
         ii = getattr(self, param).index
@@ -280,4 +287,11 @@ class SimpleExponentialDip(DelayComponent):
         gamma = getattr(self, f"EXPINDEX_{ii}").quantity
         tau = getattr(self, f"EXPTAU_{ii}").quantity
 
-        return -A * ffac**gamma * np.exp(-dt / tau) / tau * mask_factor
+        return (
+            -A
+            * ffac**gamma
+            * np.exp(-dt / tau)
+            / tau
+            * mask_factor
+            * ((1 + (1 - tau / eps) * np.exp(-dt / eps)) / (1 + np.exp(-dt / eps)))
+        )
