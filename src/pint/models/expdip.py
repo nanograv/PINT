@@ -176,122 +176,80 @@ class SimpleExponentialDip(DelayComponent):
             elif prefix_par.startswith("EXPDIPIDX_"):
                 self.register_deriv_funcs(self.d_delay_d_gamma, prefix_par)
 
-    def expdip_delay(self, toas: TOAs, acc_delay=None):
-        indices = self.get_indices()
-
-        delay = np.zeros(len(toas)) * u.s
-
+    def get_ffac(self, toas: TOAs) -> np.ndarray:
         f = self._parent.barycentric_radio_freq(toas)
         fref = 1400 * u.MHz
-        ffac = f / fref
+        return (f / fref).to_value(u.dimensionless_unscaled)
 
-        eps = self.EXPDIPEPS.quantity
-
-        for ii in indices:
-            T = getattr(self, f"EXPDIPEP_{ii}").value
-            dt = (toas["tdbld"] - T) * u.day
-
-            A = getattr(self, f"EXPDIPAMP_{ii}").quantity
-            gamma = getattr(self, f"EXPDIPIDX_{ii}").quantity
-            tau = getattr(self, f"EXPDIPTAU_{ii}").quantity
-
-            delay += (
-                -A
-                * ffac**gamma
-                * (tau / eps) ** (eps / tau)
-                * (tau / (tau - eps)) ** ((tau - eps) / tau)
-                * np.exp(-dt / tau)
-                / (1 + np.exp(-dt / eps))
-            )
-
-        return delay
-
-    def d_delay_d_A(self, toas: TOAs, param: str, acc_delay=None):
-        ii = getattr(self, param).index
-
-        f = self._parent.barycentric_radio_freq(toas)
-        fref = 1400 * u.MHz
-        ffac = f / fref
-
-        eps = self.EXPDIPEPS.quantity
-
+    def expdip_delay_term(
+        self, t_mjd: np.ndarray, ffac: np.ndarray, ii: int
+    ) -> u.Quantity:
         T = getattr(self, f"EXPDIPEP_{ii}").value
-        dt = (toas["tdbld"] - T) * u.day
+        dt = (t_mjd - T) * u.day
 
+        A = getattr(self, f"EXPDIPAMP_{ii}").quantity
         gamma = getattr(self, f"EXPDIPIDX_{ii}").quantity
         tau = getattr(self, f"EXPDIPTAU_{ii}").quantity
+        eps = self.EXPDIPEPS.quantity
 
         return (
-            -(ffac**gamma)
+            -A
+            * ffac**gamma
             * (tau / eps) ** (eps / tau)
             * (tau / (tau - eps)) ** ((tau - eps) / tau)
             * np.exp(-dt / tau)
             / (1 + np.exp(-dt / eps))
         )
 
-    def d_delay_d_expindex(self, toas: TOAs, param: str, acc_delay=None):
+    def expdip_delay(self, toas: TOAs, acc_delay=None):
+        indices = self.get_indices()
+
+        ffac = self.get_ffac(toas)
+        t_mjd = toas["tdbld"]
+
+        delay = np.zeros(len(toas)) * u.s
+        for ii in indices:
+            delay += self.expdip_delay_term(t_mjd, ffac, ii)
+
+        return delay
+
+    def d_delay_d_A(self, toas: TOAs, param: str, acc_delay=None):
         ii = getattr(self, param).index
+        ffac = self.get_ffac()
+        A = getattr(self, f"EXPDIPAMP_{ii}").quantity
+        return self.expdip_delay_term(toas["tdbld"], ffac, ii) / A
 
-        f = self._parent.barycentric_radio_freq(toas)
-        fref = 1400 * u.MHz
-        ffac = f / fref
+    def d_delay_d_gamma(self, toas: TOAs, param: str, acc_delay=None):
+        ii = getattr(self, param).index
+        ffac = self.get_ffac()
+        return self.expdip_delay_term(toas["tdbld"], ffac, ii) * np.log(ffac)
 
-        eps = self.EXPEPS.quantity
+    def d_delay_d_tau(self, toas: TOAs, param: str, acc_delay=None):
+        ii = getattr(self, param).index
+        ffac = self.get_ffac()
 
         t0_mjd = getattr(self, f"EXPEP_{ii}").value
         dt = (toas["tdbld"] - t0_mjd) * u.day
 
-        mask_factor = 1 / (1 + np.exp(-dt / eps))
-
-        A = getattr(self, f"EXPPH_{ii}").quantity
-        gamma = getattr(self, f"EXPINDEX_{ii}").quantity
         tau = getattr(self, f"EXPTAU_{ii}").quantity
-
-        return -A * ffac**gamma * np.log(ffac) * np.exp(-dt / tau) * mask_factor
-
-    def d_delay_d_exptau(self, toas: TOAs, param: str, acc_delay=None):
-        ii = getattr(self, param).index
-
-        f = self._parent.barycentric_radio_freq(toas)
-        fref = 1400 * u.MHz
-        ffac = f / fref
-
         eps = self.EXPEPS.quantity
 
-        t0_mjd = getattr(self, f"EXPEP_{ii}").value
-        dt = (toas["tdbld"] - t0_mjd) * u.day
-
-        mask_factor = 1 / (1 + np.exp(-dt / eps))
-
-        A = getattr(self, f"EXPPH_{ii}").quantity
-        gamma = getattr(self, f"EXPINDEX_{ii}").quantity
-        tau = getattr(self, f"EXPTAU_{ii}").quantity
-
-        return -A * ffac**gamma * np.exp(-dt / tau) * (dt / tau / tau) * mask_factor
+        return (
+            self.expdip_delay_term(toas["tdbld"], ffac, ii)
+            * (dt + eps * np.log(eps / (tau - eps)))
+            / tau**2
+        )
 
     def d_delay_d_expep(self, toas: TOAs, param: str, acc_delay=None):
         ii = getattr(self, param).index
+        ffac = self.get_ffac()
 
-        f = self._parent.barycentric_radio_freq(toas)
-        fref = 1400 * u.MHz
-        ffac = f / fref
+        T = getattr(self, f"EXPEP_{ii}").value
+        dt = (toas["tdbld"] - T) * u.day
 
+        tau = getattr(self, f"EXPTAU_{ii}").quantity
         eps = self.EXPEPS.quantity
 
-        t0_mjd = getattr(self, f"EXPEP_{ii}").value
-        dt = (toas["tdbld"] - t0_mjd) * u.day
-
-        mask_factor = 1 / (1 + np.exp(-dt / eps))
-
-        A = getattr(self, f"EXPPH_{ii}").quantity
-        gamma = getattr(self, f"EXPINDEX_{ii}").quantity
-        tau = getattr(self, f"EXPTAU_{ii}").quantity
-
-        return (
-            -A
-            * ffac**gamma
-            * np.exp(-dt / tau)
-            / tau
-            * mask_factor
-            * ((1 + (1 - tau / eps) * np.exp(-dt / eps)) / (1 + np.exp(-dt / eps)))
+        return self.expdip_delay_term(toas["tdbld"], ffac, ii) * (
+            1 / tau - (1 / eps) * (np.exp(-dt / eps) / (1 + np.exp(-dt / eps)))
         )
