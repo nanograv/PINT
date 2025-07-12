@@ -127,7 +127,7 @@ class SimpleExponentialDip(DelayComponent):
 
         return index
 
-    def remove_exp_dip(self, index: Union[float, int, List[int], np.ndarray]):
+    def remove_exp_dip(self, index: Union[float, int, List[int], np.ndarray]) -> None:
         """Removes all exp dip parameters associated with a given index/list of indices.
 
         Parameters
@@ -162,7 +162,7 @@ class SimpleExponentialDip(DelayComponent):
         inds = [int(p.split("_")[-1]) for p in self.params if "EXPEP_" in p]
         return np.array(inds)
 
-    def setup(self):
+    def setup(self) -> None:
         super().setup()
         # Get DMX mapping.
         # Register the DMX derivatives
@@ -209,7 +209,7 @@ class SimpleExponentialDip(DelayComponent):
             * expfac
         )
 
-    def expdip_delay(self, toas: TOAs, acc_delay=None):
+    def expdip_delay(self, toas: TOAs, acc_delay=None) -> u.Quantity:
         """Total exponential dip delay"""
         indices = self.get_indices()
 
@@ -222,20 +222,20 @@ class SimpleExponentialDip(DelayComponent):
 
         return delay
 
-    def d_delay_d_A(self, toas: TOAs, param: str, acc_delay=None):
+    def d_delay_d_A(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
         """Derivative of delay w.r.t. exponential dip amplitude."""
         ii = getattr(self, param).index
         ffac = self.get_ffac(toas)
         A = getattr(self, f"EXPDIPAMP_{ii}").quantity
         return self.expdip_delay_term(toas["tdbld"], ffac, ii) / A
 
-    def d_delay_d_gamma(self, toas: TOAs, param: str, acc_delay=None):
+    def d_delay_d_gamma(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
         """Derivative of delay w.r.t. exponential dip chromatic index."""
         ii = getattr(self, param).index
         ffac = self.get_ffac(toas)
         return self.expdip_delay_term(toas["tdbld"], ffac, ii) * np.log(ffac)
 
-    def d_delay_d_tau(self, toas: TOAs, param: str, acc_delay=None):
+    def d_delay_d_tau(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
         """Derivative of delay w.r.t. exponential dip decay timescale."""
         ii = getattr(self, param).index
         ffac = self.get_ffac(toas)
@@ -252,7 +252,7 @@ class SimpleExponentialDip(DelayComponent):
             / tau**2
         )
 
-    def d_delay_d_T(self, toas: TOAs, param: str, acc_delay=None):
+    def d_delay_d_T(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
         """Derivative of delay w.r.t. exponential dip epoch."""
         ii = getattr(self, param).index
         ffac = self.get_ffac(toas)
