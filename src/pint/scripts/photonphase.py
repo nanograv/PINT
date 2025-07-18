@@ -249,8 +249,10 @@ def main(argv=None):
 
         # Calculate phases
         log.debug("Evaluating polycos")
-        phases = ptable.eval_phase(mjds)
-        phases[phases < 0] += 1.0
+        abs_phases = ptable.eval_abs_phase(mjds)
+        iphss = abs_phases.int
+        phss = abs_phases.frac
+        phases = phss.value % 1
         h = float(hm(phases))
         print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
     else:  # Normal mode, not polycos
