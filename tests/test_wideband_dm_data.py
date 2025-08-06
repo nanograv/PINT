@@ -196,3 +196,5 @@ def test_wideband_fit_dmjump_all(wb_model, wb_toas_all):
     fitter.fit_toas()
     print(fitter.print_summary())
     assert_allclose(fitter.model.DMJUMP1.value, -10, atol=1e-3)
+
+    assert fitter.resids.noise_resids is not None
