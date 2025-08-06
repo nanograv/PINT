@@ -21,6 +21,7 @@ the released changes.
 - Explicitly specify the Tspan for power-law GP noise parameters (TN*TSPAN)
 - Parallel execution and work stealing in CI tests
 - Chromatic exponential dip model
+- Make `WidebandTOAResiduals.noise_resids` available as a `@property`
 ### Fixed
 - `TimingModel.total_dm()` now returns zero when no DM component is present in the model.
 - Made `TimingModel.toa_covariance_matrix()` not explicitly dependent on `ScaleToaError`
@@ -32,4 +33,5 @@ the released changes.
 - When converting between binary models, some parameters may not be visible
 - When converting from ELL1H, if only H3 is set should not include M2,SINI in output
 - `find_empty_masks` can now handle SWX models
+- `photonphase` crash when launched with `--absphase --polycos`
 ### Removed

@@ -1304,3 +1304,7 @@ class WidebandTOAResiduals(CombinedResiduals):
     @property
     def _combined_resids(self) -> np.ndarray:
         return self.calc_wideband_resids()
+
+    @property
+    def noise_resids(self):
+        return self.toa.noise_resids
