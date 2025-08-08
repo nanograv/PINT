@@ -20,6 +20,7 @@ the released changes.
 - PLSWNoise: a Fourier basis stochastic solar wind model. See Hazboun et al. 2022 for details.
 - Explicitly specify the Tspan for power-law GP noise parameters (TN*TSPAN)
 - Parallel execution and work stealing in CI tests
+- Chromatic exponential dip model
 - Make `WidebandTOAResiduals.noise_resids` available as a `@property`
 ### Fixed
 - `TimingModel.total_dm()` now returns zero when no DM component is present in the model.
