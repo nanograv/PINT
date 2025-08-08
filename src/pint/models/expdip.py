@@ -13,6 +13,15 @@ class SimpleExponentialDip(DelayComponent):
     """Simple chromatic exponential dip model for events like the profile changes
     in J1713+0747.
 
+    The dip is modeled as a logistic function multiplied by an exponential decay.
+    This is different from the tempo2 implementation where the exponential decay
+    is multiplied by a Heaviside step function. We cannot fit for the event epoch
+    while using the latter because it is not differentiable at the event epoch.
+    This implementation approaches the tempo2 version in the limit EXPDIPEPS -> 0.
+
+    An exponential dip event is normalized such that the EXPDIPAMP_ is its extremum
+    value. Note that the extremum occurs slightly after the event epoch.
+
     Parameters supported:
 
     .. paramtable::
@@ -74,6 +83,7 @@ class SimpleExponentialDip(DelayComponent):
                 value=epoch,
                 frozen=frozen,
                 tcb2tdb_scale_factor=1,
+                prefix_aliases=["EXPEP_"],
             )
         )
 
@@ -89,6 +99,7 @@ class SimpleExponentialDip(DelayComponent):
                 parameter_type="float",
                 frozen=frozen,
                 tcb2tdb_scale_factor=1,
+                prefix_aliases=["EXPPH_"],
             )
         )
 
@@ -104,6 +115,7 @@ class SimpleExponentialDip(DelayComponent):
                 parameter_type="float",
                 frozen=frozen,
                 tcb2tdb_scale_factor=1,
+                prefix_aliases=["EXPINDEX_"],
             )
         )
 
@@ -119,6 +131,7 @@ class SimpleExponentialDip(DelayComponent):
                 parameter_type="float",
                 frozen=frozen,
                 tcb2tdb_scale_factor=1,
+                prefix_aliases=["EXPTAU_"],
             )
         )
 
@@ -210,7 +223,7 @@ class SimpleExponentialDip(DelayComponent):
         )
 
     def expdip_delay(self, toas: TOAs, acc_delay=None) -> u.Quantity:
-        """Total exponential dip delay"""
+        """Total exponential dip delay."""
         indices = self.get_indices()
 
         ffac = self.get_ffac(toas)
