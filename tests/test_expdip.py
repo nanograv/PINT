@@ -22,6 +22,10 @@ def model_and_toas():
         EXPDIPAMP_1    1.6641670367524487e-06       1
         EXPDIPTAU_1    112.00425959054773           1
         EXPDIPIDX_1    -1.9148109887274356          1
+        EXPEP_2        55764.272428904194001        1      
+        EXPPH_2        2.6641670367524487e-06       1
+        EXPTAU_2       102.00425959054773           1
+        EXPINDEX_2     -2.9148109887274356          1
         EXPDIPEPS      0.01 
         TZRMJD         55000
         TZRSITE        pks
@@ -49,6 +53,8 @@ def model_and_toas():
 
 def test_expdip(model_and_toas):
     m, t = model_and_toas
+
+    assert len(m.components["SimpleExponentialDip"].get_indices()) == 2
 
     res = Residuals(t, m)
     assert res.reduced_chi2 < 1.5

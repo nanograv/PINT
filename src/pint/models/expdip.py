@@ -172,7 +172,7 @@ class SimpleExponentialDip(DelayComponent):
         inds : np.ndarray
             Array of exp dip indices in model.
         """
-        inds = [int(p.split("_")[-1]) for p in self.params if "EXPEP_" in p]
+        inds = [int(p.split("_")[-1]) for p in self.params if "EXPDIPEP_" in p]
         return np.array(inds)
 
     def setup(self) -> None:
