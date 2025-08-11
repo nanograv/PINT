@@ -1325,13 +1325,23 @@ class WidebandTOAResiduals(CombinedResiduals):
     def noise_resids(self):
         return self.toa.noise_resids
 
-    def calc_whitened_resids(self):
+    def calc_whitened_resids(self) -> np.ndarray:
+        """Compute the whitened wideband TOA residuals. The whitened TOA residuals
+        are dimensionless and should be unit-normal distributed if the timing model is
+        correctly fit."""
         return self.calc_wideband_whitened_resids()[: len(self.toas)]
 
-    def calc_whitened_dm_resids(self):
+    def calc_whitened_dm_resids(self) -> np.ndarray:
+        """Compute the whitened wideband DM residuals. The whitened DM residuals
+        are dimensionless and should be unit-normal distributed if the timing model is
+        correctly fit."""
         return self.calc_wideband_whitened_resids()[len(self.toas) :]
 
-    def calc_wideband_whitened_resids(self):
+    def calc_wideband_whitened_resids(self) -> np.ndarray:
+        """Compute the whitened wideband residuals. The first Ntoas elements are
+        the whitened TOA residuals and the rest are DM residuals. The whitened residuals
+        are dimensionless and should be unit-normal distributed if the timing model is
+        correctly fit."""
         r = self.calc_wideband_resids()
         errs = self.model.scaled_wideband_uncertainty(self.toas)
 
