@@ -302,7 +302,7 @@ class DDmodel(PSR_BINARY):
         d_eTheta_d_par = self.d_eTheta_d_par(par)
 
         d_beta_d_a1 = 1.0 / c.c * (1 - eTheta**2) ** 0.5 * cosOmg
-        d_beta_d_omega = -a1 / c.c * (1 - eTheta**2) ** 0.5 * sinOmg
+        d_beta_d_omega = -a1 / c.c * (1 - eTheta**2) ** 0.5 * sinOmg / u.rad
         d_beta_d_eTheta = a1 / c.c * (-eTheta) / np.sqrt(1 - eTheta**2) * cosOmg
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
             return (

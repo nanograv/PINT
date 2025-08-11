@@ -500,7 +500,7 @@ class PSR_BINARY:
 
     def d_E_d_ECC(self):
         E = self.E()
-        return np.sin(E) / (1.0 - self.ecc() * np.cos(E))
+        return np.sin(E) / (1.0 - self.ecc() * np.cos(E)) * u.rad
 
     def d_E_d_EDOT(self):
         return self.tt0 * self.d_E_d_ECC()
