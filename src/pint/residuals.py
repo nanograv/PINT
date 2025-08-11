@@ -579,18 +579,22 @@ class Residuals:
         """
         r = self.calc_time_resids().to_value("s")
         errs = self.get_data_error().to_value("s")
-        Ndiag = errs**2
-        U = self.model.noise_model_designmatrix(self.toas)
-        Phidiag = self.model.noise_model_basis_weight(self.toas)
 
-        Ninv_U = U / Ndiag[:, None]
-        UT_Ninv_U = U.T @ Ninv_U
-        UT_Ninv_r = r @ Ninv_U
-        Sigmainv = UT_Ninv_U + np.diag(1 / Phidiag)
-        Sigmainv_cf = cho_factor(Sigmainv)
+        if self.model.has_correlated_errors:
+            Ndiag = errs**2
+            U = self.model.noise_model_designmatrix(self.toas)
+            Phidiag = self.model.noise_model_basis_weight(self.toas)
 
-        ahat = cho_solve(Sigmainv_cf, UT_Ninv_r)
-        rw = r - U @ ahat
+            Ninv_U = U / Ndiag[:, None]
+            UT_Ninv_U = U.T @ Ninv_U
+            UT_Ninv_r = r @ Ninv_U
+            Sigmainv = UT_Ninv_U + np.diag(1 / Phidiag)
+            Sigmainv_cf = cho_factor(Sigmainv)
+
+            ahat = cho_solve(Sigmainv_cf, UT_Ninv_r)
+            rw = r - U @ ahat
+        else:
+            rw = r
 
         return rw / errs
 
