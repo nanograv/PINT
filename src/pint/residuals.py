@@ -15,7 +15,7 @@ import warnings
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
-from scipy.linalg import LinAlgError
+from scipy.linalg import cholesky, cho_factor, cho_solve, solve_triangular, LinAlgError
 
 from pint import dmu
 from pint.models.dispersion_model import Dispersion
@@ -577,10 +577,22 @@ class Residuals:
         :meth:`pint.residuals.Residuals.calc_time_resids`
         :meth:`pint.residuals.Residuals.calc_phase_resids`
         """
-        r = self.calc_time_resids()
-        nr = sum(self.noise_resids.values())
-        sigma = self.get_data_error()
-        return ((r - nr) / sigma).to(u.dimensionless_unscaled)
+        r = self.calc_time_resids().to_value("s")
+        errs = self.get_data_error().to_value("s")
+        Ndiag = errs**2
+        U = self.model.noise_model_designmatrix(self.toas)
+        Phidiag = self.model.noise_model_basis_weight(self.toas)
+
+        Ninv_U = U / Ndiag[:, None]
+        UT_Ninv_U = U.T @ Ninv_U
+        UT_Ninv_r = r @ Ninv_U
+        Sigmainv = UT_Ninv_U + np.diag(1 / Phidiag)
+        Sigmainv_cf = cho_factor(Sigmainv)
+
+        ahat = cho_solve(Sigmainv_cf, UT_Ninv_r)
+        rw = r - U @ ahat
+
+        return rw / errs
 
     def _calc_gls_chi2(self, lognorm: bool = False) -> float:
         """Compute the chi2 when correlated noise is present in the timing model.
