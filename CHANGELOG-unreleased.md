@@ -34,3 +34,4 @@ the released changes.
 - `find_empty_masks` can now handle SWX models
 - `photonphase` crash when launched with `--absphase --polycos`
 ### Removed
+- Broken script `event_optimize_multiple`
