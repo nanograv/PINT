@@ -18,7 +18,11 @@ class SimpleExponentialDip(DelayComponent):
     is multiplied by a Heaviside step function. We cannot fit for the event epoch
     while using the latter because it is not differentiable at the event epoch.
     This implementation approaches the tempo2 version in the limit EXPDIPEPS -> 0.
-    The explicit mathematical form is as follows.
+    The parameter names are also different between this implementation and tempo2.
+    The tempo2 parameter names have been added here as aliases so that tempo2 par files
+    can be read.
+
+    The explicit mathematical form of the dips is as follows.
 
     .. math::
             \\Delta_{\\text{dip}}(t)=-\\sum_{i}A_{i}\\left(\\frac{f}{f_{\\text{ref}}}\\right)^{\\gamma_{i}}\\left(\\frac{\\tau_{i}}{\\epsilon}\\right)^{\\epsilon/\\tau_{i}}\\left(\\frac{\\tau_{i}}{\\tau_{i}-\\epsilon}\\right)^{\\frac{\\tau_{i}-\\epsilon}{\\tau_{i}}}\\frac{\\exp\\left[-\\frac{t-T_{i}}{\\tau_{i}}\\right]}{1+\\exp\\left[-\\frac{t-T_{i}}{\\epsilon}\\right]}
@@ -44,6 +48,17 @@ class SimpleExponentialDip(DelayComponent):
                 units="day",
                 description="Chromatic exponential dip step timescale",
                 value=1e-3,
+                frozen=True,
+                tcb2tdb_scale_factor=1,
+            )
+        )
+
+        self.add_param(
+            floatParameter(
+                name=f"EXPDIPFREF",
+                units="MHz",
+                description="Chromatic exponential dip reference frequency",
+                value=1400,
                 frozen=True,
                 tcb2tdb_scale_factor=1,
             )
@@ -196,7 +211,7 @@ class SimpleExponentialDip(DelayComponent):
     def get_ffac(self, toas: TOAs) -> np.ndarray:
         """Compute f/fref where f is the observing frequency."""
         f = self._parent.barycentric_radio_freq(toas)
-        fref = 1400 * u.MHz
+        fref = self.EXPDIPFREF.quantity
         return (f / fref).to_value(u.dimensionless_unscaled)
 
     def expdip_delay_term(
