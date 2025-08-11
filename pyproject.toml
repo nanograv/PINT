@@ -60,6 +60,7 @@ Documentation = "https://nanograv-pint.readthedocs.io/"
 [project.scripts]
 photonphase = "pint.scripts.photonphase:main"
 event_optimize = "pint.scripts.event_optimize:main"
+event_optimize_multiple = "pint.scripts.event_optimize_multiple:main"
 pintempo = "pint.scripts.pintempo:main"
 zima = "pint.scripts.zima:main"
 pintbary = "pint.scripts.pintbary:main"
