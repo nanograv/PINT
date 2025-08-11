@@ -1324,3 +1324,31 @@ class WidebandTOAResiduals(CombinedResiduals):
     @property
     def noise_resids(self):
         return self.toa.noise_resids
+
+    def calc_whitened_resids(self):
+        return self.calc_wideband_whitened_resids()[: len(self.toas)]
+
+    def calc_whitened_dm_resids(self):
+        return self.calc_wideband_whitened_resids()[len(self.toas) :]
+
+    def calc_wideband_whitened_resids(self):
+        r = self.calc_wideband_resids()
+        errs = self.model.scaled_wideband_uncertainty(self.toas)
+
+        if self.model.has_correlated_errors:
+            Ndiag = errs**2
+            U = self.model.noise_model_wideband_designmatrix(self.toas)
+            Phidiag = self.model.noise_model_basis_weight(self.toas)
+
+            Ninv_U = U / Ndiag[:, None]
+            UT_Ninv_U = U.T @ Ninv_U
+            UT_Ninv_r = r @ Ninv_U
+            Sigmainv = UT_Ninv_U + np.diag(1 / Phidiag)
+            Sigmainv_cf = cho_factor(Sigmainv)
+
+            ahat = cho_solve(Sigmainv_cf, UT_Ninv_r)
+            rw = r - U @ ahat
+        else:
+            rw = r
+
+        return rw / errs
