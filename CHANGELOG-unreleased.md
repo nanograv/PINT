@@ -10,6 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 - Simulation functions no longer subtract the residual mean by default.
+- `cmwavex_setup` now takes the chromatic index as an optional argument.
 ### Added
 - `WidebandTOAResiduals.calc_wideband_resids()` and `TimingModel.scaled_wideband_uncertainty()` methods
 - New abstract base classes `WhiteNoiseComponent` and `CorrelatedNoiseComponent` (changed the type hierarchy of `NoiseComponent`s)
@@ -19,6 +20,7 @@ the released changes.
 - PLSWNoise: a Fourier basis stochastic solar wind model. See Hazboun et al. 2022 for details.
 - Explicitly specify the Tspan for power-law GP noise parameters (TN*TSPAN)
 - Parallel execution and work stealing in CI tests
+- Make `WidebandTOAResiduals.noise_resids` available as a `@property`
 ### Fixed
 - `TimingModel.total_dm()` now returns zero when no DM component is present in the model.
 - Made `TimingModel.toa_covariance_matrix()` not explicitly dependent on `ScaleToaError`
@@ -27,4 +29,8 @@ the released changes.
 - TN*C parameter are now `intParameters`
 - Bug in `Fitter.plot()`
 - `np.NaN` -> `np.nan`
+- When converting between binary models, some parameters may not be visible
+- When converting from ELL1H, if only H3 is set should not include M2,SINI in output
+- `find_empty_masks` can now handle SWX models
+- `photonphase` crash when launched with `--absphase --polycos`
 ### Removed

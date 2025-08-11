@@ -449,7 +449,7 @@ def taylor_horner_deriv(
     with respect to x evaluated at 2.0, we would do::
 
         In [1]: taylor_horner_deriv(2.0, [10, 3, 4, 12], 1)
-        Out[1]: 15.0
+        Out[1]: 35.0
 
     Parameters
     ----------
@@ -991,9 +991,15 @@ def xxxselections(
     if not any(p.startswith(f"{prefix}X") for p in model.params):
         return {}
     toas_selector = TOASelect(is_range=True)
-    X_mapping = model.get_prefix_mapping(f"{prefix}X_")
-    XR1_mapping = model.get_prefix_mapping(f"{prefix}XR1_")
-    XR2_mapping = model.get_prefix_mapping(f"{prefix}XR2_")
+    if prefix in ["SW"]:
+        # need a special case here since it looks like SWXDM_
+        X_mapping = model.get_prefix_mapping(f"{prefix}XDM_")
+        XR1_mapping = model.get_prefix_mapping(f"{prefix}XR1_")
+        XR2_mapping = model.get_prefix_mapping(f"{prefix}XR2_")
+    else:
+        X_mapping = model.get_prefix_mapping(f"{prefix}X_")
+        XR1_mapping = model.get_prefix_mapping(f"{prefix}XR1_")
+        XR2_mapping = model.get_prefix_mapping(f"{prefix}XR2_")
     condition = {}
     for ii in X_mapping:
         r1 = getattr(model, XR1_mapping[ii]).quantity
@@ -1640,6 +1646,7 @@ def cmwavex_setup(
     freqs: Optional[Iterable[Union[float, u.Quantity]]] = None,
     n_freqs: Optional[int] = None,
     freeze_params: bool = False,
+    chromatic_index: Optional[float] = None,
 ) -> List[int]:
     """
     Set-up a CMWaveX model based on either an array of user-provided frequencies or the wave number
@@ -1672,6 +1679,21 @@ def cmwavex_setup(
             Indices that have been assigned to new WaveX components
     """
     from pint.models.cmwavex import CMWaveX
+    from pint.models.chromatic_model import ChromaticCM
+
+    if (
+        "ChromaticCM" not in model.components
+        or ("ChromaticCM" in model.components and model["TNCHROMIDX"].value is None)
+    ) and chromatic_index is not None:
+        model.add_component(ChromaticCM())
+        model["CM"].value = 0
+        model["CM1"].value = 0
+        model["TNCHROMIDX"].value = chromatic_index
+    else:
+        assert chromatic_index is None, (
+            "ChromaticCM is already present in the timing model and will not be rewritten."
+            "Use `chromatic_index=None`."
+        )
 
     if (freqs is None) and (n_freqs is None):
         raise ValueError(
