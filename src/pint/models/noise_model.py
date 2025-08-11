@@ -5,12 +5,11 @@ from typing import Callable, List, Optional, Tuple
 import warnings
 
 import astropy.units as u
-from astropy.table import Table
 import numpy as np
 from loguru import logger as log
 
-from pint import DMconst
-from pint.models.parameter import Parameter, floatParameter, maskParameter
+from pint import DMconst, dmu
+from pint.models.parameter import Parameter, floatParameter, intParameter, maskParameter
 from pint.models.timing_model import Component
 from pint.toa import TOAs
 
@@ -34,9 +33,52 @@ class NoiseComponent(Component):
         self.dm_covariance_matrix_funcs_component = []
         self.basis_funcs = []
 
+    @property
+    def introduces_correlated_errors(self) -> bool:
+        return isinstance(self, CorrelatedNoiseComponent)
 
-class ScaleToaError(NoiseComponent):
-    """Correct reported template fitting uncertainties.
+
+class WhiteNoiseComponent(NoiseComponent):
+    """Abstract base class for all white noise components."""
+
+    pass
+
+
+class CorrelatedNoiseComponent(NoiseComponent):
+    """Abstract base class for all correlated noise components."""
+
+    is_time_correlated = False
+
+    def get_noise_basis(self, toas):
+        raise NotImplementedError
+
+    def get_noise_weights(self, toas):
+        raise NotImplementedError
+
+    def get_dm_noise_basis(self, toas):
+        """The DM part of the basis matrix for wideband datasets. This is non-zero
+        only for DM noise. The output is a numpy array but it has units of dmu/s
+        by convention since the noise amplitudes are defined to have dimensions of
+        time."""
+        toa_noise_basis = self.get_noise_basis(toas)
+        if self.introduces_dm_errors:
+            freqs = self._parent.barycentric_radio_freq(toas)
+            return (toa_noise_basis * (freqs**2 / DMconst)[:, None]).to_value(dmu / u.s)
+        else:
+            return np.zeros_like(toa_noise_basis)
+
+    def get_wideband_noise_basis(self, toas):
+        """The wideband noise basis including both TOA and DM parts. The TOA part
+        of the matrix is dimensionless but the DM part of the basis has units of
+        dmu/s."""
+        M_toa = self.get_noise_basis(toas)
+        M_dm = self.get_dm_noise_basis(toas)
+        return np.vstack((M_toa, M_dm))
+
+
+class ScaleToaError(WhiteNoiseComponent):
+    """Correct the reported TOA uncertainties. The corrections account for
+    imperfections in the TOA measurement and pulse jitter.
 
     Parameters supported:
 
@@ -51,8 +93,6 @@ class ScaleToaError(NoiseComponent):
 
     register = True
     category = "scale_toa_error"
-
-    introduces_correlated_errors = False
 
     def __init__(
         self,
@@ -221,7 +261,7 @@ class ScaleToaError(NoiseComponent):
         return result
 
 
-class ScaleDmError(NoiseComponent):
+class ScaleDmError(WhiteNoiseComponent):
     """Correction for estimated wideband DM measurement uncertainty.
 
     Parameters supported:
@@ -237,7 +277,6 @@ class ScaleDmError(NoiseComponent):
     register = True
     category = "scale_dm_error"
 
-    introduces_correlated_errors = False
     introduces_dm_errors = True
 
     def __init__(
@@ -325,7 +364,7 @@ class ScaleDmError(NoiseComponent):
         return np.diag(scaled_sigma)
 
 
-class EcorrNoise(NoiseComponent):
+class EcorrNoise(CorrelatedNoiseComponent):
     """Noise correlated between nearby TOAs.
 
     This can occur, for example, if multiple TOAs were taken at different
@@ -346,9 +385,6 @@ class EcorrNoise(NoiseComponent):
 
     register = True
     category = "ecorr_noise"
-
-    introduces_correlated_errors = True
-    is_time_correlated = False
 
     def __init__(
         self,
@@ -448,7 +484,7 @@ class EcorrNoise(NoiseComponent):
         return np.dot(U * Jvec[None, :], U.T)
 
 
-class PLDMNoise(NoiseComponent):
+class PLDMNoise(CorrelatedNoiseComponent):
     """Model of DM variations as radio frequency-dependent noise with a power-law spectrum.
 
     Variations in DM over time result from both the proper motion of the
@@ -476,7 +512,6 @@ class PLDMNoise(NoiseComponent):
     register = True
     category = "pl_DM_noise"
 
-    introduces_correlated_errors = True
     introduces_dm_errors = True
     is_time_correlated = True
 
@@ -491,7 +526,8 @@ class PLDMNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Amplitude of powerlaw DM noise in tempo2 format",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
@@ -499,33 +535,42 @@ class PLDMNoise(NoiseComponent):
                 name="TNDMGAM",
                 units="",
                 aliases=[],
-                description="Spectral index of powerlaw " "DM noise in tempo2 format",
-                convert_tcb2tdb=False,
+                description="Spectral index of powerlaw DM noise in tempo2 format",
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNDMC",
                 units="",
                 aliases=[],
                 description="Number of DM noise frequencies.",
-                convert_tcb2tdb=False,
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNDMFLOG",
                 units="",
                 description="Number of logarithmically spaced DM noise frequencies in the basis.",
-                convert_tcb2tdb=False,
             )
         )
         self.add_param(
             floatParameter(
                 name="TNDMFLOG_FACTOR",
                 units="",
-                description="Factor of the log-spaced DM frequencies (2 -> [1/8,1/4,1/2,...])",
-                convert_tcb2tdb=False,
+                description="Scaling factor for the log-spaced DM frequencies (2 -> [1/8, 1/4, 1/2, ...]).",
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNDMTSPAN",
+                units="year",
+                description="Time span corresponding to the fundamental frequency of the DM noise Fourier series (data span is used by default).",
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
 
@@ -554,7 +599,11 @@ class PLDMNoise(NoiseComponent):
 
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        T = np.max(t) - np.min(t)
+        T = (
+            np.max(t) - np.min(t)
+            if self.TNDMTSPAN.quantity is None
+            else self.TNDMTSPAN.quantity
+        )
 
         (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
         f_min = f_min_ratio / T
@@ -607,7 +656,7 @@ class PLDMNoise(NoiseComponent):
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
-class PLSWNoise(NoiseComponent):
+class PLSWNoise(CorrelatedNoiseComponent):
     """Model of solar wind DM variations as radio frequency-dependent noise with a
     power-law spectrum.
 
@@ -635,7 +684,7 @@ class PLSWNoise(NoiseComponent):
     register = True
     category = "pl_SW_noise"
 
-    introduces_correlated_errors = True
+    introduces_dm_errors = True
     is_time_correlated = True
 
     def __init__(
@@ -683,7 +732,7 @@ class PLSWNoise(NoiseComponent):
             floatParameter(
                 name="TNSWFLOG_FACTOR",
                 units="",
-                description="Factor of the log-spaced solar wind frequencies (2 -> [1/8,1/4,1/2,...])",
+                description="Scaling factor for the log-spaced solar wind frequencies (2 -> [1/8,1/4,1/2,...])",
                 convert_tcb2tdb=False,
             )
         )
@@ -769,7 +818,7 @@ class PLSWNoise(NoiseComponent):
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
-class PLChromNoise(NoiseComponent):
+class PLChromNoise(CorrelatedNoiseComponent):
     """Model of a radio frequency-dependent noise with a power-law spectrum and arbitrary chromatic index.
 
     Such variations are usually attributed to time-variable scattering in the
@@ -802,7 +851,6 @@ class PLChromNoise(NoiseComponent):
     register = True
     category = "pl_chrom_noise"
 
-    introduces_correlated_errors = True
     is_time_correlated = True
 
     def __init__(
@@ -816,7 +864,8 @@ class PLChromNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Amplitude of powerlaw chromatic noise in tempo2 format",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
@@ -825,32 +874,41 @@ class PLChromNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Spectral index of powerlaw chromatic noise in tempo2 format",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNCHROMC",
                 units="",
                 aliases=[],
                 description="Number of chromatic noise frequencies.",
-                convert_tcb2tdb=False,
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNCHROMFLOG",
                 units="",
                 description="Number of logarithmically spaced chromatic noise frequencies in the basis.",
-                convert_tcb2tdb=False,
             )
         )
         self.add_param(
             floatParameter(
                 name="TNCHROMFLOG_FACTOR",
                 units="",
-                description="Factor of the log-spaced chromatic frequencies (2 -> [1/8,1/4,1/2,...])",
-                convert_tcb2tdb=False,
+                description="Scaling factor for the log-spaced chromatic frequencies (2 -> [1/8,1/4,1/2,...])",
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNCHROMTSPAN",
+                units="year",
+                description="Time span corresponding to the fundamental frequency of the chromatic noise Fourier series (data span is used by default).",
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
 
@@ -883,7 +941,11 @@ class PLChromNoise(NoiseComponent):
 
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        T = np.max(t) - np.min(t)
+        T = (
+            np.max(t) - np.min(t)
+            if self.TNCHROMTSPAN.quantity is None
+            else self.TNCHROMTSPAN.quantity
+        )
 
         (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
         f_min = f_min_ratio / T
@@ -937,7 +999,7 @@ class PLChromNoise(NoiseComponent):
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
-class PLRedNoise(NoiseComponent):
+class PLRedNoise(CorrelatedNoiseComponent):
     """Timing noise with a power-law spectrum.
 
     Over the long term, pulsars are observed to experience timing noise
@@ -964,7 +1026,6 @@ class PLRedNoise(NoiseComponent):
     register = True
     category = "pl_red_noise"
 
-    introduces_correlated_errors = True
     is_time_correlated = True
 
     def __init__(
@@ -978,7 +1039,8 @@ class PLRedNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Amplitude of powerlaw red noise.",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
@@ -987,7 +1049,8 @@ class PLRedNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Spectral index of powerlaw red noise.",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
 
@@ -997,7 +1060,8 @@ class PLRedNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Amplitude of powerlaw red noise in tempo2 format",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
@@ -1010,28 +1074,36 @@ class PLRedNoise(NoiseComponent):
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNREDC",
                 units="",
                 aliases=[],
                 description="Number of red noise frequencies.",
-                convert_tcb2tdb=False,
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNREDFLOG",
                 units="",
                 description="Number of logarithmically spaced red noise frequencies in the basis.",
-                convert_tcb2tdb=False,
             )
         )
         self.add_param(
             floatParameter(
                 name="TNREDFLOG_FACTOR",
                 units="",
-                description="Factor of the log-spaced frequencies (2 -> [1/8,1/4,1/2,...])",
-                convert_tcb2tdb=False,
+                description="Scaling factor for the log-spaced frequencies (2 -> [1/8,1/4,1/2,...])",
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNREDTSPAN",
+                units="year",
+                description="Time span corresponding to the fundamental frequency of the achromatic red noise Fourier series (data span is used by default).",
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
 
@@ -1068,7 +1140,11 @@ class PLRedNoise(NoiseComponent):
 
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        T = np.max(t) - np.min(t)
+        T = (
+            np.max(t) - np.min(t)
+            if self.TNREDTSPAN.quantity is None
+            else self.TNREDTSPAN.quantity
+        )
 
         (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
         f_min = f_min_ratio / T

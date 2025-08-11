@@ -58,6 +58,7 @@ parfile_contents = """
     TNDMC 70
     TNDMFLOG 4
     TNDMFLOG_FACTOR 2
+    TNDMTSPAN 1
 """
 
 

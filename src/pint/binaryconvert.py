@@ -85,7 +85,8 @@ def _orthometric_to_M2SINI(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
     Inverts Eqns. 12, 20, 21 from Freire and Wex (2010)
     Also propagates uncertainties if present
 
-    If STIGMA is present will use that.  Otherwise will use H4
+    If STIGMA is present will use that.  Otherwise will use H4.
+    If neither is present, will leave M2, SINI unset.
 
     Paramters
     ---------
@@ -128,10 +129,12 @@ def _orthometric_to_M2SINI(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
     if stigma is not None:
         sini = 2 * stigma / (1 + stigma**2)
         m2 = h3 / stigma**3 / Tsun.value
-    else:
+    elif h4 is not None:
         # FW10 Eqn. 25, 26
         sini = 2 * h3 * h4 / (h3**2 + h4**2)
         m2 = h3**4 / h4**3 / Tsun.value
+    else:
+        return None, None, None, None
 
     m2_unc = m2.s * u.Msun if m2.s > 0 else None
     sini_unc = sini.s if sini.s > 0 else None
@@ -540,6 +543,11 @@ def _transfer_params(
                 p,
                 copy.deepcopy(getattr(inmodel.components[inbinary_component_name], p)),
             )
+            getattr(outmodel.components[outbinary_component_name], p)._parent = (
+                outmodel.components[outbinary_component_name]
+            )
+            if not p in outmodel.components[outbinary_component_name].params:
+                outmodel.components[outbinary_component_name].params.append(p)
 
 
 def convert_binary(
@@ -817,7 +825,7 @@ def convert_binary(
             else:
                 outmodel.EDOT.frozen = model.LNEDOT.frozen
             if binary_component.binary_model_name == "ELL1H":
-                if output not in ["DDH", "DDS", "DDK"]:
+                if output not in ["DDH", "DDS", "DDK", "BT"]:
                     M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
                     outmodel.M2.quantity = M2
                     outmodel.SINI.quantity = SINI

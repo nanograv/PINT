@@ -17,9 +17,7 @@ noise_component_labels = [
 correlated_noise_component_labels = [
     cl
     for cl, c in Component.component_types.items()
-    if issubclass(c, NoiseComponent)
-    and hasattr(c, "introduces_correlated_errors")
-    and c.introduces_correlated_errors
+    if issubclass(c, NoiseComponent) and c().introduces_correlated_errors
 ]
 
 
@@ -69,7 +67,7 @@ def add_chrom_noise_to_model(model):
     model.validate()
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def model_and_toas():
     parfile = examplefile("B1855+09_NANOGrav_9yv1.gls.par")
     timfile = examplefile("B1855+09_NANOGrav_9yv1.tim")
@@ -95,7 +93,7 @@ def test_introduces_correlated_errors(component_label):
 
     component = Component.component_types[component_label]
     assert hasattr(component, "introduces_correlated_errors") and isinstance(
-        component.introduces_correlated_errors, bool
+        component().introduces_correlated_errors, bool
     )
 
 

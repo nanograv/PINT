@@ -94,12 +94,12 @@ class WrappedFitter:
             log.warning(
                 f"Max iterations reached for {','.join(parstrings)}: returning NaN"
             )
-            chi2 = np.NaN
+            chi2 = np.nan
         except Exception as e:
             log.warning(
                 f"Unexpected exception {e} for {','.join(parstrings)}: returning NaN"
             )
-            chi2 = np.NaN
+            chi2 = np.nan
         log.debug(
             f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}"
         )
@@ -150,7 +150,7 @@ def doonefit(
         )
     except fitter.MaxiterReached:
         log.warning(f"Max iterations reached for {','.join(parstrings)}: returning NaN")
-        return np.NaN
+        return np.nan
     log.debug(
         f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}"
     )
