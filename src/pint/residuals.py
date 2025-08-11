@@ -15,7 +15,7 @@ import warnings
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
-from scipy.linalg import cholesky, cho_factor, cho_solve, solve_triangular, LinAlgError
+from scipy.linalg import cho_factor, cho_solve, LinAlgError
 
 from pint import dmu
 from pint.models.dispersion_model import Dispersion
