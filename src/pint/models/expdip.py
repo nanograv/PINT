@@ -20,7 +20,8 @@ class SimpleExponentialDip(DelayComponent):
     This implementation approaches the tempo2 version in the limit EXPDIPEPS -> 0.
     The explicit mathematical form is as follows.
 
-        :math:`\Delta_{\text{dip}}(t)=-\sum_{i}A_{i}\left(\frac{f}{f_{\text{ref}}}\right)^{\gamma_{i}}\left(\frac{\tau_{i}}{\epsilon}\right)^{\epsilon/\tau_{i}}\left(\frac{\tau_{i}}{\tau_{i}-\epsilon}\right)^{\frac{\tau_{i}-\epsilon}{\tau_{i}}}\frac{\exp\left[-\frac{t-T_{i}}{\tau_{i}}\right]}{1+\exp\left[-\frac{t-T_{i}}{\epsilon}\right]}`
+    .. math::
+            \Delta_{\text{dip}}(t)=-\sum_{i}A_{i}\left(\frac{f}{f_{\text{ref}}}\right)^{\gamma_{i}}\left(\frac{\tau_{i}}{\epsilon}\right)^{\epsilon/\tau_{i}}\left(\frac{\tau_{i}}{\tau_{i}-\epsilon}\right)^{\frac{\tau_{i}-\epsilon}{\tau_{i}}}\frac{\exp\left[-\frac{t-T_{i}}{\tau_{i}}\right]}{1+\exp\left[-\frac{t-T_{i}}{\epsilon}\right]}
 
     An exponential dip event is normalized such that the EXPDIPAMP_ is its extremum
     value. Note that the extremum occurs slightly after the event epoch.
