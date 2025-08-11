@@ -8,7 +8,13 @@ from pint.models.stand_alone_psr_binaries.BT_model import BTmodel
 
 class BTpiecewise(BTmodel):
     """
-     This is a class independent from the PINT platform for pulsar BT piecewise binary model. It is a subclass of BTmodel which is a subclass of  PSR_BINARY class defined in file binary_generic.py in the same directory. This class is designed for use with the PINT platform but can be used as an independent module for piecewise binary delay calculation. To interact with the PINT platform, a pulsar_binary wrapper is needed. See the source file pint/models/binary_piecewise.py.
+    This is a class independent from the PINT platform for pulsar BT piecewise binary model.
+    It is a subclass of BTmodel which is a subclass of  PSR_BINARY class defined in file
+    binary_generic.py in the same directory. This class is designed for use with the PINT
+    platform but can be used as an independent module for piecewise binary delay calculation.
+    To interact with the PINT platform, a pulsar_binary wrapper is needed. See the source
+    file pint/models/binary_piecewise.py.
+
     Reference
     ---------
     The 'BT' binary model for the pulse period. Model as in:

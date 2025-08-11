@@ -48,7 +48,7 @@ class PulsarBinary(DelayComponent):
         - T0 - time of (any) periastron (MJD)
         - PB - binary period (days, non-negative)
         - PBDOT - time derivative of binary period (s/s)
-        - A1 - projected orbital amplitude, $a \sin i$ (ls, non-negative)
+        - A1 - projected orbital amplitude, $a \\sin i$ (ls, non-negative)
         - A1DOT - time derivative of projected orbital amplitude (ls/s)
         - ECC (or E) - eccentricity (no units, 0<=ECC<1)
         - EDOT - time derivative of eccentricity (1/s)
@@ -68,7 +68,7 @@ class PulsarBinary(DelayComponent):
 
     The orbital phase is then given by:
         orbits(t) = (t - T0) / PB
-                    + \sum_{n=0} (ORBWAVECn cos(ORBWAVE_OM * (n + 1) * (t - ORBWAVE_EPOCH))
+                    + \\sum_{n=0} (ORBWAVECn cos(ORBWAVE_OM * (n + 1) * (t - ORBWAVE_EPOCH))
                                 + ORBWAVESn sin(ORBWAVE_OM * (n + 1) * (t - ORBWAVE_EPOCH))
 
     The internal calculation code uses different names for some parameters:

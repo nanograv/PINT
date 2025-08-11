@@ -136,8 +136,8 @@ class BinaryDDS(BinaryDD):
     """Damour and Deruelle model with alternate Shapiro delay parameterization.
 
     This extends the :class:`pint.models.binary_dd.BinaryDD` model with
-    :math:`SHAPMAX = -\log(1-s)` instead of just :math:`s=\sin i`, which behaves better
-    for :math:`\sin i` near 1.  It does not (yet) implement the higher-order delays and lensing correction.
+    :math:`SHAPMAX = -\\log(1-s)` instead of just :math:`s=\\sin i`, which behaves better
+    for :math:`\\sin i` near 1.  It does not (yet) implement the higher-order delays and lensing correction.
 
     The actual calculations for this are done in
     :class:`pint.models.stand_alone_psr_binaries.DDS_model.DDSmodel`.
@@ -146,7 +146,7 @@ class BinaryDDS(BinaryDD):
     and :class:`pint.models.binary_dd.BinaryDD` plus:
 
        SHAPMAX
-            :math:`-\log(1-\sin i)`
+            :math:`-\\log(1-\\sin i)`
 
     It also converts:
 
