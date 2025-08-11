@@ -19,6 +19,7 @@ __all__ = [
     "MCMCFitter",
     "MCMCFitterAnalyticTemplate",
     "MCMCFitterBinnedTemplate",
+    "CompositeMCMCFitter",
 ]
 
 
