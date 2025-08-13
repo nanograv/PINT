@@ -9,13 +9,14 @@ dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 
 import collections
 import copy
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 import warnings
 
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
 from scipy.linalg import cho_factor, cho_solve, LinAlgError
+from scipy.stats import kstest
 
 from pint import dmu
 from pint.models.dispersion_model import Dispersion
@@ -597,6 +598,13 @@ class Residuals:
             rw = r
 
         return rw / errs
+
+    def whitened_resids_kstest(self) -> Tuple[float, float]:
+        """Checks if the whitened residuals are unit-normal distributed. A small p-value indicates a
+        significant departure from unit-Gaussianity."""
+        rw = self.calc_whitened_resids()
+        ks = kstest(rw, "norm")
+        return ks.statistic, ks.pvalue
 
     def _calc_gls_chi2(self, lognorm: bool = False) -> float:
         """Compute the chi2 when correlated noise is present in the timing model.
@@ -1362,3 +1370,10 @@ class WidebandTOAResiduals(CombinedResiduals):
             rw = r
 
         return rw / errs
+
+    def whitened_resids_kstest(self) -> Tuple[float, float]:
+        """Checks if the whitened residuals are unit-normal distributed. A small p-value indicates a
+        significant departure from unit-Gaussianity."""
+        rw = self.calc_wideband_whitened_resids()
+        ks = kstest(rw, "norm")
+        return ks.statistic, ks.pvalue
