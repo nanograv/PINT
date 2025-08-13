@@ -602,7 +602,7 @@ class Residuals:
     def whitened_resids_kstest(self) -> Tuple[float, float]:
         """Checks if the whitened residuals are unit-normal distributed. A small p-value indicates a
         significant departure from unit-Gaussianity."""
-        rw = self.calc_whitened_resids()
+        rw = self.calc_whitened_resids().astype(float)
         ks = kstest(rw, "norm")
         return ks.statistic, ks.pvalue
 
@@ -1374,6 +1374,6 @@ class WidebandTOAResiduals(CombinedResiduals):
     def whitened_resids_kstest(self) -> Tuple[float, float]:
         """Checks if the whitened residuals are unit-normal distributed. A small p-value indicates a
         significant departure from unit-Gaussianity."""
-        rw = self.calc_wideband_whitened_resids()
+        rw = self.calc_wideband_whitened_resids().astype(float)
         ks = kstest(rw, "norm")
         return ks.statistic, ks.pvalue
