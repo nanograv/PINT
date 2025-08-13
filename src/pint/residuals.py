@@ -603,7 +603,7 @@ class Residuals:
         """Checks if the whitened residuals are unit-normal distributed. A small p-value indicates a
         significant departure from unit-Gaussianity."""
         rw = self.calc_whitened_resids().astype(float)
-        ks = kstest(rw, "norm")
+        ks = kstest(rw, "norm", args=(0, 1))
         return ks.statistic, ks.pvalue
 
     def _calc_gls_chi2(self, lognorm: bool = False) -> float:
@@ -1375,5 +1375,5 @@ class WidebandTOAResiduals(CombinedResiduals):
         """Checks if the whitened residuals are unit-normal distributed. A small p-value indicates a
         significant departure from unit-Gaussianity."""
         rw = self.calc_wideband_whitened_resids().astype(float)
-        ks = kstest(rw, "norm")
+        ks = kstest(rw, "norm", args=(0, 1))
         return ks.statistic, ks.pvalue
