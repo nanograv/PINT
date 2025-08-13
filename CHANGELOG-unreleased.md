@@ -34,5 +34,6 @@ the released changes.
 - When converting from ELL1H, if only H3 is set should not include M2,SINI in output
 - `find_empty_masks` can now handle SWX models
 - `photonphase` crash when launched with `--absphase --polycos`
+- Removed ORBWAVE parameters from `BinaryBTPiecewise` 
 ### Removed
 - Broken script `event_optimize_multiple`
