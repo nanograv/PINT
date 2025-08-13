@@ -24,6 +24,9 @@ class TestWidebandTOAFitter:
             "J1614-2230_NANOGrav_12yv3.wb.tempo_test", comments="#"
         )
 
+    def test_toa_summary(self):
+        assert "Median DM" in self.toas.get_summary()
+
     def test_fitter_init(self):
         fitter = WidebandTOAFitter([self.toas], self.model, additional_args={})
 
