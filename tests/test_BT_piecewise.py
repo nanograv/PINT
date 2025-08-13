@@ -1,4 +1,5 @@
 from pint.models import get_model
+from pint.models.timing_model import TimingModel
 import pint.toa
 import numpy as np
 import pint.fitter
@@ -602,6 +603,11 @@ def test_interacting_with_multiple_models(model_no_pieces):
     )
     np.testing.assert_allclose(
         m_piecewise_2.A1X_0000.value, m_piecewise_2.A1.value + 3.0e-3
+    )
+
+    assert all(
+        p not in m_piecewise_2.params
+        for p in ["ORBWAVE_EPOCH", "ORBWAVE_OM", "ORBWAVES0", "ORBWAVEC0"]
     )
 
     # can add more suggested tests in here
