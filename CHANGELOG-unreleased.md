@@ -35,5 +35,6 @@ the released changes.
 - `find_empty_masks` can now handle SWX models
 - `photonphase` crash when launched with `--absphase --polycos`
 - Removed ORBWAVE parameters from `BinaryBTPiecewise` 
+- `pintk.Pulsar.print_chi2()` method
 ### Removed
 - Broken script `event_optimize_multiple`
