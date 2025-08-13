@@ -21,7 +21,7 @@ correlated_noise_component_labels = [
 ]
 
 
-def add_DM_noise_to_model(model):
+def add_PL_DM_noise_to_model(model):
     all_components = Component.component_types
     model.add_component(all_components["PLDMNoise"](), validate=False)
     model["TNDMAMP"].quantity = -13
@@ -29,6 +29,15 @@ def add_DM_noise_to_model(model):
     model["TNDMC"].value = 30
     model["TNDMFLOG"].value = 4
     model["TNDMFLOG_FACTOR"].value = 2
+    model.validate()
+
+
+def add_sq_exp_DM_noise_to_model(model):
+    all_components = Component.component_types
+    model.add_component(all_components["PLDMNoise"](), validate=False)
+    model["TNDMLOGSIG"].quantity = -13
+    model["TNDMLOGELL"].quantity = 2.0
+    model["TNDMDT"].value = 30
     model.validate()
 
 
@@ -63,9 +72,18 @@ def model_and_toas():
     parfile = examplefile("B1855+09_NANOGrav_9yv1.gls.par")
     timfile = examplefile("B1855+09_NANOGrav_9yv1.tim")
     model, toas = get_model_and_toas(parfile, timfile)
-    add_DM_noise_to_model(model)
+    add_PL_DM_noise_to_model(model)
     add_chrom_noise_to_model(model)
     add_SW_noise_to_model(model)
+    return model, toas
+
+
+@pytest.fixture()
+def time_domain_model_and_toas():
+    parfile = examplefile("B1855+09_NANOGrav_9yv1.gls.par")
+    timfile = examplefile("B1855+09_NANOGrav_9yv1.tim")
+    model, toas = get_model_and_toas(parfile, timfile)
+    add_sq_exp_DM_noise_to_model(model)
     return model, toas
 
 
