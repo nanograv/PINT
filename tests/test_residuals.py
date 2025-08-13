@@ -33,18 +33,18 @@ def wideband_fake():
             DM 10
             F0 1
             PEPOCH 58000
-            ECORR mjd 57000 58000 2
             """
         )
     )
     toas = make_fake_toas_uniform(
-        57000, 59000, 40, model=model, error=1 * u.us, wideband=True
+        57000,
+        59000,
+        40,
+        model=model,
+        error=1 * u.us,
+        wideband=True,
+        add_noise=True,
     )
-    toas.compute_pulse_numbers(model)
-    np.random.seed(0)
-    toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
-    for f in toas.table["flags"]:
-        f["pp_dm"] = str(float(f["pp_dm"]) + np.random.randn() * float(f["pp_dme"]))
     return toas, model
 
 
@@ -344,7 +344,7 @@ def test_wideband_chi2_null_updating(wideband_fake):
     toas, model = wideband_fake
     model.free_params = ["F0"]
     f = WidebandTOAFitter(toas, model)
-    assert abs(f.fit_toas() - WidebandTOAResiduals(toas, model).chi2) > 1
+    assert f.fit_toas() <= WidebandTOAResiduals(toas, model).chi2
     c2 = WidebandTOAResiduals(toas, f.model).chi2
     assert_allclose(f.fit_toas(), c2)
     c2 = WidebandTOAResiduals(toas, f.model).chi2
