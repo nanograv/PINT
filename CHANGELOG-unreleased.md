@@ -36,5 +36,6 @@ the released changes.
 - `photonphase` crash when launched with `--absphase --polycos`
 - Removed ORBWAVE parameters from `BinaryBTPiecewise` 
 - `TOAs.get_summary()` now includes DM information for wideband TOAs.
+- `pintk.Pulsar.print_chi2()` method
 ### Removed
 - Broken script `event_optimize_multiple`
