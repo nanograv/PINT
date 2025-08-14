@@ -48,10 +48,10 @@ def p_to_f(p: u.Quantity, pd: u.Quantity, pdd: Optional[u.Quantity] = None):
         pulsar period (or frequency), :math:`P` (or :math:`f`)
     pd : astropy.units.Quantity
         period derivative (or frequency derivative),
-        :math:`\dot P` (or :math:`\dot f`)
+        :math:`\\dot P` (or :math:`\\dot f`)
     pdd : astropy.units.Quantity, optional
         period second derivative (or frequency second derivative),
-        :math:`\ddot P` (or :math:`\ddot f`)
+        :math:`\\ddot P` (or :math:`\\ddot f`)
 
     Returns
     -------
@@ -59,10 +59,10 @@ def p_to_f(p: u.Quantity, pd: u.Quantity, pdd: Optional[u.Quantity] = None):
         pulsar frequency (or period), :math:`f` (or :math:`P`)
     fd : astropy.units.Quantity
         pulsar frequency derivative (or period derivative),
-        :math:`\dot f` (or :math:`\dot P`)
+        :math:`\\dot f` (or :math:`\\dot P`)
     fdd : astropy.units.Quantity
         if `pdd` is supplied, then frequency second derivative
-        (or period second derivative), :math:`\ddot f` (or :math:`\ddot P`)
+        (or period second derivative), :math:`\\ddot f` (or :math:`\\ddot P`)
     """
     f = 1.0 / p
     fd = -pd / (p * p)
@@ -103,14 +103,14 @@ def pferrs(
         pulsar period (or frequency), :math:`P` or :math:`f`
     porferr : astropy.units.Quantity
         pulsar period uncertainty (or frequency uncertainty),
-        :math:`\sigma_P` or :math:`\sigma_f`
+        :math:`\\sigma_P` or :math:`\\sigma_f`
     pdorfd : astropy.units.Quantity, optional
         pulsar period derivative (or frequency derivative),
-        :math:`\dot P` or :math:`\dot f`
+        :math:`\\dot P` or :math:`\\dot f`
     pdorfderr : astropy.units.Quantity, optional
         pulsar period derivative uncertainty
-        (or frequency derivative uncertainty)  :math:`\sigma_{\dot P}`
-        or :math:`\sigma_{\dot f}`
+        (or frequency derivative uncertainty)  :math:`\\sigma_{\\dot P}`
+        or :math:`\\sigma_{\\dot f}`
 
     Returns
     -------
@@ -118,14 +118,14 @@ def pferrs(
         pulsar frequency (or period) :math:`f` or :math:`P`
     forperr : astropy.units.Quantity
         pulsar frequency uncertainty (or period uncertainty)
-        :math:`\sigma_f` or :math:`\sigma_P`
+        :math:`\\sigma_f` or :math:`\\sigma_P`
     fdorpd : astropy.units.Quantity
         pulsar frequency derivative (or period derivative) if pdorfd supplied
-        :math:`\dot f` or :math:`\dot P`
+        :math:`\\dot f` or :math:`\dot P`
     fdorpderr : astropy.units.Quantity
         if `pdorfd` supplied, then pulsar frequency derivative uncertainty
         (or period derivative uncertainty),
-        :math:`\sigma_{\dot f}` or :math:`\sigma_{\dot P}`
+        :math:`\\sigma_{\\dot f}` or :math:`\\sigma_{\\dot P}`
     """
     if pdorfd is None:
         return [1.0 / porf, porferr / porf**2.0]
@@ -154,14 +154,14 @@ def pulsar_age(
     Return the age of a pulsar given the spin frequency
     and frequency derivative.  By default, the characteristic age
     is returned (assuming a braking index `n` =3 and an initial
-    spin frequency :math:`f_0 \gg f`).  But `n` and `fo` can be set.
+    spin frequency :math:`f_0 \\gg f`).  But `n` and `fo` can be set.
 
     Parameters
     ----------
     f : astropy.units.Quantity
         pulsar frequency
     fdot : astropy.units.Quantity
-        frequency derivative :math:`\dot f`
+        frequency derivative :math:`\\dot f`
     n : int, optional
         braking index (default = 3)
     fo : astropy.units.Quantity, optional
@@ -185,7 +185,7 @@ def pulsar_age(
 
     .. math::
 
-        \tau = \frac{f}{(n-1)\dot f}\left(1-\left(\frac{f}{f_0}\right)^{n-1}\right)
+        \\tau = \\frac{f}{(n-1)\\dot f}\\left(1-\\left(\\frac{f}{f_0}\\right)^{n-1}\\right)
     """
     return (-f / ((n - 1.0) * fdot) * (1.0 - (f / fo) ** (n - 1.0))).to(u.yr)
 
@@ -193,10 +193,10 @@ def pulsar_age(
 @u.quantity_input(f=u.Hz, fdot=u.Hz / u.s, I=u.g * u.cm**2)
 def pulsar_edot(
     f: u.Quantity, fdot: u.Quantity, I: u.Quantity = 1.0e45 * u.g * u.cm**2
-) -> u.erg / u.s:
+) -> u.Quantity[u.erg / u.s]:
     r"""Compute pulsar spindown energy loss rate
 
-    Return the pulsar `Edot` (:math:`\dot E`, in erg/s) given the spin frequency `f` and
+    Return the pulsar `Edot` (:math:`\\dot E`, in erg/s) given the spin frequency `f` and
     frequency derivative `fdot`. The NS moment of inertia is assumed to be
     `I` = 1.0e45 g cm^2 by default.
 
@@ -205,7 +205,7 @@ def pulsar_edot(
     f : astropy.units.Quantity
         pulsar frequency
     fdot : astropy.units.Quantity
-        frequency derivative :math:`\dot f`
+        frequency derivative :math:`\\dot f`
     I : astropy.units.Quantity, optional
         pulsar moment of inertia, default of 1e45 g*cm**2
 
@@ -223,7 +223,7 @@ def pulsar_edot(
 
     Notes
     -----
-    Calculates :math:`\dot E = -4\pi^2  I  f  \dot f`
+    Calculates :math:`\\dot E = -4\\pi^2  I  f  \\dot f`
     """
     return (-4.0 * np.pi**2 * I * f * fdot).to(u.erg / u.s)
 
@@ -244,7 +244,7 @@ def pulsar_B(
     f : astropy.units.Quantity
         pulsar frequency
     fdot : astropy.units.Quantity
-        frequency derivative :math:`\dot f`
+        frequency derivative :math:`\\dot f`
     I : astropy.units.Quantity, optional
         pulsar moment of inertia, default of 1e45 g*cm**2
     R : astropy.units.Quantity, optional
@@ -264,7 +264,7 @@ def pulsar_B(
 
     Notes
     -----
-    Calculates :math:`B=\sqrt{\frac{3\,I\,c^3}{8\pi^2\,R^6}\times\frac{-\dot{f}}{f^3}}`
+    Calculates :math:`B=\\sqrt{\\frac{3\\,I\\,c^3}{8\\pi^2\\,R^6}\\times\\frac{-\\dot{f}}{f^3}}`
     """
     factor = (3.0 * I * const.c**3) / (8.0 * np.pi**2 * R**6)
     return _to_gauss((factor * (-fdot) / f**3) ** 0.5)
@@ -288,7 +288,7 @@ def pulsar_B_lightcyl(
     f : astropy.units.Quantity
         pulsar frequency
     fdot : astropy.units.Quantity
-        frequency derivative :math:`\dot f`
+        frequency derivative :math:`\\dot f`
     I : astropy.units.Quantity, optional
         pulsar moment of inertia, default of 1e45 g*cm**2
     R : astropy.units.Quantity, optional
@@ -308,7 +308,7 @@ def pulsar_B_lightcyl(
 
     Notes
     -----
-    Calculates :math:`B_{LC} = \sqrt{\frac{-24\pi^4\,I}{c^3}\dot{f}f^3}`
+    Calculates :math:`B_{LC} = \\sqrt{\\frac{-24\\pi^4\\,I}{c^3}\\dot{f}f^3}`
     """
     factor = 24.0 * np.pi**4.0 * I / const.c**3.0
     return _to_gauss((factor * (-fdot) * f**3.0) ** 0.5)
@@ -345,7 +345,7 @@ def mass_funct(pb: u.Quantity, x: u.Quantity) -> u.Msun:
 
     .. math::
 
-        f(m_p, m_c) = \frac{4\pi^2 x^3}{G P_b^2}
+        f(m_p, m_c) = \\frac{4\\pi^2 x^3}{G P_b^2}
 
     See [1]_
 
@@ -390,7 +390,7 @@ def mass_funct2(mp: u.Quantity, mc: u.Quantity, i: u.Quantity) -> u.Msun:
     Calculates
 
     .. math::
-        f(m_p, m_c) = \frac{m_c^3\sin^3 i}{(m_c + m_p)^2}
+        f(m_p, m_c) = \\frac{m_c^3\\sin^3 i}{(m_c + m_p)^2}
 
     See [2]_
 
@@ -448,10 +448,10 @@ def pulsar_mass(pb: u.Quantity, x: u.Quantity, mc: u.Quantity, i: u.Quantity) ->
 
     - :math:`a = f(P_b,x)` (the mass function)
     - :math:`b = 2 f(P_b,x) M_c`
-    - :math:`c = f(P_b,x)  M_c^2 - M_c\sin^3 i`
+    - :math:`c = f(P_b,x)  M_c^2 - M_c\\sin^3 i`
 
     except the discriminant simplifies to:
-    :math:`4f(P_b,x) M_c^3 \sin^3 i`
+    :math:`4f(P_b,x) M_c^3 \\sin^3 i`
 
     solve it directly
     this has to be the positive branch of the quadratic
@@ -516,10 +516,10 @@ def companion_mass(
     This ends up as a a cubic equation of the form:
     :math:`a M_c^3 + b M_c^2 + c M_c + d = 0`
 
-    - :math:`a = \sin^3(inc)`
-    - :math:`b = -{\rm massfunct}`
-    - :math:`c = -2 M_p {\rm massfunct}`
-    - :math:`d = -{\rm massfunct} M_p^2`
+    - :math:`a = \\sin^3(inc)`
+    - :math:`b = -{\\rm massfunct}`
+    - :math:`c = -2 M_p {\\rm massfunct}`
+    - :math:`d = -{\\rm massfunct} M_p^2`
 
     To solve it we can use a direct calculation of the cubic roots [3]_.
 
@@ -528,12 +528,12 @@ def companion_mass(
     and make sure we get the right one [4]_.
 
 
-    :math:`\Delta = (b^2 c^2 - 4ac^3-4b^3d-27a^2d^2+18abcd)`
+    :math:`\\Delta = (b^2 c^2 - 4ac^3-4b^3d-27a^2d^2+18abcd)`
 
-    if :math:`\delta< 0` then there is only 1 real root,
+    if :math:`\\delta< 0` then there is only 1 real root,
     and I think we do it correctly below
     and this should be < 0
-    since this reduces to :math:`-27\sin^6 i f(P_b,x)^2 M_p^4 -4\sin^3 i f(P_b,x)^3 M_p^3`
+    since this reduces to :math:`-27\\sin^6 i f(P_b,x)^2 M_p^4 -4\\sin^3 i f(P_b,x)^3 M_p^3`
     (where :math:`f(P_b,x)` is the mass function) so there is just 1 real root.
 
     .. [3] https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
@@ -574,10 +574,10 @@ def companion_mass(
 @u.quantity_input(mp=u.Msun, mc=u.Msun, pb=u.d, e=u.dimensionless_unscaled)
 def pbdot(
     mp: u.Quantity, mc: u.Quantity, pb: u.Quantity, e: Union[float, u.Quantity]
-) -> u.dimensionless_unscaled:
+) -> u.Quantity[u.dimensionless_unscaled]:
     r"""Post-Keplerian orbital decay pbdot, assuming general relativity.
 
-    pbdot (:math:`\dot P_B`) is the change in the binary orbital period
+    pbdot (:math:`\\dot P_B`) is the change in the binary orbital period
     due to emission of gravitational waves.
     Can handle scalar or array inputs.
 
@@ -609,15 +609,15 @@ def pbdot(
     Calculates
 
     .. math::
-        \dot P_b = -\frac{192\pi}{5}T_{\odot}^{5/3} \left(\frac{P_b}{2\pi}\right)^{-5/3}
-        f(e)\frac{m_p m_c}{(m_p+m_c)^{1/3}}
+        \\dot P_b = -\\frac{192\\pi}{5}T_{\\odot}^{5/3} \\left(\\frac{P_b}{2\\pi}\\right)^{-5/3}
+        f(e)\\frac{m_p m_c}{(m_p+m_c)^{1/3}}
 
     with
 
     .. math::
-        f(e)=\frac{1+(73/24)e^2+(37/96)e^4}{(1-e^2)^{7/2}}
+        f(e)=\\frac{1+(73/24)e^2+(37/96)e^4}{(1-e^2)^{7/2}}
 
-    and :math:`T_\odot = GM_\odot c^{-3}`.
+    and :math:`T_\\odot = GM_\\odot c^{-3}`.
 
     More details in :ref:`Timing Models`.  Also see [5]_.
 
@@ -645,9 +645,9 @@ def gamma(
 ) -> u.s:
     r"""Post-Keplerian time dilation and gravitational redshift gamma, assuming general relativity.
 
-    gamma (:math:`\gamma`) is the amplitude of the modification in arrival times caused by the varying
+    gamma (:math:`\\gamma`) is the amplitude of the modification in arrival times caused by the varying
     gravitational redshift of the companion and time dilation in an elliptical orbit.  The time delay is
-    :math:`\gamma \sin E`, where :math:`E` is the eccentric anomaly.
+    :math:`\\gamma \\sin E`, where :math:`E` is the eccentric anomaly.
     Can handle scalar or array inputs.
 
     Parameters
@@ -678,9 +678,9 @@ def gamma(
     Calculates
 
     .. math::
-        \gamma = T_{\odot}^{2/3} \left(\frac{P_b}{2\pi}\right)^{1/3} e \frac{m_c(m_p+2m_c)}{(m_p+m_c)^{4/3}}
+        \\gamma = T_{\\odot}^{2/3} \\left(\\frac{P_b}{2\\pi}\\right)^{1/3} e \\frac{m_c(m_p+2m_c)}{(m_p+m_c)^{4/3}}
 
-    with :math:`T_\odot = GM_\odot c^{-3}`.
+    with :math:`T_\\odot = GM_\\odot c^{-3}`.
 
     More details in :ref:`Timing Models`.  Also see [6]_
 
@@ -703,10 +703,10 @@ def omdot(
     mc: u.Quantity,
     pb: u.Quantity,
     e: Union[float, u.Quantity],
-) -> u.deg / u.yr:
+) -> u.Quantity[u.deg / u.yr]:
     r"""Post-Keplerian longitude of periastron precession rate omdot, assuming general relativity.
 
-    omdot (:math:`\dot \omega`) is the relativistic advance of periastron.
+    omdot (:math:`\\dot \\omega`) is the relativistic advance of periastron.
     Can handle scalar or array inputs.
 
     Parameters
@@ -738,10 +738,10 @@ def omdot(
 
     .. math::
 
-        \dot \omega = 3T_{\odot}^{2/3} \left(\frac{P_b}{2\pi}\right)^{-5/3}
-        \frac{1}{1-e^2}(m_p+m_c)^{2/3}
+        \\dot \\omega = 3T_{\\odot}^{2/3} \\left(\\frac{P_b}{2\\pi}\\right)^{-5/3}
+        \\frac{1}{1-e^2}(m_p+m_c)^{2/3}
 
-    with :math:`T_\odot = GM_\odot c^{-3}`.
+    with :math:`T_\\odot = GM_\\odot c^{-3}`.
 
     More details in :ref:`Timing Models`.  Also see [7]_.
 
@@ -760,7 +760,7 @@ def omdot(
 @u.quantity_input(mp=u.Msun, mc=u.Msun, pb=u.d, x=u.cm)
 def sini(
     mp: u.Quantity, mc: u.Quantity, pb: u.Quantity, x: u.Quantity
-) -> u.dimensionless_unscaled:
+) -> u.Quantity[u.dimensionless_unscaled]:
     r"""Post-Keplerian sine of inclination, assuming general relativity.
 
     Can handle scalar or array inputs.
@@ -793,10 +793,10 @@ def sini(
 
     .. math::
 
-        s = T_{\odot}^{-1/3} \left(\frac{P_b}{2\pi}\right)^{-2/3}
-        \frac{(m_p+m_c)^{2/3}}{m_c}
+        s = T_{\\odot}^{-1/3} \\left(\\frac{P_b}{2\\pi}\\right)^{-2/3}
+        \\frac{(m_p+m_c)^{2/3}}{m_c}
 
-    with :math:`T_\odot = GM_\odot c^{-3}`.
+    with :math:`T_\\odot = GM_\\odot c^{-3}`.
 
     More details in :ref:`Timing Models`.  Also see [11]_.
 
@@ -814,10 +814,12 @@ def sini(
 
 
 @u.quantity_input(mp=u.Msun, mc=u.Msun, pb=u.d)
-def dr(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.dimensionless_unscaled:
+def dr(
+    mp: u.Quantity, mc: u.Quantity, pb: u.Quantity
+) -> u.Quantity[u.dimensionless_unscaled]:
     r"""Post-Keplerian Roemer delay term
 
-    dr (:math:`\delta_r`) is part of the relativistic deformation of the orbit
+    dr (:math:`\\delta_r`) is part of the relativistic deformation of the orbit
 
     Parameters
     ----------
@@ -845,10 +847,10 @@ def dr(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.dimensionless_unscal
 
     .. math::
 
-        \delta_r = T_{\odot}^{2/3} \left(\frac{P_b}{2\pi}\right)^{2/3}
-        \frac{3 m_p^2+6 m_p m_c +2m_c^2}{(m_p+m_c)^{4/3}}
+        \\delta_r = T_{\\odot}^{2/3} \\left(\\frac{P_b}{2\\pi}\\right)^{2/3}
+        \\frac{3 m_p^2+6 m_p m_c +2m_c^2}{(m_p+m_c)^{4/3}}
 
-    with :math:`T_\odot = GM_\odot c^{-3}`.
+    with :math:`T_\\odot = GM_\\odot c^{-3}`.
 
     More details in :ref:`Timing Models`.  Also see [12]_.
 
@@ -864,10 +866,12 @@ def dr(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.dimensionless_unscal
 
 
 @u.quantity_input(mp=u.Msun, mc=u.Msun, pb=u.d)
-def dth(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.dimensionless_unscaled:
+def dth(
+    mp: u.Quantity, mc: u.Quantity, pb: u.Quantity
+) -> u.Quantity[u.dimensionless_unscaled]:
     r"""Post-Keplerian Roemer delay term
 
-    dth (:math:`\delta_{\theta}`) is part of the relativistic deformation of the orbit
+    dth (:math:`\\delta_{\\theta}`) is part of the relativistic deformation of the orbit
 
     Parameters
     ----------
@@ -895,10 +899,10 @@ def dth(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.dimensionless_unsca
 
     .. math::
 
-        \delta_{\theta} = T_{\odot}^{2/3} \left(\frac{P_b}{2\pi}\right)^{2/3}
-        \frac{3.5 m_p^2+6 m_p m_c +2m_c^2}{(m_p+m_c)^{4/3}}
+        \\delta_{\\theta} = T_{\\odot}^{2/3} \\left(\\frac{P_b}{2\\pi}\\right)^{2/3}
+        \\frac{3.5 m_p^2+6 m_p m_c +2m_c^2}{(m_p+m_c)^{4/3}}
 
-    with :math:`T_\odot = GM_\odot c^{-3}`.
+    with :math:`T_\\odot = GM_\\odot c^{-3}`.
 
     More details in :ref:`Timing Models`.  Also see [13]_.
 
@@ -920,7 +924,7 @@ def omdot_to_mtot(
     r"""Determine total mass from Post-Keplerian longitude of periastron precession rate omdot,
     assuming general relativity.
 
-    omdot (:math:`\dot \omega`) is the relativistic advance of periastron.  It relates to the total
+    omdot (:math:`\\dot \\omega`) is the relativistic advance of periastron.  It relates to the total
     system mass (assuming GR).
     Can handle scalar or array inputs.
 
@@ -951,11 +955,11 @@ def omdot_to_mtot(
 
     .. math::
 
-        \dot \omega = 3T_{\odot}^{2/3} \left(\frac{P_b}{2\pi}\right)^{-5/3}
-        \frac{1}{1-e^2}(m_p+m_c)^{2/3}
+        \\dot \\omega = 3T_{\\odot}^{2/3} \\left(\\frac{P_b}{2\\pi}\\right)^{-5/3}
+        \\frac{1}{1-e^2}(m_p+m_c)^{2/3}
 
-    to calculate :math:`m_{\rm tot} = m_p + m_c`,
-    with :math:`T_\odot = GM_\odot c^{-3}`.
+    to calculate :math:`m_{\\rm tot} = m_p + m_c`,
+    with :math:`T_\\odot = GM_\\odot c^{-3}`.
 
     More details in :ref:`Timing Models`.  Also see [9]_.
 
@@ -980,11 +984,11 @@ def omdot_to_mtot(
 @u.quantity_input(mp=u.Msun, mc=u.Msun, pb=u.d, i=u.deg)
 def a1sini(
     mp: u.Quantity, mc: u.Quantity, pb: u.Quantity, i: u.Quantity = 90 * u.deg
-) -> pint.ls:
+) -> u.Quantity[pint.ls]:
     r"""Pulsar's semi-major axis.
 
     The full semi-major axis is given by Kepler's third law.  This is the
-    projection (:math:`\sin i`) of just the pulsar's orbit (:math:`m_c/(m_p+m_c)`
+    projection (:math:`\\sin i`) of just the pulsar's orbit (:math:`m_c/(m_p+m_c)`
     times the full semi-major axis), which is what pulsar timing measures.
     Can handle scalar or array inputs.
 
@@ -1017,8 +1021,8 @@ def a1sini(
 
     .. math::
 
-        \frac{a_p \sin i}{c} = \frac{m_c \sin i}{(m_p+m_c)^{2/3}}
-        G^{1/3}\left(\frac{P_b}{2\pi}\right)^{2/3}
+        \\frac{a_p \\sin i}{c} = \\frac{m_c \\sin i}{(m_p+m_c)^{2/3}}
+        G^{1/3}\\left(\frac{P_b}{2\\pi}\\right)^{2/3}
 
     More details in :ref:`Timing Models`.  Also see [8]_
 
@@ -1032,23 +1036,23 @@ def a1sini(
 
 
 @u.quantity_input(pmtot=u.mas / u.yr, D=u.kpc)
-def shklovskii_factor(pmtot: u.Quantity, D: u.Quantity) -> 1 / u.s:
+def shklovskii_factor(pmtot: u.Quantity, D: u.Quantity) -> u.Quantity[1 / u.s]:
     r"""Compute magnitude of Shklovskii correction factor.
 
     Computes the Shklovskii correction factor, as defined in Eq 8.12 of Lorimer & Kramer (2005) [10]_
-    This is the factor by which :math:`\dot P /P` is increased due to the transverse velocity.
+    This is the factor by which :math:`\\dot P /P` is increased due to the transverse velocity.
     Note that this affects both the measured spin period and the orbital period.
     If we call this Shklovskii acceleration :math:`a_s`, then
 
     .. math::
 
-        \dot P_{\rm intrinsic} = \dot P_{\rm observed} - a_s P
+        \\dot P_{\\rm intrinsic} = \\dot P_{\\rm observed} - a_s P
 
     Parameters
     ----------
     pmtot : astropy.units.Quantity
         typically units of u.mas/u.yr
-        Total proper motion of the pulsar :math:`\mu` (system)
+        Total proper motion of the pulsar :math:`\\mu` (system)
     D : astropy.units.Quantity
         typically in units of u.kpc or u.pc
         Distance to the pulsar
@@ -1070,7 +1074,7 @@ def shklovskii_factor(pmtot: u.Quantity, D: u.Quantity) -> 1 / u.s:
 
 
 @u.quantity_input(dm=pint.dmu)
-def dispersion_slope(dm: u.Quantity) -> 1 / u.s:
+def dispersion_slope(dm: u.Quantity) -> u.Quantity[1 / u.s]:
     """Compute the dispersion slope.
 
     This is equal to DMconst * DM.
