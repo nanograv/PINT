@@ -1376,7 +1376,7 @@ class PlkWidget(tk.Frame):
             if self.psr.fitter is not None:
                 data = self.psr.fitter.resids.calc_whitened_resids()
             else:
-                data = self.prefit_resids.calc_whitened_resids()
+                data = self.psr.prefit_resids.calc_whitened_resids()
             error = None
 
         return data, error
