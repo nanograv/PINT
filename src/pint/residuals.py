@@ -15,7 +15,7 @@ import warnings
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
-from scipy.linalg import LinAlgError
+from scipy.linalg import cho_factor, cho_solve, LinAlgError
 
 from pint import dmu
 from pint.models.dispersion_model import Dispersion
@@ -577,10 +577,15 @@ class Residuals:
         :meth:`pint.residuals.Residuals.calc_time_resids`
         :meth:`pint.residuals.Residuals.calc_phase_resids`
         """
-        r = self.calc_time_resids()
-        nr = sum(self.noise_resids.values())
-        sigma = self.get_data_error()
-        return ((r - nr) / sigma).to(u.dimensionless_unscaled)
+        r = self.calc_time_resids().to_value("s")
+        errs = self.get_data_error().to_value("s")
+
+        if self.model.has_correlated_errors:
+            U = self.model.noise_model_designmatrix(self.toas)
+            Phidiag = self.model.noise_model_basis_weight(self.toas)
+            return whiten_residuals(r, errs, U, Phidiag)
+        else:
+            return r / errs
 
     def _calc_gls_chi2(self, lognorm: bool = False) -> float:
         """Compute the chi2 when correlated noise is present in the timing model.
@@ -1308,3 +1313,51 @@ class WidebandTOAResiduals(CombinedResiduals):
     @property
     def noise_resids(self):
         return self.toa.noise_resids
+
+    def calc_whitened_resids(self) -> np.ndarray:
+        """Compute the whitened wideband TOA residuals. The whitened TOA residuals
+        are dimensionless and should be unit-normal distributed if the timing model is
+        correctly fit."""
+        return self.calc_wideband_whitened_resids()[: len(self.toas)]
+
+    def calc_whitened_dm_resids(self) -> np.ndarray:
+        """Compute the whitened wideband DM residuals. The whitened DM residuals
+        are dimensionless and should be unit-normal distributed if the timing model is
+        correctly fit."""
+        return self.calc_wideband_whitened_resids()[len(self.toas) :]
+
+    def calc_wideband_whitened_resids(self) -> np.ndarray:
+        """Compute the whitened wideband residuals. The first Ntoas elements are
+        the whitened TOA residuals and the rest are DM residuals. The whitened residuals
+        are dimensionless and should be unit-normal distributed if the timing model is
+        correctly fit."""
+        r = self.calc_wideband_resids()
+        errs = self.model.scaled_wideband_uncertainty(self.toas)
+
+        if self.model.has_correlated_errors:
+            U = self.model.noise_model_wideband_designmatrix(self.toas)
+            Phidiag = self.model.noise_model_basis_weight(self.toas)
+            return whiten_residuals(r, errs, U, Phidiag)
+        else:
+            return r / errs
+
+
+def whiten_residuals(
+    y: np.ndarray, yerr: np.ndarray, U: np.ndarray, Phidiag: np.ndarray
+) -> np.ndarray:
+    """Whiten an array of residuals y given measurement uncertainties yerr,
+    noise basis matrix U, and noise weights Phidiag.
+
+    Similar computation is done by the following methods: `pint.fitter.GLSFitter.fit_toas()`,
+    `pint.fitter.WidebandTOAFitter.fit_toas()`, `pint.fitter.GLSState.step()`,
+    `pint.fitter.WidebandState.step()`."""
+    Ndiag = yerr**2
+    Ninv_U = U / Ndiag[:, None]
+    UT_Ninv_U = U.T @ Ninv_U
+    UT_Ninv_r = y @ Ninv_U
+    Sigmainv = UT_Ninv_U + np.diag(1 / Phidiag)
+    Sigmainv_cf = cho_factor(Sigmainv)
+
+    ahat = cho_solve(Sigmainv_cf, UT_Ninv_r)
+    yw = y - U @ ahat
+    return yw / yerr
