@@ -37,7 +37,9 @@ the released changes.
 - When converting from ELL1H, if only H3 is set should not include M2,SINI in output
 - `find_empty_masks` can now handle SWX models
 - `photonphase` crash when launched with `--absphase --polycos`
+- Set tcb2tdb factors for solar wind GP parameters
 - Removed ORBWAVE parameters from `BinaryBTPiecewise` 
+- `TOAs.get_summary()` now includes DM information for wideband TOAs.
 - `pintk.Pulsar.print_chi2()` method
 ### Removed
 - Broken script `event_optimize_multiple`
