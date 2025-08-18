@@ -22,6 +22,8 @@ the released changes.
 - Parallel execution and work stealing in CI tests
 - Chromatic exponential dip model
 - Make `WidebandTOAResiduals.noise_resids` available as a `@property`
+- Make whitened residuals available pre-fit
+- Whitened wideband residuals
 ### Fixed
 - `TimingModel.total_dm()` now returns zero when no DM component is present in the model.
 - Made `TimingModel.toa_covariance_matrix()` not explicitly dependent on `ScaleToaError`
