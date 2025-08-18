@@ -582,22 +582,11 @@ class Residuals:
         errs = self.get_data_error().to_value("s")
 
         if self.model.has_correlated_errors:
-            Ndiag = errs**2
             U = self.model.noise_model_designmatrix(self.toas)
             Phidiag = self.model.noise_model_basis_weight(self.toas)
-
-            Ninv_U = U / Ndiag[:, None]
-            UT_Ninv_U = U.T @ Ninv_U
-            UT_Ninv_r = r @ Ninv_U
-            Sigmainv = UT_Ninv_U + np.diag(1 / Phidiag)
-            Sigmainv_cf = cho_factor(Sigmainv)
-
-            ahat = cho_solve(Sigmainv_cf, UT_Ninv_r)
-            rw = r - U @ ahat
+            return whiten_residuals(r, errs, U, Phidiag)
         else:
-            rw = r
-
-        return rw / errs
+            return r / errs
 
     def whitened_resids_kstest(self) -> Tuple[float, float]:
         """Checks if the whitened residuals are unit-normal distributed. A small p-value indicates a
@@ -1354,22 +1343,11 @@ class WidebandTOAResiduals(CombinedResiduals):
         errs = self.model.scaled_wideband_uncertainty(self.toas)
 
         if self.model.has_correlated_errors:
-            Ndiag = errs**2
             U = self.model.noise_model_wideband_designmatrix(self.toas)
             Phidiag = self.model.noise_model_basis_weight(self.toas)
-
-            Ninv_U = U / Ndiag[:, None]
-            UT_Ninv_U = U.T @ Ninv_U
-            UT_Ninv_r = r @ Ninv_U
-            Sigmainv = UT_Ninv_U + np.diag(1 / Phidiag)
-            Sigmainv_cf = cho_factor(Sigmainv)
-
-            ahat = cho_solve(Sigmainv_cf, UT_Ninv_r)
-            rw = r - U @ ahat
+            return whiten_residuals(r, errs, U, Phidiag)
         else:
-            rw = r
-
-        return rw / errs
+            return r / errs
 
     def whitened_resids_kstest(self) -> Tuple[float, float]:
         """Checks if the whitened residuals are unit-normal distributed. A small p-value indicates a
@@ -1377,3 +1355,24 @@ class WidebandTOAResiduals(CombinedResiduals):
         rw = self.calc_wideband_whitened_resids().astype(float)
         ks = kstest(rw, "norm", args=(0, 1))
         return ks.statistic, ks.pvalue
+
+
+def whiten_residuals(
+    y: np.ndarray, yerr: np.ndarray, U: np.ndarray, Phidiag: np.ndarray
+) -> np.ndarray:
+    """Whiten an array of residuals y given measurement uncertainties yerr,
+    noise basis matrix U, and noise weights Phidiag.
+
+    Similar computation is done by the following methods: `pint.fitter.GLSFitter.fit_toas()`,
+    `pint.fitter.WidebandTOAFitter.fit_toas()`, `pint.fitter.GLSState.step()`,
+    `pint.fitter.WidebandState.step()`."""
+    Ndiag = yerr**2
+    Ninv_U = U / Ndiag[:, None]
+    UT_Ninv_U = U.T @ Ninv_U
+    UT_Ninv_r = y @ Ninv_U
+    Sigmainv = UT_Ninv_U + np.diag(1 / Phidiag)
+    Sigmainv_cf = cho_factor(Sigmainv)
+
+    ahat = cho_solve(Sigmainv_cf, UT_Ninv_r)
+    yw = y - U @ ahat
+    return yw / yerr
