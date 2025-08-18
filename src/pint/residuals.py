@@ -1346,7 +1346,11 @@ def whiten_residuals(
     y: np.ndarray, yerr: np.ndarray, U: np.ndarray, Phidiag: np.ndarray
 ) -> np.ndarray:
     """Whiten an array of residuals y given measurement uncertainties yerr,
-    noise basis matrix U, and noise weights Phidiag."""
+    noise basis matrix U, and noise weights Phidiag.
+
+    Similar computation is done by the following methods: `pint.fitter.GLSFitter.fit_toas()`,
+    `pint.fitter.WidebandTOAFitter.fit_toas()`, `pint.fitter.GLSState.step()`,
+    `pint.fitter.WidebandState.step()`."""
     Ndiag = yerr**2
     Ninv_U = U / Ndiag[:, None]
     UT_Ninv_U = U.T @ Ninv_U
