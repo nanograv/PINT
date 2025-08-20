@@ -378,6 +378,14 @@ class TimingModel:
         for cp in components:
             self.add_component(cp, setup=False, validate=False)
 
+        # These are used for caching TOA masks associated with `maskParameter`s
+        # when the `TimingModel` is specific to a certain `TOAs` object that is
+        # known to be invariant. This is set using the `TimingModel.set_immutable_toas()`
+        # method. Mutating the `TOAs` specified therein will result in undefined behavior.
+        self.mask_cache: Optional[Dict[str, np.array]] = None
+        self.piecewise_cache: Optional[Dict[str, np.array]] = None
+        self.toas_for_cache: Optional[TOAs] = None
+
         from .noise_model import NoiseComponent
 
         self.PhaseComponent_list: List[PhaseComponent]
@@ -546,14 +554,39 @@ class TimingModel:
                 num_components_of_type(ChromaticCM) == 1
             ), "PLChromNoise / CMWaveX component cannot be used without the ChromaticCM component."
 
-    # def __str__(self):
-    #    result = ""
-    #    comps = self.components
-    #    for k, cp in list(comps.items()):
-    #        result += "In component '%s'" % k + "\n\n"
-    #        for pp in cp.params:
-    #            result += str(getattr(cp, pp)) + "\n"
-    #    return result
+    def _set_cache(self, toas: TOAs) -> None:
+        """This method couples the `TimingModel` object with a `TOAs` object that is assumed
+        to be immutable. This allows the TOA selection masks to be cached. Mutating the `TOAs` object
+        given herein or one of the timing model metaparameters (e.g. TNREDC) will result in undefined
+        behavior."""
+
+        warn(
+            "Setting `TOAs` for caching in the `TimingModel`. Mutating this `TOAs` object "
+            "or any of the timing model metaparameters like TNREDC hereafter will result "
+            "in undefined behavior."
+        )
+
+        mask_cache = {}
+        for p in self.params:
+            if isinstance(self[p], maskParameter) and self[p].quantity is not None:
+                param: maskParameter = self[p]
+                mask_cache[p] = param.select_toa_mask(toas)
+
+        piecewise_cache = {
+            component_name: self.components[component_name].get_select_idxs(toas)
+            for component_name in ["DispersionDMX", "ChromaticCMX"]
+            if component_name in self.components
+        }
+
+        self.toas_for_cache = toas
+        self.mask_cache = mask_cache
+        self.piecewise_cache = piecewise_cache
+
+    def _unset_cache(self):
+        """Undo the action of `_set_cache()`."""
+        self.toas_for_cache = None
+        self.mask_cache = None
+        self.piecewise_cache = None
 
     def __getattr__(self, name: str):
         if name in {"components", "component_types", "search_cmp_attr"}:
@@ -1724,14 +1757,11 @@ class TimingModel:
         toas: pint.toa.TOAs
             The input data object for TOAs uncertainty.
         """
-        ntoa = toas.ntoas
-        tbl = toas.table
-        result = np.zeros(ntoa) * u.us
         # When there is no noise model.
         if len(self.scaled_toa_uncertainty_funcs) == 0:
-            result += tbl["error"].quantity
-            return result
+            return toas.table["error"].quantity
 
+        result = np.zeros(toas.ntoas) << u.us
         for nf in self.scaled_toa_uncertainty_funcs:
             result += nf(toas)
         return result
@@ -1747,14 +1777,13 @@ class TimingModel:
         toas: pint.toa.TOAs
             The input data object for DM uncertainty.
         """
-        dm_error, valid = toas.get_flag_value("pp_dme", as_type=float)
-        dm_error = np.array(dm_error)[valid] * u.pc / u.cm**3
-        result = np.zeros(len(dm_error)) * u.pc / u.cm**3
+        dm_error, _ = np.array(toas.get_flag_value("pp_dme", as_type=float)) << pint.dmu
+
         # When there is no noise model.
         if len(self.scaled_dm_uncertainty_funcs) == 0:
-            result += dm_error
-            return result
+            return dm_error
 
+        result = np.zeros(len(dm_error)) << pint.dmu
         for nf in self.scaled_dm_uncertainty_funcs:
             result += nf(toas)
         return result
@@ -3584,7 +3613,7 @@ class Component(metaclass=ModelMeta):
 
     def __init__(self):
         self.params = []
-        self._parent = None
+        self._parent: Optional[TimingModel] = None
         self.deriv_funcs = {}
         self.component_special_params = []
 
