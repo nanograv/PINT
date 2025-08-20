@@ -38,7 +38,7 @@ from astropy.coordinates import (
 from loguru import logger as log
 
 import pint
-from pint import utils
+from pint import dmu, utils
 from pint.observatory import Observatory, bipm_default, get_observatory
 from pint.observatory.satellite_obs import SatelliteObs
 from pint.observatory.special_locations import T2SpacecraftObs
@@ -1935,6 +1935,7 @@ class TOAs:
         but is never more than a few lines regardless of how many TOAs there are.
         """
         s = f"Number of TOAs:  {self.ntoas}\n"
+        s += f"Paradigm: {'wideband' if self.wideband else 'narrowband'}\n"
         if len(self.commands) and type(self.commands[0]) is list:
             s += f"Number of commands:  {[len(x) for x in self.commands]}\n"
         else:
@@ -1949,6 +1950,13 @@ class TOAs:
             s += f"  Min error:     {np.min(self['error'][grp].to(u.us)):.3g}\n"
             s += f"  Max error:     {np.max(self['error'][grp].to(u.us)):.3g}\n"
             s += f"  Median error:  {np.median(self['error'][grp].to(u.us)):.3g}\n"
+
+            if self.wideband:
+                s += f"  Median DM:        {np.median(self.get_dms()[grp].to(dmu)):.3g}\n"
+                s += f"  Min DM error:     {np.min(self.get_dm_errors()[grp].to(dmu)):.3g}\n"
+                s += f"  Max DM error:     {np.max(self.get_dm_errors()[grp].to(dmu)):.3g}\n"
+                s += f"  Median DM error:  {np.median(self.get_dm_errors()[grp].to(dmu)):.3g}\n"
+
         return s
 
     def print_summary(self) -> None:

@@ -124,6 +124,11 @@ class BinaryBTPiecewise(PulsarBinary):
         self.add_piecewise_param(0, T0=0 * u.d)
         self.add_piecewise_param(0, A1=0 * ls)
 
+        self.remove_param("ORBWAVEC0")
+        self.remove_param("ORBWAVES0")
+        self.remove_param("ORBWAVE_OM")
+        self.remove_param("ORBWAVE_EPOCH")
+
     def add_group_range(
         self,
         group_start_mjd,
