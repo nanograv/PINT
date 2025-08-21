@@ -507,13 +507,13 @@ class Pulsar:
 
         self.update_resids()
 
-        wrms = self.selected_resids.rms_weighted()
+        wrms = self.selected_prefit_resids.rms_weighted()
         print("------------------------------------")
         print("Selected TOAs:           %8d" % self.selected_toas.ntoas)
-        print("Selected Chi2:          %.8g" % self.selected_resids.chi2)
+        print("Selected Chi2:          %.8g" % self.selected_prefit_resids.chi2)
         print(
             "Selected Chi2/Ntoa:     %.8g"
-            % (self.selected_resids.chi2 / self.selected_toas.ntoas)
+            % (self.selected_prefit_resids.chi2 / self.selected_toas.ntoas)
         )
         print("Selected Weighted RMS:  %.8g us" % wrms.to(u.us).value)
         print("------------------------------------")

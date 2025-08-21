@@ -698,7 +698,8 @@ class PLSWNoise(CorrelatedNoiseComponent):
                 units="",
                 aliases=[],
                 description="Amplitude of power-law SW DM noise in tempo2 format",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
@@ -708,7 +709,8 @@ class PLSWNoise(CorrelatedNoiseComponent):
                 aliases=[],
                 description="Spectral index of power-law "
                 "SW DM noise in tempo2 format",
-                convert_tcb2tdb=False,
+                convert_tcb2tdb=True,
+                tcb2tdb_scale_factor=1,
             )
         )
         self.add_param(
