@@ -70,6 +70,7 @@ from numdifftools import Hessian
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import minimize
 from scipy.special import fdtrc
+import scipy.stats
 
 import pint
 import pint.pulsar_ecliptic
@@ -3458,3 +3459,96 @@ def find_optimal_nharms(
     assert all(np.isfinite(aics)), "Infs/NaNs found in AICs!"
 
     return np.argmin(aics), np.array(aics) - np.min(aics)
+
+
+def _adinf(z: np.ndarray) -> np.ndarray:
+    """Null distribution of Anderson-Darling statistic for Case 0 (when mean and variance are known)
+
+    This is the limiting case that can be done analytically when the number of data points goes to infinity.
+
+    Parameters
+    ----------
+    z : np.ndarray
+        Values of Anderson-Darling statistic
+
+    Returns
+    -------
+    np.ndarray
+        p-value for null distribution
+
+    References
+    ----------
+    - https://en.wikipedia.org/wiki/Anderson–Darling_test#Test_for_normality
+    - Marsaglia, G., & Marsaglia, J. (2004). Evaluating the Anderson-Darling Distribution. Journal of Statistical Software, 9(2), 1-5. https://doi.org/10.18637/jss.v009.i02
+    """
+    z = np.atleast_1d(z)
+    y = 0 * z
+    i1 = z < 2
+    y[i1] = (
+        z[i1] ** -0.5
+        * np.exp(-1.2337141 / z[i1])
+        * (
+            2.00012
+            + (
+                0.247105
+                - (
+                    0.0649821
+                    - (0.0347962 - (0.0116720 - 0.00168691 * z[i1]) * z[i1]) * z[i1]
+                )
+                * z[i1]
+            )
+            * z[i1]
+        )
+    )
+    y[~i1] = np.exp(
+        -np.exp(
+            1.0776
+            - (
+                2.30695
+                - (
+                    0.43424
+                    - (0.082433 - (0.008056 - 0.0003146 * z[~i1]) * z[~i1]) * z[~i1]
+                )
+                * z[~i1]
+            )
+            * z[~i1]
+        )
+    )
+    return 1 - y
+
+
+def anderson_darling(
+    x: np.ndarray, mean: float = 0, variance: float = 1
+) -> Tuple[float, float]:
+    """Anderson-Darling statistic with a known mean and variance for a normal distribution
+
+    Differs from :func:`scipy.stats.anderson` in that the mean and variance are specified, rather than fit.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Data
+    mean : float, optional
+        Known mean of data
+    variance : float, optional
+        Known variance of data
+
+    Returns
+    -------
+    float : test statistic
+    float : p-value (lower means less likely to have come from a normal distribution)
+
+    References
+    ----------
+    - https://en.wikipedia.org/wiki/Anderson–Darling_test#Test_for_normality
+    """
+    y = (np.sort(x) - mean) / np.sqrt(variance)
+    lncdf = scipy.stats.norm.logcdf
+    lnsf = scipy.stats.norm.logsf
+
+    n = len(x)
+    k = np.arange(1, n + 1)
+    Asquared = (
+        -n - (1.0 / n) * ((2 * k - 1) * lncdf(y) + (2 * (n - k) + 1) * lnsf(y)).sum()
+    )
+    return Asquared, _adinf(Asquared)

@@ -10,6 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Anderson-Darling test for normal data with fixed mean/variance
 - KS test to check if the whitened residuals are unit-normal distributed
 ### Fixed
 ### Removed
