@@ -591,14 +591,44 @@ class Residuals:
 
     def whitened_resids_kstest(self) -> Tuple[float, float]:
         """Checks if the whitened residuals are unit-normal distributed using a KS test. A small p-value indicates a
-        significant departure from unit-Gaussianity."""
+        significant departure from unit-Gaussianity.
+
+        Returns
+        -------
+        float :
+            A-D statistic
+        float :
+            p-value
+
+        See also
+        --------
+        :meth:`~pint.residuals.Residuals.whitened_resids_adtest`
+        """
         rw = self.calc_whitened_resids().astype(float)
         ks = kstest(rw, "norm", args=(0, 1))
         return ks.statistic, ks.pvalue
 
     def whitened_resids_adtest(self) -> Tuple[float, float]:
         """Checks if the whitened residuals are unit-normal distributed using an Anderson-Darling test. A small p-value indicates a
-        significant departure from unit-Gaussianity."""
+        significant departure from unit-Gaussianity.
+
+        The Anderson-Darling test has more discriminatory power than the K-S test.
+
+        Returns
+        -------
+        float :
+            A-D statistic
+        float :
+            p-value
+
+        See also
+        --------
+        :meth:`~pint.residuals.Residuals.whitened_resids_kstest`
+
+        Notes
+        -----
+        Calculation done in :func:`pint.utils.anderson_darling`.
+        """
         rw = self.calc_whitened_resids().astype(float)
         return anderson_darling(rw)
 
@@ -1358,14 +1388,44 @@ class WidebandTOAResiduals(CombinedResiduals):
 
     def whitened_resids_kstest(self) -> Tuple[float, float]:
         """Checks if the whitened residuals are unit-normal distributed using a KS test. A small p-value indicates a
-        significant departure from unit-Gaussianity."""
+        significant departure from unit-Gaussianity.
+
+        Returns
+        -------
+        float :
+            A-D statistic
+        float :
+            p-value
+
+        See also
+        --------
+        :meth:`~pint.residuals.WidebandTOAResiduals.whitened_resids_adtest`
+        """
         rw = self.calc_wideband_whitened_resids().astype(float)
         ks = kstest(rw, "norm", args=(0, 1))
         return ks.statistic, ks.pvalue
 
     def whitened_resids_adtest(self) -> Tuple[float, float]:
         """Checks if the whitened residuals are unit-normal distributed using an Anderson-Darling test. A small p-value indicates a
-        significant departure from unit-Gaussianity."""
+        significant departure from unit-Gaussianity.
+
+        The Anderson-Darling test has more discriminatory power than the K-S test.
+
+        Returns
+        -------
+        float :
+            A-D statistic
+        float :
+            p-value
+
+        See also
+        --------
+        :meth:`~pint.residuals.WidebandTOAResiduals.whitened_resids_kstest`
+
+        Notes
+        -----
+        Calculation done in :func:`pint.utils.anderson_darling`.
+        """
         rw = self.calc_wideband_whitened_resids().astype(float)
         return anderson_darling(rw)
 
