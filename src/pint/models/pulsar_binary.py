@@ -62,14 +62,16 @@ class PulsarBinary(DelayComponent):
     The following ORBWAVEs parameters define a Fourier series model for orbital phase
     variations, as an alternative to the FBn Taylor series expansion:
 
-        - ORBWAVE_OM - base angular frequency for ORBWAVEs expansion (rad / s)
-        - ORBWAVE_EPOCH - reference epoch for ORBWAVEs model (MJD)
-        - ORBWAVECn/ORBWAVESn - coefficients for cosine/sine components (dimensionless)
+        - ORBWAVE_OM - base angular frequency for ORBWAVEs expansion :math:`\\omega_{\\text{ow}}` (rad / s)
+        - ORBWAVE_EPOCH - reference epoch for ORBWAVEs model :math:`T_{\\text{ow}}` (MJD)
+        - ORBWAVECn / ORBWAVESn - coefficients for cosine/sine components :math:`C_{n}^{\\text{ow}},\,S_{n}^{\\text{ow}}` (dimensionless)
 
-    The orbital phase is then given by:
-        orbits(t) = (t - T0) / PB
-                    + \\sum_{n=0} (ORBWAVECn cos(ORBWAVE_OM * (n + 1) * (t - ORBWAVE_EPOCH))
-                                + ORBWAVESn sin(ORBWAVE_OM * (n + 1) * (t - ORBWAVE_EPOCH))
+    The orbital phase :math:`\\phi(t)` is then given by:
+
+    ..math::
+
+        ``\\phi(t)=\\frac{t-T_{0}}{P_{b}}+\\sum_{n=1}^{N_{\\text{ow}}}C_{n}^{\\text{ow}}\\cos\\left(n\\omega_{\\text{ow}}\\left(t-T_{\\text{ow}}\\right)\\right)+S_{n}^{\\text{ow}}\\sin\\left(n\\omega\\left(t-T_{\\text{ow}}\\right)\\right)``
+
 
     The internal calculation code uses different names for some parameters:
 
