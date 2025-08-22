@@ -57,10 +57,10 @@ def sig2sigma(sig, two_tailed=True, logprob=False):
     chance probability of 0.32 will return a value of 1 sigma.
 
     Two-tailed:
-    \int_{-sigma}^{+sigma} norm(x) dx = sig
+    :math:`\\int_{-\\sigma}^{+\\sigma} norm(x) dx = sig`
 
     One-tailed:
-    \int_{-inf}^{sigma} norm(x) dx = sig
+    :math:`\\int_{-\\inf}^{\\sigma} norm(x) dx = sig`
 
     Note that if sig >= 0.5, the one-tailed result will be negative.
 
