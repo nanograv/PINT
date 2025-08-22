@@ -68,9 +68,7 @@ class PulsarBinary(DelayComponent):
 
     The orbital phase :math:`\\phi(t)` is then given by:
 
-    ..math::
-
-        ``\\phi(t)=\\frac{t-T_{0}}{P_{b}}+\\sum_{n=1}^{N_{\\text{ow}}}C_{n}^{\\text{ow}}\\cos\\left(n\\omega_{\\text{ow}}\\left(t-T_{\\text{ow}}\\right)\\right)+S_{n}^{\\text{ow}}\\sin\\left(n\\omega\\left(t-T_{\\text{ow}}\\right)\\right)``
+    ..math::`\\phi(t)=\\frac{t-T_{0}}{P_{b}}+\\sum_{n=1}^{N_{\\text{ow}}}C_{n}^{\\text{ow}}\\cos\\left(n\\omega_{\\text{ow}}\\left(t-T_{\\text{ow}}\\right)\\right)+S_{n}^{\\text{ow}}\\sin\\left(n\\omega\\left(t-T_{\\text{ow}}\\right)\\right)`
 
 
     The internal calculation code uses different names for some parameters:
