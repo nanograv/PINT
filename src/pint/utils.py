@@ -1312,7 +1312,7 @@ def find_prefix_bytime(
     indices, r1, r2 = get_prefix_timeranges(model, prefixname)
     matches = np.where((t >= r1) & (t < r2))[0]
     if len(matches) == 1:
-        matches = int(matches)
+        matches = int(matches[0])
     return indices[matches]
 
 
