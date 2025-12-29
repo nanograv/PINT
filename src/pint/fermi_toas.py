@@ -322,7 +322,7 @@ def get_Fermi_TOAs(
             t,
             obs,
             errors=errors,
-            include_bipm=include_bipm,
+            include_bipm=False,
             planets=planets,
             ephem=ephem,
             flags=[
