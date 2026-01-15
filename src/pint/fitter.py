@@ -1454,9 +1454,10 @@ class DownhillGLSFitter(DownhillFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_ampls = {}
-            offset = self.current_state.xhat[0] / self.current_state.norm[0]
-            offset = (offset / self.model.F0.quantity).to(u.s)
-            noise_ampls['offset'] = offset
+            if 'Offset' in self.current_state.params:
+                offset = self.current_state.xhat[0] / self.current_state.norm[0]
+                offset = (offset / self.model.F0.quantity).to(u.s)
+                noise_ampls['offset'] = offset
             ntmpar = self.model.ntmpar
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
@@ -1636,9 +1637,10 @@ class WidebandDownhillFitter(DownhillFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_ampls = {}
-            offset = self.current_state.xhat[0] / self.current_state.norm[0]
-            offset = (offset / self.model.F0.quantity).to(u.s)
-            noise_ampls['offset'] = offset
+            if 'Offset' in current_state.params:
+                offset = self.current_state.xhat[0] / self.current_state.norm[0]
+                offset = (offset / self.model.F0.quantity).to(u.s)
+                noise_ampls['offset'] = offset
             ntmpar = self.model.ntmpar
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
@@ -1963,9 +1965,10 @@ class GLSFitter(Fitter):
                 noise_dims = self.model.noise_model_dimensions(self.toas)
                 ntmpar = self.model.ntmpar
                 noise_ampls = {}
-                offset = self.current_state.xhat[0] / self.current_state.norm[0]
-                offset = (offset / self.model.F0.quantity).to(u.s)
-                noise_ampls['offset'] = offset
+                if 'Offset' in params:
+                    offset = xhat[0] / norm[0]
+                    offset = (offset / self.model.F0.quantity).to(u.s)
+                    noise_ampls['offset'] = offset
                 for comp in noise_dims:
                     # The first column of designmatrix is "offset", add 1 to match
                     # the indices of noise designmatrix
@@ -2321,9 +2324,10 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             if not full_cov:
                 noise_dims = self.model.noise_model_dimensions(self.toas)
                 noise_ampls = {}
-                offset = self.current_state.xhat[0] / self.current_state.norm[0]
-                offset = (offset / self.model.F0.quantity).to(u.s)
-                noise_ampls['offset'] = offset
+                if 'Offset' in params:
+                    offset = xhat[0] / norm[0]
+                    offset = (offset / self.model.F0.quantity).to(u.s)
+                    noise_ampls['offset'] = offset
                 for comp in noise_dims:
                     # The first column of designmatrix is "offset", add 1 to match
                     # the indices of noise designmatrix
@@ -2539,9 +2543,10 @@ class WidebandLMFitter(LMFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_ampls = {}
-            offset = self.current_state.xhat[0] / self.current_state.norm[0]
-            offset = (offset / self.model.F0.quantity).to(u.s)
-            noise_ampls['offset'] = offset
+            if 'Offset' in state.params:
+                offset = state.xhat[0] / state.norm[0]
+                offset = (offset / self.model.F0.quantity).to(u.s)
+                noise_ampls['offset'] = offset
             ntmpar = self.model.ntmpar
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
