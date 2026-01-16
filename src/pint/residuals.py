@@ -32,7 +32,6 @@ from pint.utils import (
     anderson_darling,
     get_phiinv,
 )
-import pint.fitter
 
 __all__ = [
     "Residuals",
@@ -598,6 +597,8 @@ class Residuals:
             this dictionary also has an 'offset' entry giving the delay
             corresponding to the implicit offset added by PINT.
         """
+        import pint.fitter
+
         if not hasattr(self, "noise_ampls") or force_refit:
             # do a single GLSFitter step
             M, params, units = self.model.full_designmatrix(self.toas)
