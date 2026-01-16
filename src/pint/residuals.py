@@ -600,21 +600,27 @@ class Residuals:
             M, params, units = self.model.full_designmatrix(self.toas)
             M, norm = pint.fitter.normalize_designmatrix(M, params)
             phiinv = 1 / self.model.full_basis_weight(self.toas) / norm**2
-            Nvec = errors.to_value(u.s)**2
+            Nvec = errors.to_value(u.s) ** 2
             mtcm, mtcy = pint.fitter.get_gls_mtcm_mtcy(
-                phiinv, Nvec, M, time_resids.to_value(u.s),
+                phiinv,
+                Nvec,
+                M,
+                time_resids.to_value(u.s),
             )
             xvar, xhat = pint.fitter._solve_svd(
-                mtcm, mtcy, threshold=0, params=params,
+                mtcm,
+                mtcy,
+                threshold=0,
+                params=params,
             )
 
             # extract noise_ampls
             noise_dims = self.model.noise_model_dimensions(self.toas)
             self.noise_ampls = {}
-            if 'Offset' in params:
+            if "Offset" in params:
                 offset = xhat[0] / norm[0]
                 offset = (offset / self.model.F0.quantity).to(u.s)
-                self.noise_ampls['offset'] = offset
+                self.noise_ampls["offset"] = offset
             ntmpar = self.model.ntmpar
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
@@ -674,7 +680,8 @@ class Residuals:
 
         if remove_only is None:
             remove_only = [
-                cname for cname, component in self.model.components.items()
+                cname
+                for cname, component in self.model.components.items()
                 if component in self.model.NoiseComponent_list
                 and component.introduces_correlated_errors
             ]
@@ -687,8 +694,8 @@ class Residuals:
                 @ self.noise_ampls[component.category]
             )
             whitened_resids -= noise_resids
-        if 'offset' in self.noise_ampls:
-            whitened_resids -= self.noise_ampls['offset']
+        if "offset" in self.noise_ampls:
+            whitened_resids -= self.noise_ampls["offset"]
 
         if normalize:
             whitened_resids /= errors
