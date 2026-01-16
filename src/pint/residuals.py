@@ -32,6 +32,7 @@ from pint.utils import (
     anderson_darling,
     get_phiinv,
 )
+import pint.fitter
 
 __all__ = [
     "Residuals",
@@ -660,8 +661,8 @@ class Residuals:
                 @ self.noise_ampls[component.category]
             )
             whitened_resids -= noise_resids
-        if 'offset' in noise_resids:
-            whitened_resids -= noise_resids['offset']
+        if 'offset' in self.noise_ampls:
+            whitened_resids -= self.noise_ampls['offset']
 
         if normalize:
             whitened_resids /= errors
