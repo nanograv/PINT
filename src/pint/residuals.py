@@ -651,7 +651,7 @@ class Residuals:
 
         whitened_resids = time_resids.copy()
         for cname in remove_only:
-            component = mo.components[cname]
+            component = self.model.components[cname]
             noise_resids = (
                 component.get_noise_basis(self.toas)
                 @ self.noise_ampls[component.category]
