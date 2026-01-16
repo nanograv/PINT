@@ -1739,7 +1739,7 @@ class WidebandDownhillFitter(DownhillFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_ampls = {}
-            if "Offset" in current_state.params:
+            if "Offset" in self.current_state.params:
                 offset = self.current_state.xhat[0] / self.current_state.norm[0]
                 offset = (offset / self.model.F0.quantity).to(u.s)
                 noise_ampls["offset"] = offset
