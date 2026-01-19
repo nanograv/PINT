@@ -705,6 +705,7 @@ class Residuals:
 
         if normalize:
             whitened_resids /= errors
+            whitened_resids = whitened_resids.to("")
         else:
             whitened_resids = whitened_resids.to(u.us)
 
