@@ -170,6 +170,8 @@ class Residuals:
         self._is_combined = False
 
         self.noise_ampls: Dict[str, u.Quantity] = {}
+        if "PhaseOffset" not in model.components:
+            self.noise_ampls["offset"] = np.zeros(1)*u.s
         for component in model.NoiseComponent_list:
             if component.introduces_correlated_errors:
                 self.noise_ampls[component.category] = (

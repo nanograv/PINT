@@ -1453,6 +1453,7 @@ class DownhillGLSFitter(DownhillFitter):
             noise_ampls = {}
             if "Offset" in self.current_state.params:
                 offset = self.current_state.xhat[0] / self.current_state.norm[0]
+                offset = np.atleast_1d(offset)
                 offset = (offset / self.model.F0.quantity).to(u.s)
                 noise_ampls["offset"] = offset
             ntmpar = self.model.ntmpar
@@ -1741,6 +1742,7 @@ class WidebandDownhillFitter(DownhillFitter):
             noise_ampls = {}
             if "Offset" in self.current_state.params:
                 offset = self.current_state.xhat[0] / self.current_state.norm[0]
+                offset = np.atleast_1d(offset)
                 offset = (offset / self.model.F0.quantity).to(u.s)
                 noise_ampls["offset"] = offset
             ntmpar = self.model.ntmpar
@@ -2067,6 +2069,7 @@ class GLSFitter(Fitter):
                 noise_ampls = {}
                 if "Offset" in params:
                     offset = xhat[0] / norm[0]
+                    offset = np.atleast_1d(offset)
                     offset = (offset / self.model.F0.quantity).to(u.s)
                     noise_ampls["offset"] = offset
                 for comp in noise_dims:
@@ -2405,6 +2408,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 noise_ampls = {}
                 if "Offset" in params:
                     offset = xhat[0] / norm[0]
+                    offset = np.atleast_1d(offset)
                     offset = (offset / self.model.F0.quantity).to(u.s)
                     noise_ampls["offset"] = offset
                 for comp in noise_dims:
@@ -2605,6 +2609,7 @@ class WidebandLMFitter(LMFitter):
             noise_ampls = {}
             if "Offset" in state.params:
                 offset = state.xhat[0] / state.norm[0]
+                offset = np.atleast_1d(offset)
                 offset = (offset / self.model.F0.quantity).to(u.s)
                 noise_ampls["offset"] = offset
             ntmpar = self.model.ntmpar
