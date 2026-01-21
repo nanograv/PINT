@@ -622,6 +622,7 @@ class Residuals:
             self.noise_ampls = {}
             if "Offset" in params:
                 offset = xhat[0] / norm[0]
+                offset = np.atleast_1d(offset)
                 offset = (offset / self.model.F0.quantity).to(u.s)
                 self.noise_ampls["offset"] = offset
             ntmpar = self.model.ntmpar
