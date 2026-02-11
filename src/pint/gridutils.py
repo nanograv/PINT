@@ -78,8 +78,12 @@ class WrappedFitter:
         for parname, parvalue in zip(parnames, parvalues):
             # Freeze the  params we are going to grid over and set their values
             # All other unfrozen parameters will be fitted for at each grid point
-            getattr(myftr.model, parname).frozen = True
-            getattr(myftr.model, parname).quantity = parvalue
+            if parvalue is not None:
+                getattr(myftr.model, parname).frozen = True
+                getattr(myftr.model, parname).quantity = parvalue
+            else:
+                getattr(myftr.model, parname).frozen = False
+
             parstrings.append(f"{parname} = {parvalue}")
             log.debug(f"Running for {','.join(parstrings)} on {hostinfo()}")
         try:
@@ -101,7 +105,7 @@ class WrappedFitter:
             )
             chi2 = np.nan
         log.debug(
-            f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}"
+            f"Computed chi^2={myftr.resids.chi2} (dof={myftr.resids.dof}) for {','.join(parstrings)} on {hostinfo()}"
         )
         extraparvalues = []
         for extrapar in extraparnames:
