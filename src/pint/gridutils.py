@@ -110,7 +110,7 @@ class WrappedFitter:
         extraparvalues = []
         for extrapar in extraparnames:
             extraparvalues.append(getattr(myftr.model, extrapar).quantity)
-        return chi2, extraparvalues
+        return chi2, myftr.resids.dof, extraparvalues
 
 
 def doonefit(
@@ -368,7 +368,7 @@ def grid_chisq(
         it = np.ndindex(chi2.shape)
         for i, r in zip(it, result):
             chi2[i] = r[0]
-            for extrapar, extraparvalue in zip(extraparnames, r[1]):
+            for extrapar, extraparvalue in zip(extraparnames, r[-1]):
                 extraout[extrapar][i] = extraparvalue
     else:
         indices = list(np.ndindex(out[0].shape))
@@ -564,7 +564,7 @@ def grid_chisq_derived(
         it = np.ndindex(chi2.shape)
         for i, r in zip(it, result):
             chi2[i] = r[0]
-            for extrapar, extraparvalue in zip(extraparnames, r[1]):
+            for extrapar, extraparvalue in zip(extraparnames, r[-1]):
                 extraout[extrapar][i] = extraparvalue
     else:
         indices = list(np.ndindex(grid[0].shape))
@@ -713,6 +713,7 @@ def tuple_chisq(
 
     # All other unfrozen parameters will be fitted for at each grid point
     chi2 = np.zeros(len(parvalues))
+    dof = np.zeros(len(parvalues))
 
     extraout = {}
     for extrapar in extraparnames:
@@ -749,7 +750,8 @@ def tuple_chisq(
         it = np.ndindex(chi2.shape)
         for i, r in zip(it, result):
             chi2[i] = r[0]
-            for extrapar, extraparvalue in zip(extraparnames, r[1]):
+            dof[i] = r[1]
+            for extrapar, extraparvalue in zip(extraparnames, r[-1]):
                 extraout[extrapar][i] = extraparvalue
     else:
         indices = list(np.ndindex(chi2.shape))
@@ -769,7 +771,7 @@ def tuple_chisq(
 
     # Restore saved model
     ftr.model = savemod
-    return chi2, extraout
+    return chi2, dof, extraout
 
 
 def tuple_chisq_derived(
@@ -945,7 +947,7 @@ def tuple_chisq_derived(
         it = np.ndindex(chi2.shape)
         for i, r in zip(it, result):
             chi2[i] = r[0]
-            for extrapar, extraparvalue in zip(extraparnames, r[1]):
+            for extrapar, extraparvalue in zip(extraparnames, r[-1]):
                 extraout[extrapar][i] = extraparvalue
     else:
         indices = list(np.ndindex(chi2.shape))
