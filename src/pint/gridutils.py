@@ -713,7 +713,7 @@ def tuple_chisq(
 
     # All other unfrozen parameters will be fitted for at each grid point
     chi2 = np.zeros(len(parvalues))
-    dof = np.zeros(len(parvalues))
+    dof = np.zeros(len(parvalues), dtype=np.int16)
 
     extraout = {}
     for extrapar in extraparnames:
