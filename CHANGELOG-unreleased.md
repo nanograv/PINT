@@ -15,6 +15,6 @@ the released changes.
 - KS test to check if the whitened residuals are unit-normal distributed
 - Warning about setting of TZRMJD from TOAs
 - Method to zero out mean residual based on TZRMJD
-- `gridutils.tuple_chisq` now returns DOF and can handle unfrozen parameters 
+- `gridutils.tuple_chisq` and `gridutils.tuple_chisq_derived` now return DOF and can handle unfrozen parameters 
 ### Fixed
 ### Removed
