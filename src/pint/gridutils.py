@@ -597,7 +597,7 @@ def tuple_chisq(
     chunksize: int = 1,
     printprogress: bool = True,
     **fitargs,
-) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
+) -> Tuple[np.ndarray, np.ndarray, Dict[str, np.ndarray]]:
     """Compute chisq over a list of parameter tuples
 
     Parameters
@@ -628,6 +628,7 @@ def tuple_chisq(
     Returns
     -------
     np.ndarray : array of chisq values
+    np.ndarray : array of dof values
     extraout : dict of np.ndarray
         Parameter values computed at each point for `extraparnames`
 
@@ -650,7 +651,7 @@ def tuple_chisq(
     # We'll do something like 3-sigma around the best-fit values of  F0
     >>> F0 = np.linspace(f.model.F0.quantity - 3 * f.model.F0.uncertainty,f.model.F0.quantity + 3 * f.model.F0.uncertainty,25)
     >>> F1 = np.ones(len(F0))*f.model.F1.quantity
-    >>> chi2_F0,extra = pint.gridutils.tuple_chisq(f, ("F0","F1",), parvalues, extraparnames=("DM",))
+    >>> chi2_F0,dof,extra = pint.gridutils.tuple_chisq(f, ("F0","F1",), parvalues, extraparnames=("DM",))
 
     Notes
     -----
@@ -766,6 +767,7 @@ def tuple_chisq(
                 getattr(ftr.model, parname).quantity = parvalues[i[0]][parnum]
             ftr.fit_toas(**fitargs)
             chi2[i[0]] = ftr.resids.chi2
+            dof[i[0]] = ftr.resids.dof
             for extrapar in extraparnames:
                 extraout[extrapar][i[0]] = getattr(ftr.model, extrapar).quantity
 
@@ -785,7 +787,7 @@ def tuple_chisq_derived(
     chunksize: int = 1,
     printprogress: bool = True,
     **fitargs,
-) -> Tuple[np.ndarray, List, Dict[str, np.ndarray]]:
+) -> Tuple[np.ndarray, np.ndarray, List, Dict[str, np.ndarray]]:
     """Compute chisq over a list of derived parameter tuples
 
     Parameters
@@ -818,6 +820,7 @@ def tuple_chisq_derived(
     Returns
     -------
     np.ndarray : array of chisq values
+    np.ndarray : array of dof values
     outparvalues : list of tuples
         Parameter values computed from `parvalues` and `parfuncs`
     extraout : dict of np.ndarray
@@ -844,7 +847,7 @@ def tuple_chisq_derived(
     # make sure it's the same length
     >>> tau = np.linspace(8.1, 8.3, 15) * 100 * u.Myr
     >>> parvalues = list(zip(F0,tau))
-    >>> chi2_tau, params, _ = pint.gridutils.tuple_chisq_derived(f,("F0", "F1"),(lambda x, y: x, lambda x, y: -x / 2 / y),(F0, tau))
+    >>> chi2_tau, dof, params, _ = pint.gridutils.tuple_chisq_derived(f,("F0", "F1"),(lambda x, y: x, lambda x, y: -x / 2 / y),(F0, tau))
 
     Notes
     -----
@@ -906,6 +909,7 @@ def tuple_chisq_derived(
 
     # All other unfrozen parameters will be fitted for at each grid point
     chi2 = np.zeros(len(parvalues))
+    dof = np.zeros(len(parvalues), dtype=np.int16)
     out = []
     # convert the tuples of values to the actual parameter values
     for i in range(len(parvalues)):
@@ -947,6 +951,7 @@ def tuple_chisq_derived(
         it = np.ndindex(chi2.shape)
         for i, r in zip(it, result):
             chi2[i] = r[0]
+            dof[i] = r[1]
             for extrapar, extraparvalue in zip(extraparnames, r[-1]):
                 extraout[extrapar][i] = extraparvalue
     else:
@@ -962,9 +967,10 @@ def tuple_chisq_derived(
                 getattr(ftr.model, parname).quantity = out[i[0]][parnum]
             ftr.fit_toas(**fitargs)
             chi2[i[0]] = ftr.resids.chi2
+            dof[i[0]] = ftr.resids.dof
             for extrapar in extraparnames:
                 extraout[extrapar][i[0]] = getattr(ftr.model, extrapar).quantity
 
     # Restore saved model
     ftr.model = savemod
-    return chi2, out, extraout
+    return chi2, dof, out, extraout
