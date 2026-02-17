@@ -21,7 +21,7 @@ A1       1.5231012457846993008      1 0.00050791514972366278
 TASC      59683.784709068155703     1 0.00004690256150561100"""
 
 
-# add in parameters that exist, parameters that don't, float, bool, and string.  Then somem quantities
+# add in parameters that exist, parameters that don't, float, bool, and string.  Then some quantities
 @pytest.mark.parametrize(
     ("k", "v"),
     [
@@ -81,3 +81,46 @@ def test_paroverride_withtim(k, v):
         assert getattr(m2, k).value == v
     else:
         assert np.isclose(getattr(m2, k).value, v)
+
+
+# add in parameters that don't yet exist, float, bool, and string.  Then some quantities
+@pytest.mark.parametrize(
+    ("k", "v"),
+    [
+        ("F2", 1e-12),
+        ("F2", -1e-10 * u.Hz / u.day**2),
+        ("JUMP", "mjd 55000 56000 0.03"),
+    ],
+)
+def test_paradd(k, v):
+    m = get_model(io.StringIO(par))
+    m.add_params(**{k: v})
+    if isinstance(v, (str, bool)):
+        if k != "JUMP":
+            assert getattr(m, k).value == v
+        else:
+            assert getattr(m, f"{k}1").value == 0.03
+            assert getattr(m, f"{k}1").key == "mjd"
+            assert getattr(m, f"{k}1").key_value == [55000.0, 56000.0]
+    elif isinstance(v, u.Quantity):
+        assert np.isclose(getattr(m, k).quantity, v)
+    elif isinstance(v, Time):
+        assert getattr(m, k).quantity == v
+    else:
+        assert np.isclose(getattr(m, k).value, v)
+
+
+# these should fail:
+# adding F3 without F2
+# adding an unknown parameter
+# adding an improper value
+# adding a value with incorrect units
+# adding an existing parameter
+@pytest.mark.parametrize(
+    ("k", "v"), [("F3", -2e-14), ("TEST", -1), ("F1", "test"), ("F1", -1e-10 * u.Hz)]
+)
+def test_paradd_fails(k, v):
+    kwargs = {k: v}
+    m = get_model(io.StringIO(par))
+    with pytest.raises((AttributeError, ValueError)):
+        m.add_params(**kwargs)

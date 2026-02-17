@@ -15,5 +15,6 @@ the released changes.
 - KS test to check if the whitened residuals are unit-normal distributed
 - Warning about setting of TZRMJD from TOAs
 - Method to zero out mean residual based on TZRMJD
+- Easy method to add new parameters
 ### Fixed
 ### Removed
