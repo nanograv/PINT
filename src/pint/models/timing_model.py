@@ -852,7 +852,6 @@ class TimingModel:
         See Also
         --------
         :meth:`~pint.models.timing_model.TimingModel.set_param_values`
-
         """
         # imoprt here to avoid circular import
         from pint.models import model_builder
