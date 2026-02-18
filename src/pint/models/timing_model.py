@@ -845,6 +845,10 @@ class TimingModel:
         kwargs : dict
             Any additional parameter/value pairs that will add to those in the model.  Values can be quantities.
 
+        Examples
+        --------
+        >>> model.add_params(F2=-2e-13, JUMP="FREQ  1400.0 2000.0 0.1 0")
+
         See Also
         --------
         :meth:`~pint.models.timing_model.TimingModel.set_param_values`
