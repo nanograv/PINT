@@ -16,5 +16,6 @@ the released changes.
 - Warning about setting of TZRMJD from TOAs
 - Method to zero out mean residual based on TZRMJD
 - `gridutils.tuple_chisq` and `gridutils.tuple_chisq_derived` now return DOF and can handle unfrozen parameters 
+- Use VLBI astrometric measurements along with coordinate offset in the timing model
 ### Fixed
 ### Removed

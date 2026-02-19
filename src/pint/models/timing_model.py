@@ -1055,8 +1055,8 @@ class TimingModel:
         # This is the function to root-find:
 
         def funct(t):
-            nu = self.orbital_phase(t, anom="true")
-            return np.remainder((nu + bbi.omega()).value, 2 * np.pi) - np.pi / 2
+            nu = self.orbital_phase(t, anom="true")[0]
+            return np.remainder((nu + bbi.omega()[0]).value, 2 * np.pi) - np.pi / 2
 
         # Handle the input time(s)
         if isinstance(baryMJD, time.Time):
