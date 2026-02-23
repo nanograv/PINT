@@ -97,12 +97,16 @@ def test_paradd(k, v):
     m = get_model(io.StringIO(par))
     m.add_params(**{k: v})
     if isinstance(v, (str, bool)):
-        if k != "JUMP":
-            assert getattr(m, k).value == v
-        else:
+        if k == "JUMP":
             assert getattr(m, f"{k}1").value == 0.03
             assert getattr(m, f"{k}1").key == "mjd"
             assert getattr(m, f"{k}1").key_value == [55000.0, 56000.0]
+        elif k == "FDJUMPDM":
+            assert getattr(m, f"{k}1").key == "-sys"
+            assert getattr(m, f"{k}1").key_value == ["GM_GWB_500_100_b1"]
+            assert getattr(m, f"{k}1").value == 2e-5
+        else:
+            assert getattr(m, k).value == v
     elif isinstance(v, u.Quantity):
         assert np.isclose(getattr(m, k).quantity, v)
     elif isinstance(v, Time):
