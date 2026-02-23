@@ -90,6 +90,7 @@ def test_paroverride_withtim(k, v):
         ("F2", 1e-12),
         ("F2", -1e-10 * u.Hz / u.day**2),
         ("JUMP", "mjd 55000 56000 0.03"),
+        ("FDJUMPDM", "-sys GM_GWB_500_100_b1 0.00002 1"),
     ],
 )
 def test_paradd(k, v):
