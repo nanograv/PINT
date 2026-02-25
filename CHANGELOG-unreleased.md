@@ -10,6 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 - Change `StepProblem` and `MaxIterReached` into warnings
+- Removed numpy < 2.4 restriction
 - `WidebandDownhillFitter` now handles correlated noise correctly.
 ### Added
 - Anderson-Darling test for normal data with fixed mean/variance
