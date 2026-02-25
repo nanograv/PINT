@@ -1721,7 +1721,7 @@ class WidebandState(ModelState):
 
         return self.xhat / norm
 
-    def take_step(self, step, lambda_=1) -> "GLSState":
+    def take_step(self, step, lambda_=1) -> "WidebandState":
         return WidebandState(
             self.fitter,
             self.take_step_model(step, lambda_),
