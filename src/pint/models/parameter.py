@@ -33,7 +33,6 @@ from loguru import logger as log
 from uncertainties import ufloat
 
 from pint import pint_units
-from pint.exceptions import InvalidModelParameters
 from pint.models import priors
 from pint.observatory import get_observatory
 from pint.pulsar_mjd import (

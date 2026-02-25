@@ -500,6 +500,17 @@ class Residuals:
         """
         return self._calc_mean(weighted, "time", calctype=calctype)
 
+    def zero_TZR(self, use_weighted_mean: Optional[bool] = True) -> None:
+        """
+        Remove any net offset from the TOAs by subtracting the mean residual from TZRMJD
+
+        Parameters
+        ----------
+        use_weighted_mean : bool or None, optional
+            Whether to use weighted mean for mean subtraction.
+        """
+        self.model.TZRMJD.quantity += self.calc_time_mean(weighted=use_weighted_mean)
+
     def calc_time_resids(
         self,
         calctype: Literal["taylor", "modelF0", "numerical"] = "taylor",
