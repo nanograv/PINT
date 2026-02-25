@@ -56,8 +56,20 @@ to install it for just yourself (e.g. if you don't have permission to write in t
 virtualenv or Pixi environment to work on PINT.  In that case, you just activate your 
 virtualenv before running the ``pip`` command above.
 
+Install with Pixi
+-----------------
 
-.. _anaconda:
+`Pixi <https://pixi.prefix.dev/latest/>`_ is a fast and simple package management tool that uses conda under the hood. It is very quick and easy to `install <https://pixi.prefix.dev/latest/installation/>`_.  
+Once you have it installed, you can set up a PINT environment (here called "PINT") like this.  First ``cd`` to where you want the environment directory to live, then::
+
+   $ pixi init PINT
+   $ cd PINT
+   $ pixi add pint-pulsar
+   $ pixi shell
+
+Now you can run PINT commands and ``import pint`` in the Python that lives in the Pixi environment you just created and activated.
+
+
 
 Install with Anaconda
 ---------------------
