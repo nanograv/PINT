@@ -19,4 +19,5 @@ the released changes.
 - `gridutils.tuple_chisq` and `gridutils.tuple_chisq_derived` now return DOF and can handle unfrozen parameters 
 - Use VLBI astrometric measurements along with coordinate offset in the timing model
 ### Fixed
+- Fix docstring of `make_fake_toas_uniform`
 ### Removed
