@@ -19,4 +19,5 @@ the released changes.
 - Easy method to add new parameters
 - Use VLBI astrometric measurements along with coordinate offset in the timing model
 ### Fixed
+- Fix docstring of `make_fake_toas_uniform`
 ### Removed
