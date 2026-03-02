@@ -21,4 +21,5 @@ the released changes.
 - Plot whitened DM residuals in pintk.
 ### Fixed
 - `WidebandTOAFitter` throws an error if the model has correlated errors (It used to give wrong results before).
+- Fix docstring of `make_fake_toas_uniform`
 ### Removed
