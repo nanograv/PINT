@@ -20,6 +20,15 @@ PB       0.74181505310937273631     1 0.00000018999923507341
 A1       1.5231012457846993008      1 0.00050791514972366278
 TASC      59683.784709068155703     1 0.00004690256150561100"""
 
+isolatedpar = """PSRJ      J1636-5133
+RAJ       16:35:44.7781433          1 0.05999748816321897513
+DECJ      -51:34:18.01262           1 0.73332573676867170105
+F0       2.9404155099936412855      1 0.00000000013195919743
+F1       -1.4209854506981192501e-14 1 8.2230767370490607034e-17
+PEPOCH 60000
+DM       313
+"""
+
 
 # add in parameters that exist, parameters that don't, float, bool, and string.  Then some quantities
 @pytest.mark.parametrize(
@@ -127,5 +136,16 @@ def test_paradd(k, v):
 def test_paradd_fails(k, v):
     kwargs = {k: v}
     m = get_model(io.StringIO(par))
+    with pytest.raises((AttributeError, ValueError)):
+        m.add_params(**kwargs)
+
+
+# these should fail:
+# adding a BINARY type
+# adding a binary parameter when no BINARY is present
+@pytest.mark.parametrize(("k", "v"), [("BINARY", "ELL1"), ("PB", 2)])
+def test_paradd_fails_binary(k, v):
+    kwargs = {k: v}
+    m = get_model(io.StringIO(isolatedpar))
     with pytest.raises((AttributeError, ValueError)):
         m.add_params(**kwargs)

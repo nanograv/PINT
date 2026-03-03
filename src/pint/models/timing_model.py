@@ -36,7 +36,6 @@ from collections import OrderedDict, defaultdict
 from functools import wraps
 from typing import Callable, Dict, List, Literal, Optional, Set, Tuple, Union
 from warnings import warn
-from xml.dom.minidom import Attr
 
 import astropy.coordinates as coords
 import astropy.time as time
@@ -848,6 +847,12 @@ class TimingModel:
         Examples
         --------
         >>> model.add_params(F2=-2e-13, JUMP="FREQ  1400.0 2000.0 0.1 0")
+
+        Notes
+        -----
+        This will not work to change existing parameters.
+
+        This also cannot be used to add a ``BINARY`` component, or add parameters for a ``BINARY`` model if the model is not present.
 
         See Also
         --------
