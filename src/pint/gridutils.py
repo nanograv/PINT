@@ -714,7 +714,7 @@ def tuple_chisq(
 
     # All other unfrozen parameters will be fitted for at each grid point
     chi2 = np.zeros(len(parvalues))
-    dof = np.zeros(len(parvalues), dtype=np.int16)
+    dof = np.zeros(len(parvalues), dtype=np.int)
 
     extraout = {}
     for extrapar in extraparnames:
@@ -909,7 +909,7 @@ def tuple_chisq_derived(
 
     # All other unfrozen parameters will be fitted for at each grid point
     chi2 = np.zeros(len(parvalues))
-    dof = np.zeros(len(parvalues), dtype=np.int16)
+    dof = np.zeros(len(parvalues), dtype=np.int)
     out = []
     # convert the tuples of values to the actual parameter values
     for i in range(len(parvalues)):
