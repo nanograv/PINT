@@ -118,3 +118,41 @@ def test_noise_designmatrix_cache_multi_basis_hit_and_invalidation(monkeypatch):
     assert calls["PLSWNoise"] == 2
     assert calls["PLChromNoise"] == 2
     assert third.shape[1] == first.shape[1] + 2
+
+
+def test_noise_basis_weight_cache_hit_avoids_recomputing_weights(monkeypatch):
+    model, toas = _model_and_toas()
+    component = model.components["PLRedNoise"]
+
+    calls = {"n": 0}
+    original = component.get_noise_weights
+
+    def wrapped_get_noise_weights(current_toas):
+        calls["n"] += 1
+        return original(current_toas)
+
+    monkeypatch.setattr(component, "get_noise_weights", wrapped_get_noise_weights)
+
+    first = model.noise_model_basis_weight(toas)
+    second = model.noise_model_basis_weight(toas)
+
+    assert first is second
+    assert calls["n"] == 1
+
+
+def test_noise_basis_weight_cache_invalidates_on_noise_parameter_change():
+    model, toas = _model_and_toas()
+
+    first = model.noise_model_basis_weight(toas)
+
+    old_value = int(model.TNREDC.value) if model.TNREDC.value is not None else 30
+    model.TNREDC.value = old_value + 1
+    model.setup()
+    model.validate()
+
+    second = model.noise_model_basis_weight(toas)
+    third = model.noise_model_basis_weight(toas)
+
+    assert second is third
+    assert second.shape[0] == first.shape[0] + 2
+    assert not np.array_equal(first, second)

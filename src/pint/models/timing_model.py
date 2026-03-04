@@ -1910,13 +1910,22 @@ class TimingModel:
         """
         if len(self.basis_funcs) == 0:
             return None
+        key = self._noise_designmatrix_cache_key(toas)
+        cache = getattr(self, "_noise_basis_weight_cache", None)
+        if cache is not None and cache.get("key") == key:
+            return cache["Phi"]
+
         result = [nf(toas)[1] for nf in self.basis_funcs]
         has_matrix = any(np.ndim(phi) == 2 for phi in result)
         if not has_matrix:
-            return np.hstack(list(result))
+            Phi = np.hstack(list(result))
+            self._noise_basis_weight_cache = {"key": key, "Phi": Phi}
+            return Phi
 
         blocks = [np.diag(phi) if np.ndim(phi) == 1 else phi for phi in result]
-        return self._block_diag(blocks)
+        Phi = self._block_diag(blocks)
+        self._noise_basis_weight_cache = {"key": key, "Phi": Phi}
+        return Phi
 
     def full_basis_weight(self, toas: TOAs) -> np.ndarray:
         """Returns the joint basis covariance for timing and noise components.
