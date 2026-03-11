@@ -307,7 +307,8 @@ class OrbitWaves(Orbit):
         return ORBWAVEs
 
     def _tw(self):
-        return self.t - self.ORBWAVE_EPOCH.value * u.d
+        t = self.t if isinstance(self.t, u.Quantity) else self.t << u.d
+        return t - self.ORBWAVE_EPOCH.value * u.d
 
     def _deltaPhi(self):
         tw = self._tw()
