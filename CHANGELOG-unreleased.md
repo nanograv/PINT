@@ -11,6 +11,7 @@ the released changes.
 ### Changed
 - Change `StepProblem` and `MaxIterReached` into warnings
 - Removed numpy < 2.4 restriction
+- `WidebandDownhillFitter` now handles correlated noise correctly.
 ### Added
 - Anderson-Darling test for normal data with fixed mean/variance
 - KS test to check if the whitened residuals are unit-normal distributed
@@ -18,6 +19,8 @@ the released changes.
 - Method to zero out mean residual based on TZRMJD
 - Easy method to add new parameters
 - Use VLBI astrometric measurements along with coordinate offset in the timing model
+- Plot whitened DM residuals in pintk.
 ### Fixed
+- `WidebandTOAFitter` throws an error if the model has correlated errors (It used to give wrong results before).
 - Fix docstring of `make_fake_toas_uniform`
 ### Removed
