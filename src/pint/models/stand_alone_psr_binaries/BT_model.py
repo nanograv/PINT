@@ -142,17 +142,17 @@ class BTmodel(PSR_BINARY):
         """Full BT model delay"""
         return (self.delayL1() + self.delayL2()) * self.delayR()
 
-    # NOTE: Below, OMEGA is supposed to be in RADIANS!
-    # TODO: Fix UNITS!!!
     def d_delayL1_d_E(self):
         a1 = self.a1() / c.c
-        return -a1 * np.sin(self.omega()) * np.sin(self.E())
+        return -a1 * np.sin(self.omega()) * np.sin(self.E()) / u.rad
 
     def d_delayL2_d_E(self):
         a1 = self.a1() / c.c
         return (
-            a1 * np.cos(self.omega()) * np.sqrt(1 - self.ecc() ** 2) + self.GAMMA
-        ) * np.cos(self.E())
+            (a1 * np.cos(self.omega()) * np.sqrt(1 - self.ecc() ** 2) + self.GAMMA)
+            * np.cos(self.E())
+            / u.rad
+        )
 
     def d_delayL1_d_A1(self):
         return np.sin(self.omega()) * (np.cos(self.E()) - self.ecc()) / c.c
@@ -170,7 +170,7 @@ class BTmodel(PSR_BINARY):
 
     def d_delayL1_d_OM(self):
         a1 = self.a1() / c.c
-        return a1 * np.cos(self.omega()) * (np.cos(self.E()) - self.ecc())
+        return a1 * np.cos(self.omega()) * (np.cos(self.E()) - self.ecc()) / u.rad
 
     def d_delayL1_d_OMDOT(self):
         return self.tt0 * self.d_delayL1_d_OM()
@@ -178,7 +178,11 @@ class BTmodel(PSR_BINARY):
     def d_delayL2_d_OM(self):
         a1 = self.a1() / c.c
         return (
-            -a1 * np.sin(self.omega()) * np.sqrt(1 - self.ecc() ** 2) * np.sin(self.E())
+            -a1
+            * np.sin(self.omega())
+            * np.sqrt(1 - self.ecc() ** 2)
+            * np.sin(self.E())
+            / u.rad
         )
 
     def d_delayL2_d_OMDOT(self):
@@ -206,6 +210,8 @@ class BTmodel(PSR_BINARY):
     def d_delayL2_d_GAMMA(self):
         return np.sin(self.E())
 
+    # NOTE: The two derivatives below are taken care by lines 222, 237
+    # TODO: Remove if indeed redundant
     def d_delayL1_d_T0(self):
         return self.d_delayL1_d_E() * self.d_E_d_T0()
 
@@ -244,3 +250,93 @@ class BTmodel(PSR_BINARY):
 
     def d_BTdelay_d_par(self, par):
         return self.delayR() * (self.d_delayL1_d_par(par) + self.d_delayL2_d_par(par))
+
+
+class BTmodel_extended_derivatives(BTmodel):
+    """
+    This class extends the BTmodel class to include the exact first derivatives and some second derivatives.
+    """
+
+    def __init__(self, t=None, input_params=None):
+        super().__init__(t, input_params)
+
+    def d_delayR_d_E(self):
+        a1 = self.a1() / c.c
+        omega = self.omega()
+        ecc = self.ecc()
+        E = self.E()
+        num = np.sqrt(1 - ecc**2) * np.cos(omega) * np.sin(E) + (
+            np.cos(E) - ecc
+        ) * np.sin(omega)
+        den = (1 - ecc * np.cos(E)) ** 2
+        return 2 * np.pi * a1 * num / (den * self.pb().to(u.second))
+
+    def d_delayR_d_A1(self):
+        omega = self.omega()
+        ecc = self.ecc()
+        E = self.E()
+        num = np.cos(omega) * np.sqrt(1 - ecc**2) * np.cos(E) - np.sin(
+            omega
+        ) * np.sin(E)
+        den = 1.0 - ecc * np.cos(E)
+        return 1.0 - 2 * np.pi * num / (den * self.pb().to(u.second))
+
+    def d_delayR_d_A1DOT(self):
+        return self.tt0 * self.d_delayR_d_A1()
+
+    def d_delayR_d_OM(self):
+        a1 = self.a1() / c.c
+        omega = self.omega()
+        ecc = self.ecc()
+        E = self.E()
+        num = -np.sin(omega) * np.sqrt(1 - ecc**2) * np.cos(E) - np.cos(
+            omega
+        ) * np.sin(E)
+        den = 1.0 - ecc * np.cos(E)
+        return -2 * np.pi * a1 * num / (den * self.pb().to(u.second))
+
+    def d_delayR_d_OMDOT(self):
+        return self.tt0 * self.d_delayR_d_OM()
+
+    def d_delayR_d_ECC(self):
+        a1 = self.a1() / c.c
+        omega = self.omega()
+        ecc = self.ecc()
+        E = self.E()
+        num = (ecc - np.cos(E)) * np.cos(omega) + np.sqrt(1 - ecc**2) * np.sin(
+            E
+        ) * np.sin(omega)
+        den = np.sqrt(1 - ecc**2) * (1 - ecc * np.cos(E)) ** 2
+        return (
+            2 * np.pi * a1 * np.cos(E) * num / (den * self.pb().to(u.second))
+            + self.d_delayR_d_E() * self.d_E_d_ECC()
+        )
+
+    def d_delayR_d_EDOT(self):
+        return self.tt0 * self.d_delayR_d_ECC()
+
+    def d_delayR_d_GAMMA(self):
+        return np.zeros(len(self.t)) * u.second / u.second
+
+    def d_delayR_d_T0(self):
+        return self.d_delayR_d_E() * self.d_E_d_T0()
+
+    def d_delayR_d_par(self, par):
+        if par not in self.binary_params:
+            errorMesg = f"{par} is not in binary parameter list."
+            raise ValueError(errorMesg)
+
+        par_obj = getattr(self, par)
+        if not hasattr(self, f"d_delayR_d_{par}"):
+            return (
+                self.d_delayR_d_E() * self.d_E_d_par(par)
+                if par in self.orbits_cls.orbit_params
+                else np.zeros(len(self.t)) * u.second / par_obj.unit
+            )
+        func = getattr(self, f"d_delayR_d_{par}")
+        return func()
+
+    def d_BTdelay_d_par(self, par):
+        return self.delayR() * (
+            self.d_delayL1_d_par(par) + self.d_delayL2_d_par(par)
+        ) + (self.delayL1() + self.delayL2()) * self.d_delayR_d_par(par)

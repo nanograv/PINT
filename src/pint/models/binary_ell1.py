@@ -80,8 +80,8 @@ class BinaryELL1(PulsarBinary):
     - Zhu et al. (2019), MNRAS, 482 (3), 3249-3260 [2]_
     - Fiore et al. (2023), arXiv:2305.13624 [astro-ph.HE] [3]_
 
-    .. [1] https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.3249Z/abstract
-    .. [2] https://ui.adsabs.harvard.edu/abs/2001MNRAS.326..274L/abstract
+    .. [1] https://ui.adsabs.harvard.edu/abs/2001MNRAS.326..274L/abstract
+    .. [2] https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.3249Z/abstract
     .. [3] https://arxiv.org/abs/2305.13624
 
     Notes
