@@ -20,6 +20,6 @@ the released changes.
 - Use VLBI astrometric measurements along with coordinate offset in the timing model
 - Plot whitened DM residuals in pintk.
 ### Fixed
-- `WidebandTOAFitter` throws an error if the model has correlated errors (It used to give wrong results before).
+- `WidebandTOAFitter` raises a warning if the model has correlated errors (It used to give wrong results before).
 - Fix docstring of `make_fake_toas_uniform`
 ### Removed
