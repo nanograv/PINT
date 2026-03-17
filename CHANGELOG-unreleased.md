@@ -10,10 +10,15 @@ the released changes.
 ## Unreleased
 ### Changed
 - Change `StepProblem` and `MaxIterReached` into warnings
+- Removed numpy < 2.4 restriction
 ### Added
 - Anderson-Darling test for normal data with fixed mean/variance
 - KS test to check if the whitened residuals are unit-normal distributed
 - Warning about setting of TZRMJD from TOAs
 - Method to zero out mean residual based on TZRMJD
+- `gridutils.tuple_chisq` and `gridutils.tuple_chisq_derived` now return DOF and can handle unfrozen parameters 
+- Easy method to add new parameters
+- Use VLBI astrometric measurements along with coordinate offset in the timing model
 ### Fixed
+- Fix docstring of `make_fake_toas_uniform`
 ### Removed
