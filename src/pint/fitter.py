@@ -2042,9 +2042,10 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         self.is_wideband = True
         self.method = "General_Data_Fitter"
 
-        assert (
-            not self.model.has_correlated_errors
-        ), "The current version of WidebandTOAFitter does not support models with correlated errors."
+        if not self.model.has_correlated_errors:
+            warn(
+                "The current version of WidebandTOAFitter does not support models with correlated errors."
+            )
 
     @property
     def toas(self):
