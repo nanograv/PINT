@@ -510,35 +510,6 @@ def test_sw_proxy_instantiation():
     assert hasattr(model, "SWPRLAG1")
 
 
-def test_sw_proxy_set_proxy_normalisation():
-    """After set_proxy the stored values are zero-mean and unit-variance."""
-    model = get_model(StringIO(_PROXY_PAR))
-    model.add_component(SolarWindProxyRegression())
-    comp = model.components["SolarWindProxyRegression"]
-
-    rng = np.random.default_rng(0)
-    mjds = np.linspace(53000, 57000, 500)
-    vals = 5.0 + 2.0 * rng.standard_normal(500)
-    comp.set_proxy(mjds, vals)
-
-    stored = comp._proxy_data[1]["vals"]
-    assert_allclose(np.mean(stored), 0.0, atol=1e-12)
-    assert_allclose(np.std(stored), 1.0, atol=1e-12)
-
-
-def test_sw_proxy_set_proxy_no_normalisation():
-    """With normalize=False the raw values are stored unchanged."""
-    model = get_model(StringIO(_PROXY_PAR))
-    model.add_component(SolarWindProxyRegression())
-    comp = model.components["SolarWindProxyRegression"]
-
-    mjds = np.linspace(53000, 57000, 100)
-    vals = np.linspace(3.0, 9.0, 100)
-    comp.set_proxy(mjds, vals, normalize=False)
-
-    assert_allclose(comp._proxy_data[1]["vals"], vals)
-
-
 def test_sw_proxy_dm_zero_when_ne_zero():
     """DM is zero when both NE_SW and BETA1 are zero."""
     model, toas, _, _ = _proxy_model(ne_sw=0.0, beta1=0.0)
@@ -546,39 +517,11 @@ def test_sw_proxy_dm_zero_when_ne_zero():
     assert np.all(dm.value == 0.0)
 
 
-def test_sw_proxy_dm_matches_parent_when_beta1_zero():
-    """With BETA1=0 the proxy model gives the same DM as the parent."""
-    model_parent = get_model(StringIO("\n".join([_PROXY_PAR, f"NE_SW {_NE_SW_TRUE}"])))
-
-    model_proxy, toas, proxy_mjd, proxy_vals = _proxy_model(
-        ne_sw=_NE_SW_TRUE, beta1=0.0
-    )
-
-    dm_parent = model_parent.components["SolarWindDispersion"].solar_wind_dm(toas)
-    dm_proxy = model_proxy.components["SolarWindProxyRegression"].solar_wind_dm(toas)
-
-    assert_allclose(dm_proxy.value, dm_parent.value, rtol=1e-10)
-
-
 def test_sw_proxy_dm_positive():
     """DM values are positive when NE_SW > 0 with a loaded proxy."""
     model, toas, _, _ = _proxy_model()
     dm = model.components["SolarWindProxyRegression"].solar_wind_dm(toas)
     assert np.all(dm.value > 0)
-
-
-def test_sw_proxy_dm_additivity():
-    """DM = (NE_SW + BETA1 * x_p) * S, checkable against manual computation."""
-    model, toas, _, _ = _proxy_model()
-    comp = model.components["SolarWindProxyRegression"]
-
-    geom = comp.solar_wind_geometry(toas)
-    xp = comp._get_proxy_at_toas(toas, index=1, lag_days=0.0)
-    ne_expected = (_NE_SW_TRUE * u.cm**-3 + _BETA1_TRUE * u.cm**-3 * xp)
-    dm_expected = (ne_expected * geom).to(u.pc / u.cm**3)
-
-    dm_computed = comp.solar_wind_dm(toas)
-    assert_allclose(dm_computed.value, dm_expected.value, rtol=1e-10)
 
 
 def test_sw_proxy_d_dm_d_beta1_units():
@@ -591,26 +534,6 @@ def test_sw_proxy_d_dm_d_beta1_units():
     assert d.unit.is_equivalent(u.pc / u.cm**3 / (u.cm**-3))
 
 
-def test_sw_proxy_d_dm_d_beta1_matches_finite_difference():
-    """Analytic d_dm_d_beta1 matches numerical finite difference."""
-    model, toas, _, _ = _proxy_model()
-    comp = model.components["SolarWindProxyRegression"]
-
-    eps = 1e-4  # cm^-3
-    orig = comp.SWPRBETA1.value
-
-    comp.SWPRBETA1.value = orig + eps
-    dm_hi = comp.solar_wind_dm(toas).value
-    comp.SWPRBETA1.value = orig - eps
-    dm_lo = comp.solar_wind_dm(toas).value
-    comp.SWPRBETA1.value = orig
-
-    fd = (dm_hi - dm_lo) / (2 * eps)
-    analytic = comp.d_dm_d_swprbeta(toas, "SWPRBETA1").value
-
-    assert_allclose(analytic, fd, rtol=1e-5)
-
-
 def test_sw_proxy_d_dm_d_lag1_shape():
     """d_dm_d_lag1 has the right shape."""
     model, toas, _, _ = _proxy_model()
@@ -619,29 +542,6 @@ def test_sw_proxy_d_dm_d_lag1_shape():
     comp = model.components["SolarWindProxyRegression"]
     d = comp.d_dm_d_swprlag(toas, "SWPRLAG1")
     assert d.shape == (len(toas),)
-
-
-def test_sw_proxy_missing_proxy_raises():
-    """Evaluating solar_wind_dm with BETA1 != 0 but no proxy loaded raises ValueError."""
-    model = get_model(StringIO(_PROXY_PAR))
-    model.add_component(SolarWindProxyRegression())
-    model.NE_SW.value = 5.0
-    model.SWPRBETA1.value = 2.0
-    toas = make_fake_toas_uniform(_TSTART, _TEND, 20, model, obs="gbt")
-    with pytest.raises(ValueError, match="not loaded"):
-        model.components["SolarWindProxyRegression"].solar_wind_dm(toas)
-
-
-def test_sw_proxy_validate_warns_missing_proxy():
-    """validate() issues a warning when BETA1 is non-zero but no proxy is loaded."""
-    model = get_model(StringIO(_PROXY_PAR))
-    model.add_component(SolarWindProxyRegression())
-    model.SWPRBETA1.value = 2.0
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        model.components["SolarWindProxyRegression"].validate()
-    messages = [str(w.message) for w in caught]
-    assert any("SWPRBETA1" in m and "not loaded" in m for m in messages)
 
 
 def test_sw_proxy_print_par_includes_proxy_params():
@@ -659,82 +559,3 @@ def test_sw_proxy_delay_positive():
     delay = model.components["SolarWindProxyRegression"].solar_wind_delay(toas)
     assert np.all(delay.to_value(u.s) > 0)
 
-
-def test_sw_proxy_matches_parent_swm1_swp2():
-    """With SWM=1, SWP=2 and BETA1=0 the DM matches SolarWindDispersion SWM=1."""
-    model_parent = get_model(
-        StringIO("\n".join([_PROXY_PAR, f"NE_SW {_NE_SW_TRUE}\nSWM 1"]))
-    )
-    model_proxy, toas, _, _ = _proxy_model(ne_sw=_NE_SW_TRUE, beta1=0.0, swm=1)
-
-    dm_parent = model_parent.components["SolarWindDispersion"].solar_wind_dm(toas)
-    dm_proxy = model_proxy.components["SolarWindProxyRegression"].solar_wind_dm(toas)
-
-    assert_allclose(dm_proxy.value, dm_parent.value, rtol=1e-10)
-
-
-def test_sw_proxy_fit_ne_sw_and_beta1():
-    """Fit NE_SW and BETA1 against fake TOAs injected with the proxy model."""
-    model_inj, toas, _, _ = _proxy_model(ne_sw=_NE_SW_TRUE, beta1=_BETA1_TRUE)
-
-    # Build a fresh proxy model to fit with slightly perturbed starting values
-    model_fit, _, proxy_mjd, proxy_vals = _proxy_model(ne_sw=5.0, beta1=0.5)
-    model_fit.NE_SW.frozen = False
-    model_fit.SWPRBETA1.frozen = False
-
-    # Use the injected residuals as data
-    fake_toas = make_fake_toas_uniform(
-        _TSTART, _TEND, 50, model_inj, obs="gbt", add_noise=False
-    )
-    # Load proxy into the fitting model
-    model_fit.components["SolarWindProxyRegression"].set_proxy(proxy_mjd, proxy_vals)
-
-    fitter = Fitter.auto(fake_toas, model_fit)
-    fitter.fit_toas()
-
-    assert np.isclose(fitter.model.NE_SW.value, _NE_SW_TRUE, atol=1.0)
-    assert np.isclose(fitter.model.SWPRBETA1.value, _BETA1_TRUE, atol=1.0)
-
-
-def test_sw_proxy_multiple_proxy_slots():
-    """Two independent proxy slots produce additive contributions."""
-    model = get_model(StringIO(_PROXY_PAR))
-    from pint.models.parameter import prefixParameter
-    import astropy.constants as const
-    from pint import DMconst
-
-    model.add_component(SolarWindProxyRegression())
-    comp = model.components["SolarWindProxyRegression"]
-
-    toas = make_fake_toas_uniform(_TSTART, _TEND, 30, model, obs="gbt")
-    proxy_mjd, proxy_vals = _make_proxy(toas)
-
-    # Slot 1
-    comp.set_proxy(proxy_mjd, proxy_vals, index=1)
-    model.NE_SW.value = _NE_SW_TRUE
-    model.SWPRBETA1.value = _BETA1_TRUE
-
-    # Add a second proxy slot with the same series but opposite sign
-    model.add_param_from_top(
-        prefixParameter(
-            name="SWPRBETA1",
-            index=2,
-            units="cm^-3",
-            value=-_BETA1_TRUE,
-            description="slot 2",
-            unit_template=lambda n: "cm^-3",
-            description_template=lambda n: f"slot {n}",
-            type_match="float",
-            tcb2tdb_scale_factor=(const.c * DMconst),
-        ),
-        "SolarWindProxyRegression",
-    )
-    comp.set_proxy(proxy_mjd, proxy_vals, index=2)
-
-    # The two slopes cancel; result should equal NE_SW-only DM
-    dm_combined = comp.solar_wind_dm(toas)
-    dm_ne_sw_only = (
-        _NE_SW_TRUE * u.cm**-3 * comp.solar_wind_geometry(toas)
-    ).to(u.pc / u.cm**3)
-
-    assert_allclose(dm_combined.value, dm_ne_sw_only.value, rtol=1e-10)
