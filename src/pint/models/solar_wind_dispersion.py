@@ -1250,3 +1250,367 @@ class SolarWindDispersionX(SolarWindDispersionBase):
             getattr(self, SWXDM_mapping[ii]).quantity = (
                 self.conjunction_solar_wind_geometry(p) * ne_sws[j]
             ).to(u.pc / u.cm**3)
+
+
+class SolarWindProxyRegression(SolarWindDispersion):
+    """Solar-wind dispersion model with a proxy time-series regression term.
+
+    Subclasses :class:`SolarWindDispersion` and adds a linear regression term
+    on an external proxy observable (e.g. F10.7 cm radio flux or sunspot
+    number) to capture the long-term solar-cycle amplitude modulation. The
+    effective electron density used to compute the DM is:
+
+    .. math::
+
+        n_E(t) = \\mathrm{NE\\_SW}(t) + \\sum_k \\mathrm{BETA1}_k \\cdot x_k(t - \\mathrm{LAG1}_k)
+
+    where :math:`x_k(t)` is the k-th proxy normalised to zero mean and unit
+    variance, and the solar-wind DM follows as usual:
+
+    .. math::
+
+        \\mathrm{DM}_{\\mathrm{SW}}(t) = n_E(t) \\cdot S(t)
+
+    with :math:`S(t)` the path-length geometry factor inherited from the
+    parent class. ``NE_SW`` retains its physical meaning as the time-averaged
+    electron density at 1 AU; the proxy slope ``BETA1`` captures the
+    solar-cycle amplitude in the same cm^-3 units.
+
+    The proxy centring (zero mean) ensures the proxy column is orthogonal to
+    :math:`S(t)` in the design matrix, preventing degeneracy between ``NE_SW``
+    and ``BETA1``. This is equivalent to the ``make_proxy_column`` technique
+    described in Baier et al. (in prep.).
+
+    Proxy data must be loaded at runtime via :meth:`set_proxy` before any
+    model evaluation.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.solar_wind_dispersion.SolarWindProxyRegression
+
+    Notes
+    -----
+    Multiple proxy series are supported by adding further
+    ``SWPRBETA1_k`` / ``SWPRLAG1_k`` parameter pairs (k = 2, 3,
+    ...) and calling ``set_proxy(..., index=k)``.
+
+    The proxy lag derivative is computed by central finite differences with a
+    step of 0.1 days.
+
+    References
+    ----------
+    - Edwards et al. 2006, MNRAS, 372, 1549
+    - Hazboun et al. 2022, ApJ, 929, 39
+    """
+
+    register = True
+    category = "solar_wind"
+
+    def __init__(self):
+        super().__init__()
+
+        # Proxy slope: modulation amplitude in cm^-3 per unit of normalised proxy k.
+        # NE_SW (inherited) serves as the physical intercept; no separate BETA0 is
+        # needed, and adding one would be perfectly degenerate with NE_SW.
+        self.add_param(
+            prefixParameter(
+                name="SWPRBETA1",
+                units="cm^-3",
+                value=0.0,
+                description="Solar wind proxy regression slope for normalised proxy 1",
+                unit_template=lambda n: "cm^-3",
+                description_template=lambda n: (
+                    f"Solar wind proxy regression slope for normalised proxy {n}"
+                ),
+                type_match="float",
+                tcb2tdb_scale_factor=(const.c * DMconst),
+            )
+        )
+        # Optional time lag applied to proxy k before interpolation to TOA epochs.
+        self.add_param(
+            prefixParameter(
+                name="SWPRLAG1",
+                units="day",
+                value=0.0,
+                description="Time lag for proxy time series 1 [days]",
+                unit_template=lambda n: "day",
+                description_template=lambda n: (
+                    f"Time lag for proxy time series {n} [days]"
+                ),
+                type_match="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+
+        # Internal proxy storage: int index -> dict with keys mjd, vals,
+        # raw_mean, raw_std.
+        self._proxy_data = {}
+
+    def set_proxy(self, proxy_mjd, proxy_vals, index=1, smooth_days=0, normalize=True):
+        """Load a proxy time series into the model.
+
+        The proxy is optionally smoothed with a boxcar filter and then
+        normalised to zero mean / unit variance so that ``NE_SW`` retains its
+        physical meaning as the mean n_E and ``BETA1`` quantifies the
+        modulation amplitude in the same cm^-3 units.
+
+        Parameters
+        ----------
+        proxy_mjd : array_like
+            MJD of proxy sample times.
+        proxy_vals : array_like
+            Proxy values (e.g. F10.7 cm flux in sfu, sunspot number).
+        index : int
+            Which proxy slot to populate. Must match the index of the
+            corresponding ``SWPRBETA1`` parameter.
+        smooth_days : int
+            Boxcar filter width in days applied before normalisation. Zero
+            means no smoothing; 81 is standard for the F10.7 cm 81-day mean.
+        normalize : bool
+            If True (default), centre and scale the proxy to zero mean and
+            unit variance. The raw mean and std are stored so that the fitted
+            ``BETA1`` can be converted back to physical coupling units.
+        """
+        from scipy.ndimage import uniform_filter1d
+
+        proxy_mjd = np.asarray(proxy_mjd, dtype=float)
+        proxy_vals = np.asarray(proxy_vals, dtype=float)
+
+        if smooth_days > 1:
+            proxy_vals = uniform_filter1d(
+                proxy_vals, size=int(smooth_days), mode="nearest"
+            )
+
+        if normalize:
+            raw_mean = float(np.mean(proxy_vals))
+            raw_std = float(np.std(proxy_vals))
+            if raw_std == 0.0:
+                raw_std = 1.0
+            proxy_norm = (proxy_vals - raw_mean) / raw_std
+        else:
+            raw_mean, raw_std = 0.0, 1.0
+            proxy_norm = proxy_vals.copy()
+
+        self._proxy_data[index] = {
+            "mjd": proxy_mjd,
+            "vals": proxy_norm,
+            "raw_mean": raw_mean,
+            "raw_std": raw_std,
+        }
+
+    def _get_proxy_at_toas(self, toas, index, lag_days=0.0):
+        """Interpolate stored proxy *index* to TOA epochs, applying *lag_days*.
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+        index : int
+        lag_days : float
+            Shift the proxy backward by this many days, i.e. evaluate
+            x(t - lag).
+
+        Returns
+        -------
+        numpy.ndarray
+            Shape (n_toa,), dimensionless normalised proxy values.
+        """
+        if index not in self._proxy_data:
+            raise ValueError(
+                f"Proxy index {index} not loaded. "
+                f"Call set_proxy(index={index}) first."
+            )
+        data = self._proxy_data[index]
+        toas_mjd = np.asarray(toas.table["tdbld"].data, dtype=float)
+        return np.interp(
+            toas_mjd - lag_days,
+            data["mjd"],
+            data["vals"],
+            left=data["vals"][0],
+            right=data["vals"][-1],
+        )
+
+    def _proxy_ne(self, toas):
+        """Return the total proxy contribution to n_E [cm^-3].
+
+        Computes the sum over all proxy slots:
+        sum_k BETA1_k * x_k(t - LAG1_k).
+        """
+        BETA1_mapping = self.get_prefix_mapping_component("SWPRBETA1")
+        LAG1_mapping = self.get_prefix_mapping_component("SWPRLAG1")
+        ne_proxy = np.zeros(len(toas)) * u.cm**-3
+        for k in sorted(BETA1_mapping.keys()):
+            beta1 = getattr(self, BETA1_mapping[k]).quantity
+            lag_days = (
+                getattr(self, LAG1_mapping[k]).quantity.to_value(u.day)
+                if k in LAG1_mapping
+                else 0.0
+            )
+            xp = self._get_proxy_at_toas(toas, index=k, lag_days=lag_days)
+            ne_proxy = ne_proxy + beta1 * xp
+        return ne_proxy
+
+    def solar_wind_dm(self, toas):
+        """Return the solar-wind DM [pc cm^-3] including the proxy regression term.
+
+        Overrides the parent implementation to add the proxy contribution:
+
+        .. math::
+
+            n_E(t) = \\mathrm{NE\\_SW}(t) + \\sum_k \\mathrm{BETA1}_k \\cdot x_k(t - \\mathrm{LAG1}_k)
+
+        ``NE_SW(t)`` is the same Taylor-expanded electron density as in
+        :meth:`SolarWindDispersion.solar_wind_dm`.
+        """
+        ne_sw_terms = self.get_NE_SW_terms()
+
+        if len(ne_sw_terms) == 1:
+            ne_sw = self.NE_SW.quantity * np.ones(len(toas))
+        else:
+            if any(t.value != 0 for t in ne_sw_terms[1:]):
+                SWEPOCH = self.SWEPOCH.value
+                if SWEPOCH is None:
+                    raise ValueError(
+                        f"SWEPOCH not set but some NE_SW derivatives are not zero: {ne_sw_terms}"
+                    )
+                dt = (toas["tdbld"] - SWEPOCH) * u.day
+                dt_value = dt.to_value(u.yr)
+            else:
+                dt_value = np.zeros(len(toas), dtype=np.longdouble)
+            ne_sw = (
+                pint.utils.taylor_horner(dt_value, [d.value for d in ne_sw_terms])
+                * self.NE_SW.units
+            )
+
+        ne_total = ne_sw + self._proxy_ne(toas)
+
+        if np.all(ne_total.value == 0):
+            return np.zeros(len(toas)) * u.pc / u.cm**3
+
+        return (ne_total * self.solar_wind_geometry(toas)).to(u.pc / u.cm**3)
+
+    def d_dm_d_swprbeta(self, toas, param_name, acc_delay=None):
+        """Derivative of DM_SW with respect to BETA1_k.
+
+        dDM/dBETA1_k = x_k(t - LAG1_k) * S(t)
+        """
+        par = getattr(self, param_name)
+        k = par.index
+        LAG1_mapping = self.get_prefix_mapping_component("SWPRLAG1")
+        lag_days = (
+            getattr(self, LAG1_mapping[k]).quantity.to_value(u.day)
+            if k in LAG1_mapping
+            else 0.0
+        )
+        xp = self._get_proxy_at_toas(toas, index=k, lag_days=lag_days)
+        return (self.solar_wind_geometry(toas) * xp).to(u.pc / u.cm**3 / par.units)
+
+    def d_delay_d_swprbeta(self, toas, param_name, acc_delay=None):
+        return self.d_delay_d_dmparam(toas, param_name)
+
+    def d_dm_d_swprlag(self, toas, param_name, acc_delay=None):
+        """Derivative of DM_SW with respect to LAG1_k via central finite differences.
+
+        The chain rule gives:
+
+        .. math::
+
+            \\frac{\\partial \\mathrm{DM}}{\\partial \\mathrm{LAG}_k} =
+            \\mathrm{BETA1}_k \\cdot \\frac{\\partial x_k(t - \\mathrm{LAG}_k)}{\\partial \\mathrm{LAG}_k}
+            \\cdot S(t)
+
+        The proxy derivative is approximated as:
+
+        .. math::
+
+            \\frac{\\partial x_k}{\\partial \\mathrm{LAG}} \\approx
+            \\frac{x_k(t - \\mathrm{LAG} - h) - x_k(t - \\mathrm{LAG} + h)}{2h}
+
+        with h = 0.1 days.
+        """
+        par = getattr(self, param_name)
+        k = par.index
+        BETA1_mapping = self.get_prefix_mapping_component("SWPRBETA1")
+        beta1 = (
+            getattr(self, BETA1_mapping[k]).quantity
+            if k in BETA1_mapping
+            else 0.0 * u.cm**-3
+        )
+        lag_days = par.quantity.to_value(u.day)
+
+        h = 0.1  # finite-difference step in days
+        xp_hi = self._get_proxy_at_toas(toas, index=k, lag_days=lag_days + h)
+        xp_lo = self._get_proxy_at_toas(toas, index=k, lag_days=lag_days - h)
+        dxp_dlag = (xp_hi - xp_lo) / (2.0 * h)
+
+        return (
+            beta1 * dxp_dlag / u.day * self.solar_wind_geometry(toas)
+        ).to(u.pc / u.cm**3 / par.units)
+
+    def d_delay_d_swprlag(self, toas, param_name, acc_delay=None):
+        return self.d_delay_d_dmparam(toas, param_name)
+
+    def d_dm_d_swp(self, toas, param_name, acc_delay=None):
+        """Derivative of DM_SW with respect to SWP.
+
+        Overrides the parent to include the proxy contribution in n_E:
+
+        dDM/dSWP = [NE_SW(t) + proxy_ne(t)] * dS(t)/dSWP
+        """
+        d_geom_dp = self.d_solar_wind_geometry_d_swp(toas, param_name)
+        ne_sw_terms = self.get_NE_SW_terms()
+        if len(ne_sw_terms) == 1:
+            ne_sw = self.NE_SW.quantity * np.ones(len(toas))
+        else:
+            if any(t.value != 0 for t in ne_sw_terms[1:]):
+                SWEPOCH = self.SWEPOCH.value or 0
+                dt_value = ((toas["tdbld"] - SWEPOCH) * u.day).to_value(u.yr)
+            else:
+                dt_value = np.zeros(len(toas), dtype=np.longdouble)
+            ne_sw = (
+                pint.utils.taylor_horner(dt_value, [d.value for d in ne_sw_terms])
+                * self.NE_SW.units
+            )
+        ne_total = ne_sw + self._proxy_ne(toas)
+        return (ne_total * d_geom_dp).to(u.pc / u.cm**3)
+
+    def setup(self):
+        super().setup()
+
+        # Register derivatives for the proxy slope and lag parameters.
+        for param_name in self.get_prefix_mapping_component("SWPRBETA1").values():
+            self.register_dm_deriv_funcs(self.d_dm_d_swprbeta, param_name)
+            self.register_deriv_funcs(self.d_delay_d_swprbeta, param_name)
+
+        for param_name in self.get_prefix_mapping_component("SWPRLAG1").values():
+            self.register_dm_deriv_funcs(self.d_dm_d_swprlag, param_name)
+            self.register_deriv_funcs(self.d_delay_d_swprlag, param_name)
+
+        # Override the inherited SWP derivative registration so that it uses
+        # the overridden d_dm_d_swp that accounts for the proxy contribution.
+        self.register_dm_deriv_funcs(self.d_dm_d_swp, "SWP")
+
+    def validate(self):
+        super().validate()
+        BETA1_mapping = self.get_prefix_mapping_component("SWPRBETA1")
+        for k in sorted(BETA1_mapping.keys()):
+            if (
+                getattr(self, BETA1_mapping[k]).quantity.value != 0.0
+                and k not in self._proxy_data
+            ):
+                warn(
+                    f"SWPRBETA1 index {k} is non-zero but no proxy data has "
+                    f"been loaded for that index. Call set_proxy(index={k}) before "
+                    "evaluating the model."
+                )
+
+    def print_par(self, format="pint"):
+        result = super().print_par(format=format)
+        BETA1_mapping = self.get_prefix_mapping_component("SWPRBETA1")
+        LAG1_mapping = self.get_prefix_mapping_component("SWPRLAG1")
+        for k in sorted(BETA1_mapping.keys()):
+            result += getattr(self, BETA1_mapping[k]).as_parfile_line(format=format)
+            if k in LAG1_mapping:
+                result += getattr(self, LAG1_mapping[k]).as_parfile_line(format=format)
+        return result
+
