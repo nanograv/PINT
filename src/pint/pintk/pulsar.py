@@ -32,6 +32,7 @@ plot_labels = [
     "post-fit",
     "WB DM res",
     "white-res",
+    "white-DM-res",
     "WB DM",
     "model DM",
     "mjd",
