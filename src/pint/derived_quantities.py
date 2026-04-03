@@ -1,5 +1,4 @@
-"""Functions to compute various derived quantities from pulsar spin parameters, masses, etc.
-"""
+"""Functions to compute various derived quantities from pulsar spin parameters, masses, etc."""
 
 from typing import Optional, Union
 
@@ -351,8 +350,7 @@ def mass_funct(pb: u.Quantity, x: u.Quantity) -> u.Msun:
 
     .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.34 (RHS)
     """
-    fm = 4.0 * np.pi**2 * x**3 / (const.G * pb**2)
-    return fm.to(u.solMass)
+    return (4 * np.pi**2 * x**3 / pint.GMsun / pb**2).decompose() * u.Msun
 
 
 @u.quantity_input(mp=u.Msun, mc=u.Msun, i=u.deg)
@@ -626,12 +624,12 @@ def pbdot(
     """
     f = (1 + (73.0 / 24) * e**2 + (37.0 / 96) * e**4) / (1 - e**2) ** (7.0 / 2)
     value = (
-        (const.G / const.c**3) ** (5.0 / 3)
+        (pint.Tsun) ** (5.0 / 3)
         * (pb / (2 * np.pi)) ** (-5.0 / 3)
         * (-192 * np.pi / 5)
         * f
-        * (mp * mc)
-        / (mp + mc) ** (1.0 / 3)
+        * (mp * mc).to_value(u.Msun**2)
+        / (mp + mc).to_value(u.Msun) ** (1.0 / 3)
     )
     return value.to(u.s / u.s)
 
@@ -688,11 +686,11 @@ def gamma(
 
     """
     value = (
-        (const.G / const.c**3) ** (2.0 / 3)
+        (pint.Tsun) ** (2.0 / 3)
         * (pb / (2 * np.pi)) ** (1.0 / 3)
         * e
-        * (mc * (mp + 2 * mc))
-        / (mp + mc) ** (4.0 / 3)
+        * (mc * (mp + 2 * mc)).to_value(u.Msun**2)
+        / (mp + mc).to_value(u.Msun) ** (4.0 / 3)
     )
     return value.to(u.s)
 
@@ -752,7 +750,7 @@ def omdot(
         3
         * (pb / (2 * np.pi)) ** (-5.0 / 3)
         * (1 / (1 - e**2))
-        * (const.G * (mp + mc) / const.c**3) ** (2.0 / 3)
+        * (pint.Tsun * (mp + mc).to_value(u.Msun)) ** (2.0 / 3)
     )
     return value.to(u.deg / u.yr, equivalencies=u.dimensionless_angles())
 
@@ -805,11 +803,12 @@ def sini(
     """
 
     return (
-        (const.G) ** (-1.0 / 3)
+        (pint.Tsun) ** (-1.0 / 3)
         * (pb / 2 / np.pi) ** (-2.0 / 3)
         * x
-        * (mp + mc) ** (2.0 / 3)
-        / mc
+        / const.c
+        * (mp + mc).to_value(u.Msun) ** (2.0 / 3)
+        / mc.to_value(u.Msun)
     ).decompose()
 
 
@@ -856,10 +855,10 @@ def dr(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.dimensionless_unscal
 
     """
     return (
-        (const.G / const.c**3) ** (2.0 / 3)
+        (pint.Tsun) ** (2.0 / 3)
         * (2 * np.pi / pb) ** (2.0 / 3)
-        * (3 * mp**2 + 6 * mp * mc + 2 * mc**2)
-        / (mp + mc) ** (4 / 3)
+        * (3 * mp**2 + 6 * mp * mc + 2 * mc**2).to_value(u.Msun**2)
+        / (mp + mc).to_value(u.Msun) ** (4 / 3)
     ).decompose()
 
 
@@ -906,10 +905,10 @@ def dth(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.dimensionless_unsca
 
     """
     return (
-        (const.G / const.c**3) ** (2.0 / 3)
+        (pint.Tsun) ** (2.0 / 3)
         * (2 * np.pi / pb) ** (2.0 / 3)
-        * (3.5 * mp**2 + 6 * mp * mc + 2 * mc**2)
-        / (mp + mc) ** (4 / 3)
+        * (3.5 * mp**2 + 6 * mp * mc + 2 * mc**2).to_value(u.Msun**2)
+        / (mp + mc).to_value(u.Msun) ** (4 / 3)
     ).decompose()
 
 
@@ -967,14 +966,14 @@ def omdot_to_mtot(
                 omdot
                 / (
                     3
-                    * (const.G / const.c**3) ** (2.0 / 3)
+                    * (pint.Tsun) ** (2.0 / 3)
                     * (pb / (2 * np.pi)) ** (-5.0 / 3)
                     * (1 - e**2) ** (-1)
                 )
             )
         )
         ** (3.0 / 2)
-    ).to(u.Msun, equivalencies=u.dimensionless_angles())
+    ).to(u.dimensionless_unscaled, equivalencies=u.dimensionless_angles()) * u.Msun
 
 
 @u.quantity_input(mp=u.Msun, mc=u.Msun, pb=u.d, i=u.deg)
@@ -1026,8 +1025,9 @@ def a1sini(
 
     """
     return (
-        (mc * np.sin(i))
-        * (const.G * (pb / (2 * np.pi)) ** 2 / (mp + mc) ** 2) ** (1.0 / 3)
+        (mc.to_value(u.Msun) * np.sin(i))
+        * (pint.GMsun * (pb / (2 * np.pi)) ** 2 / (mp + mc).to_value(u.Msun) ** 2)
+        ** (1.0 / 3)
     ).to(pint.ls)
 
 
