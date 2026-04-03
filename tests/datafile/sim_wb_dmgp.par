@@ -1,0 +1,49 @@
+# Created: 2025-04-02T14:34:05.472716
+# PINT_version: 1.1.1+170.g68c9a01e
+# User: Abhimanyu Susobhanan (abhimanyu)
+# Host: abhimanyu-HP-Envy-x360-2-in-1-Laptop-15-fh0xxx
+# OS: Linux-6.8.0-56-generic-x86_64-with-glibc2.39
+# Python: 3.12.2 | packaged by conda-forge | (main, Feb 16 2024, 20:50:58) [GCC 12.3.0]
+# Format: pint
+# read_time: 2025-04-02T14:33:56.988994
+# allow_tcb: False
+# convert_tcb: False
+# allow_T2: False
+# original_name: sim.par
+PSR                        J0500+1500_sim
+EPHEM                               DE440
+CLOCK                        TT(BIPM2021)
+UNITS                                 TDB
+DILATEFREQ                              N
+DMDATA                                  N
+NTOA                                    0
+RAJ                      5:00:00.00000000 1 0.00000000000000000000
+DECJ                    15:00:00.00000000 1 0.00000000000000000000
+PMRA                                  0.0
+PMDEC                                 0.0
+PX                                    0.0
+POSEPOCH           55000.0000000000000000
+F0                                  100.0 1 0.0
+F1                                 -1e-15 1 0.0
+PHOFF                                   0 1
+PEPOCH             55000.0000000000000000
+TZRMJD             55000.0000000000000000
+TZRSITE                               gbt
+TZRFRQ                             1400.0
+PLANET_SHAPIRO                          N
+DM                                   15.0 1 0.0
+DM1                                 0.001 1 0.0
+DM2                                   0.0  0.0
+DMEPOCH            55000.0000000000000000
+DMEFAC          tel gbt                       1.0
+TNDMAMP                             -13.0
+TNDMGAM                               3.0
+TNDMC                                  120
+TNDMFLOG                                5
+TNDMFLOG_FACTOR                       2.0
+TNREDAMP                            -13.0
+TNREDGAM                              4.0
+TNREDC                                 120
+TNREDFLOG                               4
+TNREDFLOG_FACTOR                       2.0
+EFAC            tel gbt                       1.0
