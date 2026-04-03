@@ -11,6 +11,7 @@ the released changes.
 ### Changed
 - Change `StepProblem` and `MaxIterReached` into warnings
 - Removed numpy < 2.4 restriction
+- Derived quantities use `pint.GMsun` and `pint.Tsun` rather than `astropy.constants.G`
 ### Added
 - Anderson-Darling test for normal data with fixed mean/variance
 - KS test to check if the whitened residuals are unit-normal distributed
