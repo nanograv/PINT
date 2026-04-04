@@ -1278,8 +1278,7 @@ class SolarWindProxyRegression(SolarWindDispersion):
 
     The proxy centring (zero mean) ensures the proxy column is orthogonal to
     :math:`S(t)` in the design matrix, preventing degeneracy between ``NE_SW``
-    and ``BETA1``. This is equivalent to the ``make_proxy_column`` technique
-    described in Baier et al. (in prep.).
+    and ``BETA1``.
 
     Proxy data must be loaded at runtime via :meth:`set_proxy` before any
     model evaluation.
@@ -1522,7 +1521,22 @@ class SolarWindProxyRegression(SolarWindDispersion):
         return (self.solar_wind_geometry(toas) * xp).to(u.pc / u.cm**3 / par.units)
 
     def d_delay_d_swprbeta(self, toas, param_name, acc_delay=None):
-        return self.d_delay_d_dmparam(toas, param_name)
+        """Derivative of delay with respect to BETA1_k.
+
+        Uses the chain rule: d(delay)/d(BETA1) = (DMconst/freq^2) * d(DM)/d(BETA1)
+        """
+        try:
+            bfreq = self._parent.barycentric_radio_freq(toas)
+        except AttributeError:
+            from astropy import log
+            log.warning("Using topocentric frequency for dedispersion!")
+            bfreq = toas.table["freq"].quantity
+        
+        # Get the DM derivative directly
+        d_dm_d_beta = self.d_dm_d_swprbeta(toas, param_name)
+        
+        # Apply chain rule: delay = DMconst * DM / freq^2
+        return DMconst * d_dm_d_beta / bfreq**2.0
 
     def d_dm_d_swprlag(self, toas, param_name, acc_delay=None):
         """Derivative of DM_SW with respect to LAG1_k via central finite differences.
@@ -1564,7 +1578,22 @@ class SolarWindProxyRegression(SolarWindDispersion):
         ).to(u.pc / u.cm**3 / par.units)
 
     def d_delay_d_swprlag(self, toas, param_name, acc_delay=None):
-        return self.d_delay_d_dmparam(toas, param_name)
+        """Derivative of delay with respect to LAG1_k.
+
+        Uses the chain rule: d(delay)/d(LAG1) = (DMconst/freq^2) * d(DM)/d(LAG1)
+        """
+        try:
+            bfreq = self._parent.barycentric_radio_freq(toas)
+        except AttributeError:
+            from astropy import log
+            log.warning("Using topocentric frequency for dedispersion!")
+            bfreq = toas.table["freq"].quantity
+        
+        # Get the DM derivative directly
+        d_dm_d_lag = self.d_dm_d_swprlag(toas, param_name)
+        
+        # Apply chain rule: delay = DMconst * DM / freq^2
+        return DMconst * d_dm_d_lag / bfreq**2.0
 
     def d_dm_d_swp(self, toas, param_name, acc_delay=None):
         """Derivative of DM_SW with respect to SWP.
@@ -1594,13 +1623,14 @@ class SolarWindProxyRegression(SolarWindDispersion):
         super().setup()
 
         # Register derivatives for the proxy slope and lag parameters.
-        for param_name in self.get_prefix_mapping_component("SWPRBETA1").values():
-            self.register_dm_deriv_funcs(self.d_dm_d_swprbeta, param_name)
-            self.register_deriv_funcs(self.d_delay_d_swprbeta, param_name)
-
-        for param_name in self.get_prefix_mapping_component("SWPRLAG1").values():
-            self.register_dm_deriv_funcs(self.d_dm_d_swprlag, param_name)
-            self.register_deriv_funcs(self.d_delay_d_swprlag, param_name)
+        # Directly check for SWPRBETA1, SWPRBETA2, ... parameters
+        for param_name in self.params:
+            if param_name.startswith("SWPRBETA"):
+                self.register_dm_deriv_funcs(self.d_dm_d_swprbeta, param_name)
+                self.register_deriv_funcs(self.d_delay_d_swprbeta, param_name)
+            elif param_name.startswith("SWPRLAG"):
+                self.register_dm_deriv_funcs(self.d_dm_d_swprlag, param_name)
+                self.register_deriv_funcs(self.d_delay_d_swprlag, param_name)
 
         # Override the inherited SWP derivative registration so that it uses
         # the overridden d_dm_d_swp that accounts for the proxy contribution.
