@@ -93,7 +93,7 @@ from pint.pint_matrix import (
 )
 from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import TOAs
-from pint.utils import FTest, normalize_designmatrix
+from pint.utils import FTest, get_phiinv, normalize_designmatrix
 
 __all__ = [
     "Fitter",
@@ -1340,7 +1340,9 @@ class GLSState(ModelState):
         else:
             M, params, units = self.model.full_designmatrix(self.fitter.toas)
             M, norm = normalize_designmatrix(M, params)
-            phiinv = 1 / self.model.full_basis_weight(self.fitter.toas) / norm**2
+            phi = self.model.full_basis_weight(self.fitter.toas)
+            phiinv = get_phiinv(phi)
+            phiinv = (phiinv / norm).T / norm  # normalize the phi^-1 matrix
             Nvec = (
                 self.model.scaled_toa_uncertainty(self.fitter.toas).to_value(u.s) ** 2
             )
@@ -1515,13 +1517,19 @@ class WidebandState(ModelState):
             phi = self.model.noise_model_basis_weight(self.fitter.toas)
             phiinv = np.zeros(M.shape[1])
             if Mn is not None and phi is not None:
-                phiinv = np.concatenate((phiinv, 1 / phi))
+                n_tm = M.shape[1]
                 new_d_matrix = combine_design_matrices_by_param(d_matrix, Mn)
                 M, params, units = (
                     new_d_matrix.matrix,
                     new_d_matrix.derivative_params,
                     new_d_matrix.param_units,
                 )
+                if np.ndim(phi) == 1:
+                    phiinv = np.zeros(M.shape[1])
+                    phiinv[n_tm:] = 1 / phi
+                else:
+                    phiinv = np.zeros((M.shape[1], M.shape[1]))
+                    phiinv[n_tm:, n_tm:] = get_phiinv(phi)
 
         # normalize the design matrix
         norm = np.sqrt(np.sum(M**2, axis=0))
@@ -1534,7 +1542,10 @@ class WidebandState(ModelState):
         norm[norm == 0] = 1
         M /= norm
         if not self.full_cov:
-            phiinv /= norm**2
+            if np.ndim(phiinv) == 1:
+                phiinv /= norm**2
+            else:
+                phiinv = (phiinv / norm).T / norm
             self.phiinv = phiinv
         self.fac = norm
 
@@ -1595,7 +1606,10 @@ class WidebandState(ModelState):
             cinv = 1 / Nvec
             mtcm = np.dot(self.M.T, cinv[:, None] * self.M)
             mtcmplain = mtcm
-            mtcm += np.diag(self.phiinv)
+            if np.ndim(self.phiinv) == 1:
+                mtcm += np.diag(self.phiinv)
+            else:
+                mtcm += self.phiinv
             mtcy = np.dot(self.M.T, cinv * residuals)
         return mtcm, mtcy, mtcmplain
 
@@ -2006,7 +2020,9 @@ class GLSFitter(Fitter):
             else:
                 M, params, units = self.model.full_designmatrix(self.toas)
                 M, norm = normalize_designmatrix(M, params)
-                phiinv = 1 / self.model.full_basis_weight(self.toas) / norm**2
+                phi = self.model.full_basis_weight(self.toas)
+                phiinv = get_phiinv(phi)
+                phiinv = (phiinv / norm).T / norm  # normalize the phi^-1 matrix
                 Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
                 mtcm, mtcy = get_gls_mtcm_mtcy(phiinv, Nvec, M, residuals)
 
@@ -2304,13 +2320,19 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 phi = self.model.noise_model_basis_weight(self.toas)
                 phiinv = np.zeros(M.shape[1])
                 if Mn is not None and phi is not None:
-                    phiinv = np.concatenate((phiinv, 1 / phi))
+                    n_tm = M.shape[1]
                     new_d_matrix = combine_design_matrices_by_param(d_matrix, Mn)
                     M, params, units = (
                         new_d_matrix.matrix,
                         new_d_matrix.derivative_params,
                         new_d_matrix.param_units,
                     )
+                    if np.ndim(phi) == 1:
+                        phiinv = np.zeros(M.shape[1])
+                        phiinv[n_tm:] = 1 / phi
+                    else:
+                        phiinv = np.zeros((M.shape[1], M.shape[1]))
+                        phiinv[n_tm:, n_tm:] = get_phiinv(phi)
 
             ntmpar = self.model.ntmpar
 
@@ -2327,11 +2349,17 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 mtcy = np.dot(cm.T, residuals)
                 # mtcm, mtcy = get_gls_mtcm_mtcy_fullcov(cov, M, residuals)
             else:
-                phiinv /= norm**2
+                if np.ndim(phiinv) == 1:
+                    phiinv /= norm**2
+                else:
+                    phiinv = (phiinv / norm).T / norm
                 Nvec = self.scaled_all_sigma() ** 2
                 cinv = 1 / Nvec
                 mtcm = np.dot(M.T, cinv[:, None] * M)
-                mtcm += np.diag(phiinv)
+                if np.ndim(phiinv) == 1:
+                    mtcm += np.diag(phiinv)
+                else:
+                    mtcm += phiinv
                 mtcy = np.dot(M.T, cinv * residuals)
                 # mtcm, mtcy = get_gls_mtcm_mtcy(phiinv, Nvec, M, residuals)
 
@@ -2348,7 +2376,11 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             if full_cov:
                 chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
             else:
-                chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+                if np.ndim(phiinv) == 1:
+                    prior_chi2 = np.dot(xhat, phiinv * xhat)
+                else:
+                    prior_chi2 = np.dot(xhat, phiinv @ xhat)
+                chi2 = np.dot(newres, cinv * newres) + prior_chi2
 
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat / norm
@@ -2707,7 +2739,10 @@ def get_gls_mtcm_mtcy(
     """
     cinv = 1 / Nvec
     mtcm = np.dot(M.T, cinv[:, None] * M)
-    mtcm += np.diag(phiinv)
+    if np.ndim(phiinv) == 1:
+        mtcm += np.diag(phiinv)
+    else:
+        mtcm += phiinv
     mtcy = np.dot(M.T, cinv * residuals)
     return mtcm, mtcy
 

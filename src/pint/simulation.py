@@ -178,12 +178,16 @@ def make_fake_toas(
     if add_correlated_noise:
         U = model.noise_model_designmatrix(tsim)
         b = model.noise_model_basis_weight(tsim)
-        a = np.random.normal(size=len(b))
-        delays += (U @ (b**0.5 * a)) << u.s
+        if np.ndim(b) == 1:
+            a = np.random.normal(size=len(b))
+            coeffs = b**0.5 * a
+        else:
+            coeffs = np.random.multivariate_normal(np.zeros(b.shape[0]), b)
+        delays += (U @ coeffs) << u.s
 
         if tsim.wideband:
             Ud = model.noise_model_dm_designmatrix(tsim)
-            dms += (Ud @ (b**0.5 * a)) << pint.dmu
+            dms += (Ud @ coeffs) << pint.dmu
 
     tsim.adjust_TOAs(time.TimeDelta(delays))
 

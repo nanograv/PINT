@@ -30,6 +30,7 @@ from pint.utils import (
     weighted_mean,
     woodbury_dot,
     anderson_darling,
+    get_phiinv,
 )
 
 __all__ = [
@@ -595,8 +596,8 @@ class Residuals:
 
         if self.model.has_correlated_errors:
             U = self.model.noise_model_designmatrix(self.toas)
-            Phidiag = self.model.noise_model_basis_weight(self.toas)
-            return whiten_residuals(r, errs, U, Phidiag)
+            Phi = self.model.noise_model_basis_weight(self.toas)
+            return whiten_residuals(r, errs, U, Phi)
         else:
             return r / errs
 
@@ -657,13 +658,21 @@ class Residuals:
         s = self.time_resids.to_value(u.s)
         Ndiag = self.get_data_error().to_value(u.s) ** 2
         U = self.model.noise_model_designmatrix(self.toas)
-        Phidiag = self.model.noise_model_basis_weight(self.toas)
+        Phi = self.model.noise_model_basis_weight(self.toas)
 
         if "PHOFF" not in self.model.free_params:
             U = np.append(U, np.ones((len(self.toas), 1)), axis=1)
-            Phidiag = np.append(Phidiag, [1e40])
+            if np.ndim(Phi) == 1:
+                Phi = np.append(Phi, [1e40])
+            else:
+                phi_aug = np.zeros(
+                    (Phi.shape[0] + 1, Phi.shape[1] + 1), dtype=Phi.dtype
+                )
+                phi_aug[:-1, :-1] = Phi
+                phi_aug[-1, -1] = 1e40
+                Phi = phi_aug
 
-        chi2, logdet_C = woodbury_dot(Ndiag, U, Phidiag, s, s)
+        chi2, logdet_C = woodbury_dot(Ndiag, U, Phi, s, s)
 
         return (chi2, logdet_C / 2) if lognorm else chi2
 
@@ -1392,8 +1401,8 @@ class WidebandTOAResiduals(CombinedResiduals):
 
         if self.model.has_correlated_errors:
             U = self.model.noise_model_wideband_designmatrix(self.toas)
-            Phidiag = self.model.noise_model_basis_weight(self.toas)
-            return whiten_residuals(r, errs, U, Phidiag)
+            Phi = self.model.noise_model_basis_weight(self.toas)
+            return whiten_residuals(r, errs, U, Phi)
         else:
             return r / errs
 
@@ -1442,10 +1451,10 @@ class WidebandTOAResiduals(CombinedResiduals):
 
 
 def whiten_residuals(
-    y: np.ndarray, yerr: np.ndarray, U: np.ndarray, Phidiag: np.ndarray
+    y: np.ndarray, yerr: np.ndarray, U: np.ndarray, Phi: np.ndarray
 ) -> np.ndarray:
     """Whiten an array of residuals y given measurement uncertainties yerr,
-    noise basis matrix U, and noise weights Phidiag.
+    noise basis matrix U, and basis covariance Phi.
 
     Similar computation is done by the following methods: `pint.fitter.GLSFitter.fit_toas()`,
     `pint.fitter.WidebandTOAFitter.fit_toas()`, `pint.fitter.GLSState.step()`,
@@ -1454,7 +1463,11 @@ def whiten_residuals(
     Ninv_U = U / Ndiag[:, None]
     UT_Ninv_U = U.T @ Ninv_U
     UT_Ninv_r = y @ Ninv_U
-    Sigmainv = UT_Ninv_U + np.diag(1 / Phidiag)
+    if np.ndim(Phi) == 1:
+        Phiinv = np.diag(1 / Phi)
+    else:
+        Phiinv = get_phiinv(Phi)
+    Sigmainv = UT_Ninv_U + Phiinv
     Sigmainv_cf = cho_factor(Sigmainv)
 
     ahat = cho_solve(Sigmainv_cf, UT_Ninv_r)

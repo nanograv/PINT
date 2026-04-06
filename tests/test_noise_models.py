@@ -7,6 +7,13 @@ from pint.config import examplefile
 from pint.models import get_model_and_toas, get_model
 from pint.models.timing_model import Component
 from pint.models.noise_model import NoiseComponent
+from pint.models.noise_model import (
+    TimeDomainMaternSWNoise,
+    TimeDomainQuasiPeriodicSWNoise,
+    TimeDomainRidgeSWNoise,
+    TimeDomainSqExpSWNoise,
+    project_basis_covariance,
+)
 from pint.simulation import make_fake_toas_uniform
 from io import StringIO
 
@@ -56,6 +63,52 @@ def add_chrom_noise_to_model(model):
     model["TNCHROMIDX"].value = 4
 
     model.validate()
+
+
+def _base_model_and_toas():
+    """Load a clean real dataset used for integration-style noise component tests."""
+    parfile = examplefile("B1855+09_NANOGrav_9yv1.gls.par")
+    timfile = examplefile("B1855+09_NANOGrav_9yv1.tim")
+    return get_model_and_toas(parfile, timfile)
+
+
+def _add_time_domain_sw_component(model, component_name):
+    """Attach one time-domain SW component and set parameters for DT interpolation mode.
+
+    Note: these components intentionally share parameter names (e.g., TDSWDT),
+    so tests must add only one of them to a given model instance.
+    """
+    td_sw_classes = {
+        "TimeDomainRidgeSWNoise": TimeDomainRidgeSWNoise,
+        "TimeDomainSqExpSWNoise": TimeDomainSqExpSWNoise,
+        "TimeDomainMaternSWNoise": TimeDomainMaternSWNoise,
+        "TimeDomainQuasiPeriodicSWNoise": TimeDomainQuasiPeriodicSWNoise,
+    }
+    component = td_sw_classes[component_name]()
+    model.add_component(component, validate=False)
+
+    model["TDSWDT"].value = 14.0
+    model["TDSWINTERP_KIND"].value = "linear"
+
+    if component_name == "TimeDomainRidgeSWNoise":
+        model["TDSWLOGSIG"].value = -7.0
+    elif component_name == "TimeDomainSqExpSWNoise":
+        model["TDSWLOGSIG"].value = -7.1
+        model["TDSWLOGELL"].value = 1.2
+    elif component_name == "TimeDomainMaternSWNoise":
+        model["TDSWLOGSIG"].value = -7.2
+        model["TDSWLOGELL"].value = 1.0
+        model["TDSWNU"].value = 1.5
+    elif component_name == "TimeDomainQuasiPeriodicSWNoise":
+        model["TDSWLOGSIG"].value = -7.3
+        model["TDSWLOGELL"].value = 1.1
+        model["TDSWLOGGAMP"].value = -0.2
+        model["TDSWLOGP"].value = 1.5
+    else:
+        raise ValueError(f"Unsupported time-domain SW component: {component_name}")
+
+    model.validate()
+    return component
 
 
 @pytest.fixture(scope="module")
@@ -146,6 +199,58 @@ def test_noise_basis_weights_funcs(model_and_toas, component_label):
     weights_ = component.get_noise_weights(toas)
 
     assert np.allclose(basis_, basis) and np.allclose(weights, weights_)
+
+
+@pytest.mark.parametrize(
+    "component_name",
+    [
+        "TimeDomainRidgeSWNoise",
+        "TimeDomainSqExpSWNoise",
+        "TimeDomainMaternSWNoise",
+        "TimeDomainQuasiPeriodicSWNoise",
+    ],
+)
+def test_noise_weights_sign_time_domain_sw_integration(component_name):
+    """Integration test: each time-domain SW model should produce non-negative weights.
+
+    This extends the existing `test_noise_weights_sign` coverage to new
+    time-domain SW components that are not included in the default
+    `correlated_noise_component_labels` parametrization.
+    """
+
+    model, toas = _base_model_and_toas()
+    component = _add_time_domain_sw_component(model, component_name)
+
+    basis, weights = component.basis_funcs[0](toas)
+
+    assert basis.shape == (len(toas), len(weights))
+    assert np.all(weights >= 0)
+
+
+@pytest.mark.parametrize(
+    "component_name",
+    [
+        "TimeDomainRidgeSWNoise",
+        "TimeDomainSqExpSWNoise",
+        "TimeDomainMaternSWNoise",
+        "TimeDomainQuasiPeriodicSWNoise",
+    ],
+)
+def test_time_domain_sw_covariance_matches_basis_weights(component_name):
+    """Integration test: covariance must equal basis*weights*basis^T for time-domain SW models.
+
+    This mirrors `test_covariance_matrix_relation` but specifically targets
+    newly added time-domain SW components.
+    """
+
+    model, toas = _base_model_and_toas()
+    component = _add_time_domain_sw_component(model, component_name)
+
+    basis, weights = component.basis_funcs[0](toas)
+    cov = component.covariance_matrix_funcs[0](toas)
+    cov_from_basis = project_basis_covariance(basis, weights)
+
+    assert np.allclose(cov, cov_from_basis)
 
 
 def test_white_noise_model_derivs():
