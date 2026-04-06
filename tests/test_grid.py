@@ -436,7 +436,7 @@ def test_tuple_fit():
     parnames = ("F0", "F1")
     parvalues = list(zip(F0, F1))
 
-    chi2, extra = pint.gridutils.tuple_chisq(
+    chi2, dof, extra = pint.gridutils.tuple_chisq(
         f, parnames, parvalues, extraparnames=("DM",)
     )
     f.model.F0.quantity = F0[3]
@@ -467,7 +467,7 @@ def test_derived_tuple_fit():
 
     tau = np.linspace(8.1, 8.3, 53) * 100 * u.Myr
     parvalues = list(zip(F0, tau))
-    chi2_tau, params, _ = pint.gridutils.tuple_chisq_derived(
+    chi2_tau, dof, params, _ = pint.gridutils.tuple_chisq_derived(
         f,
         ("F0", "F1"),
         (lambda x, y: x, lambda x, y: -x / 2 / y),

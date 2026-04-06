@@ -77,7 +77,13 @@ from pint.phase import Phase
 from pint.pulsar_ecliptic import OBL, PulsarEcliptic
 from pint.toa import TOAs
 from pint.types import file_like, time_like
-from pint.utils import colorize, open_or_use, split_prefixed_name, xxxselections
+from pint.utils import (
+    colorize,
+    open_or_use,
+    split_prefixed_name,
+    xxxselections,
+    get_unit,
+)
 
 __all__ = [
     "DEFAULT_ORDER",
@@ -829,6 +835,63 @@ class TimingModel:
         for k, v in fitp.items():
             p = getattr(self, k)
             p.uncertainty = v if isinstance(v, u.Quantity) else v * p.units
+
+    def add_params(self, **kwargs) -> None:
+        """Add parameters to a model simply.  Note that this will only work for new parameters
+
+        Parameters
+        ----------
+        kwargs : dict
+            Any additional parameter/value pairs that will add to those in the model.  Values can be quantities.
+
+        Examples
+        --------
+        >>> model.add_params(F2=-2e-13, JUMP="FREQ  1400.0 2000.0 0.1 0")
+
+        Notes
+        -----
+        This will not work to change existing parameters.
+
+        This also cannot be used to add a ``BINARY`` component, or add parameters for a ``BINARY`` model if the model is not present.
+
+        See Also
+        --------
+        :meth:`~pint.models.timing_model.TimingModel.set_param_values`
+        """
+        # imoprt here to avoid circular import
+        from pint.models import model_builder
+
+        mb = model_builder.ModelBuilder()
+        param_dict = {}
+        for k, v in kwargs.items():
+            if k not in self.params:
+                if isinstance(v, u.Quantity):
+                    param_dict[k] = [
+                        str(v.to_value(get_unit(k))),
+                    ]
+                else:
+                    param_dict[k] = [
+                        str(v),
+                    ]
+            else:
+                raise AttributeError(
+                    f"Parameter '{k}' is already present in timing model, not overriding; use model.set_param_values() instead"
+                )
+        selected, conflict, param_not_in_pint = mb.choose_model(
+            param_dict,
+        )
+        # see if we need to add any new components
+        cps = [
+            mb.all_components.components[comp]
+            for comp in selected
+            if not comp in self.components.keys()
+        ]
+        for cp in cps:
+            log.debug(f"Adding component '{cp}'")
+            self.add_component(cp, setup=True, validate=True)
+        # at this point do not allow input as TCB
+        mb._setup_model(self, param_dict, allow_tcb=False)
+        self.validate(allow_tcb=False)
 
     @property_exists
     def components(self) -> Dict[str, "Component"]:
@@ -3582,7 +3645,7 @@ class TimingModel:
                         omdot
                         / (
                             3
-                            * (c.G * u.Msun / c.c**3).to_value(u.s) ** (2.0 / 3)
+                            * pint.Tsun ** (2.0 / 3)
                             * ((pb * 86400 / 2 / np.pi)) ** (-5.0 / 3)
                             * (1 - e**2) ** -1
                         )
