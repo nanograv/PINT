@@ -308,25 +308,19 @@ def get_Fermi_TOAs(
     else:
         t = Time(mjds, format="mjd", scale=scale, location=location)
     if weightcolumn is None:
-        return toa.get_TOAs_array(
-            t,
-            obs,
-            errors=errors,
-            include_bipm=include_bipm,
-            planets=planets,
-            ephem=ephem,
-            flags=[{"energy": str(e)} for e in energies.to_value(u.MeV)],
-        )
+        flags = [{"energy": str(e)} for e in energies.to_value(u.MeV)]
     else:
-        return toa.get_TOAs_array(
-            t,
-            obs,
-            errors=errors,
-            include_bipm=False,
-            planets=planets,
-            ephem=ephem,
-            flags=[
-                {"energy": str(e), "weight": str(w)}
-                for e, w in zip(energies.to_value(u.MeV), weights)
-            ],
-        )
+        flags = [
+            {"energy": str(e), "weight": str(w)}
+            for e, w in zip(energies.to_value(u.MeV), weights)
+        ]
+
+    return toa.get_TOAs_array(
+        t,
+        obs,
+        errors=errors,
+        include_bipm=include_bipm,
+        planets=planets,
+        ephem=ephem,
+        flags=flags,
+    )
