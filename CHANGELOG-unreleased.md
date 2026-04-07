@@ -21,4 +21,5 @@ the released changes.
 - Use VLBI astrometric measurements along with coordinate offset in the timing model
 ### Fixed
 - Fix docstring of `make_fake_toas_uniform`
+- Fixed bug where "include_bipm" flag was being ignored when loading Fermi TOAs with weights
 ### Removed
