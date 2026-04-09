@@ -34,7 +34,7 @@ from pint.models.dispersion_model import (
     FDJumpDM,
 )
 from pint.models.dmwavex import DMWaveX
-from pint.models.expdip import SimpleExponentialDip
+from src.PINT.src.pint.models.transient_events import SimpleExponentialDip, ChromaticGaussianEvent
 from pint.models.fdjump import FDJump
 from pint.models.frequency_dependent import FD
 from pint.models.glitch import Glitch
