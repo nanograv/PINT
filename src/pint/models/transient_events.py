@@ -303,3 +303,264 @@ class SimpleExponentialDip(DelayComponent):
         return self.expdip_delay_term(toas["tdbld"], ffac, ii) * (
             (1 / tau) - (1 / eps) * expfac1
         )
+
+
+class ChromaticGaussianEvent(DelayComponent):
+    """Simple chromatic Gaussian model for extreme scattering events or other chromatic transient features
+
+    This phenomenological model is defined as a Gaussian in time multiplied by a power law in frequency with variable chromaticity.
+    It is implemented as a delay component for flexibility.
+    The parameters of the model are the event epoch, amplitude, chromatic index, and width/st. dev of the Gaussian.
+
+    The explicit mathematical form of the Gaussian event is as follows.
+
+    .. math::
+            \\Delta_{\\text{Gaussian}}(t)=- 
+
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.expdip.ChromaticGaussianEvent
+    """
+
+    register = True
+    category = "chromatic_gaussian_event"
+
+    def __init__(self):
+        super().__init__()
+
+        self.add_param(
+            floatParameter(
+                name=f"CHROMGAUSSAMP",
+                units="s",
+                description="Chromatic Gaussian event amplitude",
+                value=1e-6,
+                frozen=True,
+                tcb2tdb_scale_factor=1,
+            )
+        )
+
+        self.add_param(
+            floatParameter(
+                name=f"CHROMGAUSSFREF",
+                units="MHz",
+                description="Chromatic Gaussian event reference frequency",
+                value=1400,
+                frozen=True,
+                tcb2tdb_scale_factor=1,
+            )
+        )
+
+        self.add_chrom_gauss_event(None, 0, None, None, index=1, frozen=True)
+
+        self.delay_funcs_component += [self.chrom_gauss_delay]
+
+    def add_chrom_gauss_event(
+        self,
+        epoch: Union[float, u.Quantity, Time],
+        ampl: Union[float, u.Quantity],
+        idx: Union[float, u.Quantity],
+        sigma: Union[float, u.Quantity],
+        index: Optional[int] = None,
+        frozen: bool = True,
+    ) -> int:
+        """Add a chromatic Gaussian event to the model."""
+
+        if index is None:
+            dct = self.get_prefix_mapping_component("CHROMGAUSS_")
+            index = np.max(list(dct.keys())) + 1
+        elif int(index) in self.get_prefix_mapping_component("CHROMGAUSS_"):
+            raise ValueError(
+                f"Index '{index}' is already in use in this model. Please choose another."
+            )
+
+        if isinstance(epoch, Time):
+            epoch = epoch.mjd
+        elif isinstance(epoch, u.Quantity):
+            epoch = epoch.value
+
+        if isinstance(ampl, u.Quantity):
+            ampl = ampl.to_value(u.s)
+
+        self.add_param(
+            prefixParameter(
+                name=f"CHROMGAUSSAMP_{index}",
+                units="s",
+                value=ampl,
+                description="Chromatic Gaussian event amplitude",
+                parameter_type="float",
+                frozen=frozen,
+                tcb2tdb_scale_factor=1,
+                prefix_aliases=["CHROMGAUSSAMP_"],
+            )
+        )
+
+        if isinstance(idx, u.Quantity):
+            idx = idx.to_value(u.s)
+
+        self.add_param(
+            prefixParameter(
+                name=f"CHROMGAUSSIDX_{index}",
+                units="",
+                value=idx,
+                description="Chromatic Gaussian event index",
+                parameter_type="float",
+                frozen=frozen,
+                tcb2tdb_scale_factor=1,
+                prefix_aliases=["CHROMGAUSSIDX_"],
+            )
+        )
+
+        if isinstance(sigma, u.Quantity):
+            sigma = sigma.to_value(u.s)
+
+        self.add_param(
+            prefixParameter(
+                name=f"CHROMGAUSS_SIGMA_{index}",
+                units="day",
+                value=sigma,
+                description="Chromatic Gaussian event standard deviation",
+                parameter_type="float",
+                frozen=frozen,
+                tcb2tdb_scale_factor=1,
+                prefix_aliases=["CHROMGAUSS_SIGMA_"],
+            )
+        )
+
+        self.setup()
+        self.validate()
+
+        return index
+
+    def remove_chrom_gauss_event(self, index: Union[float, int, List[int], np.ndarray]) -> None:
+        """Removes all chromatic Gaussian event parameters associated with a given index/list of indices.
+
+        Parameters
+        ----------
+
+        index : float, int, list, np.ndarray
+            Number or list/array of numbers corresponding to chromatic Gaussian event indices to be removed from model.
+        """
+
+        if isinstance(index, (int, float, np.int64)):
+            indices = [index]
+        elif isinstance(index, (list, set, np.ndarray)):
+            indices = index
+        else:
+            raise TypeError(
+                f"index must be a float, int, set, list, or array - not {type(index)}"
+            )
+        for index in indices:
+            index_rf = f"{int(index):d}"
+            for prefix in ["CHROMGAUSSEPOCH_", "CHROMGAUSSAMP_", "CHROMGAUSS_SIGMA_", "CHROMGAUSSIDX_"]:
+                self.remove_param(f"{prefix}{index_rf}")
+        self.validate()
+
+    def get_indices(self) -> np.ndarray:
+        """Returns an array of integers corresponding to chromatic Gaussian event parameters.
+
+        Returns
+        -------
+        inds : np.ndarray
+            Array of chromatic Gaussian event indices in model.
+        """
+        inds = [int(p.split("_")[-1]) for p in self.params if "CHROMGAUSSEPOCH_" in p]
+        return np.array(inds)
+
+    def setup(self) -> None:
+        super().setup()
+        # Get DMX mapping.
+        # Register the DMX derivatives
+        for prefix_par in self.get_params_of_type("prefixParameter"):
+            if prefix_par.startswith("CHROMGAUSSEPOCH_"):
+                self.register_deriv_funcs(self.d_delay_d_T, prefix_par)
+            elif prefix_par.startswith("CHROMGAUSSAMP_"):
+                self.register_deriv_funcs(self.d_delay_d_A, prefix_par)
+            elif prefix_par.startswith("CHROMGAUSS_SIGMA_"):
+                self.register_deriv_funcs(self.d_delay_d_tau, prefix_par)
+            elif prefix_par.startswith("CHROMGAUSSIDX_"):
+                self.register_deriv_funcs(self.d_delay_d_gamma, prefix_par)
+
+    def get_ffac(self, toas: TOAs) -> np.ndarray:
+        """Compute f/fref where f is the observing frequency."""
+        f = self._parent.barycentric_radio_freq(toas)
+        fref = self.CHROMGAUSSFREF.quantity
+        return (f / fref).to_value(u.dimensionless_unscaled)
+
+    def chrom_gauss_delay_term(
+        self, t_mjd: np.ndarray, ffac: np.ndarray, ii: int
+    ) -> u.Quantity:
+        """Compute the delay for a single chromatic Gaussian event."""
+        T = getattr(self, f"CHROMGAUSSEPOCH_{ii}").value
+        dt = (t_mjd - T) * u.day
+
+        A = getattr(self, f"CHROMGAUSSAMP_{ii}").quantity
+        idx = getattr(self, f"CHROMGAUSSIDX_{ii}").quantity
+        sigma = getattr(self, f"CHROMGAUSS_SIGMA_{ii}").quantity
+
+
+        return 1/np.sqrt(2 * np.pi * sigma**2) * A * np.exp(-0.5 * (dt) ** 2 / sigma ** 2 ) * ffac ** idx
+
+    def chrom_gauss_delay(self, toas: TOAs, acc_delay=None) -> u.Quantity:
+        """Total chromatic Gaussian delay."""
+        indices = self.get_indices()
+
+        ffac = self.get_ffac(toas)
+        t_mjd = toas["tdbld"]
+
+        delay = np.zeros(len(toas)) * u.s
+        for ii in indices:
+            delay += self.chrom_gauss_delay_term(t_mjd, ffac, ii)
+
+        return delay
+
+    def d_delay_d_A(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
+        """Derivative of delay w.r.t. chromatic Gaussian amplitude."""
+        ii = getattr(self, param).index
+        ffac = self.get_ffac(toas)
+        A = getattr(self, f"CHROMGAUSSAMP_{ii}").quantity
+        return self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii) / A
+
+    def d_delay_d_idx(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
+        """Derivative of delay w.r.t. chromatic Gaussian index."""
+        ii = getattr(self, param).index
+        ffac = self.get_ffac(toas)
+        return self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii) * np.log(ffac)
+
+    def d_delay_d_sigma(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
+        """Derivative of delay w.r.t. chromatic Gaussian st. deviation."""
+        ii = getattr(self, param).index
+        ffac = self.get_ffac(toas)
+
+        t0_mjd = getattr(self, f"CHROMGAUSSEPOCH_{ii}").value
+        dt = (toas["tdbld"] - t0_mjd) * u.day
+
+        sigma = getattr(self, f"CHROMGAUSSSIGMA_{ii}").quantity
+        eps = self.CHROMGAUSSEPS.quantity
+
+        return (
+            self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii)
+            * (dt + eps * np.log(eps / (sigma - eps)))
+            / sigma**2
+        )
+
+    def d_delay_d_T(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
+        """Derivative of delay w.r.t. chromatic Gaussian epoch."""
+        ii = getattr(self, param).index
+        ffac = self.get_ffac(toas)
+
+        T = getattr(self, f"CHROMGAUSSEPOCH_{ii}").value
+        dt = (toas["tdbld"] - T) * u.day
+
+        sigma = getattr(self, f"CHROMGAUSSSIGMA_{ii}").quantity
+        eps = self.CHROMGAUSSEPS.quantity
+
+        # Done this way to avoid overflow in exp
+        expfac1 = np.zeros(len(dt))
+        expfac1[dt >= 0] = np.exp(-dt[dt >= 0] / eps) / (1 + np.exp(-dt[dt >= 0] / eps))
+        expfac1[dt < 0] = 1 / (1 + np.exp(dt[dt < 0] / eps))
+
+        return self.expdip_delay_term(toas["tdbld"], ffac, ii) * (
+            (1 / tau) - (1 / eps) * expfac1
+        )
