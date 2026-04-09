@@ -33,7 +33,7 @@ class SimpleExponentialDip(DelayComponent):
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.expdip.SimpleExponentialDip
+        :class: pint.models.transient_events.SimpleExponentialDip
     """
 
     register = True
@@ -306,22 +306,22 @@ class SimpleExponentialDip(DelayComponent):
 
 
 class ChromaticGaussianEvent(DelayComponent):
-    """Simple chromatic Gaussian model for extreme scattering events or other chromatic transient features
+    r"""Simple chromatic Gaussian model for extreme scattering events or other chromatic transient features
 
-    This phenomenological model is defined as a Gaussian in time multiplied by a power law in frequency with variable chromaticity.
-    It is implemented as a delay component for flexibility.
-    The parameters of the model are the event epoch, amplitude, chromatic index, and width/st. dev of the Gaussian.
-
+    This phenomenological model is defined as a Gaussian in time multiplied by a power law in radio frequency with variable chromaticity.
+    The model parameters include the event epoch, sign, amplitude, chromatic index, and standard deviation of the Gaussian.
+    See Coles et al. (2015), The Astrophysical Journal, 808, 113 (arXiv:1506.07948) for more details.
     The explicit mathematical form of the Gaussian event is as follows.
 
     .. math::
-            \\Delta_{\\text{Gaussian}}(t)= \\sum_{i}A_{i}\\left(\\frac{f}{f_{\\text{ref}}}\\right)^{\\text{chromidx}_{i}}\\exp\\left[-\\frac{(t-T_{i})^2}{2\\sigma_{i}^2}\\right]
+
+        \Delta_{\text{Gaussian}}(t)= \sum_{i}A_{i}\left(\frac{f}{f_{\text{ref}}}\right)^{\text{chromidx}_{i}}\exp\left[-\frac{(t-T_{i})^2}{2\sigma_{i}^2}\right]
 
 
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.expdip.ChromaticGaussianEvent
+        :class: pint.models.transient_events.ChromaticGaussianEvent
     """
 
     register = True
