@@ -1,4 +1,4 @@
-"""Exponential dips due to, e.g., profile change events in J1713+0747"""
+"""Transient chromatic events due to, e.g., profile change events in J1713+0747 or extreme scattering events (ESE)"""
 
 from typing import List, Optional, Union
 import numpy as np
@@ -315,7 +315,7 @@ class ChromaticGaussianEvent(DelayComponent):
     The explicit mathematical form of the Gaussian event is as follows.
 
     .. math::
-            \\Delta_{\\text{Gaussian}}(t)= \\sum_{i}A_{i}\\left(\\frac{f}{f_{\\text{ref}}}\\right)^{\\text{idx}_{i}}\\exp\\left[-\\frac{(t-T_{i})^2}{2\\sigma_{i}^2}\\right]
+            \\Delta_{\\text{Gaussian}}(t)= \\sum_{i}A_{i}\\left(\\frac{f}{f_{\\text{ref}}}\\right)^{\\text{chromidx}_{i}}\\exp\\left[-\\frac{(t-T_{i})^2}{2\\sigma_{i}^2}\\right]
 
 
     Parameters supported:
@@ -332,17 +332,6 @@ class ChromaticGaussianEvent(DelayComponent):
 
         self.add_param(
             floatParameter(
-                name=f"CHROMGAUSS_LOGAMP",
-                units="s",
-                description="Log10 Chromatic Gaussian event amplitude",
-                value=1e-6,
-                frozen=True,
-                tcb2tdb_scale_factor=1,
-            )
-        )
-
-        self.add_param(
-            floatParameter(
                 name=f"CHROMGAUSS_FREF",
                 units="MHz",
                 description="Chromatic Gaussian event reference frequency",
@@ -352,43 +341,62 @@ class ChromaticGaussianEvent(DelayComponent):
             )
         )
 
-        self.add_chrom_gauss_event(None, 0, None, None, index=1, frozen=True)
-
+        # Register delay function once (it checks for events internally)
         self.delay_funcs_component += [self.chrom_gauss_delay]
 
-    def add_chrom_gauss_event(
+    def add_chromatic_gaussian_event(
         self,
         epoch: Union[float, u.Quantity, Time],
         log10amp: Union[float, u.Quantity],
-        idx: Union[float, u.Quantity],
+        chromidx: Union[float, u.Quantity],
         log10sigma: Union[float, u.Quantity],
+        sign: Union[int, float, u.Quantity],
         index: Optional[int] = None,
         frozen: bool = True,
+        force: bool = False,
     ) -> int:
         """Add a chromatic Gaussian event to the model."""
 
         if index is None:
-            dct = self.get_prefix_mapping_component("CHROMGAUSS_")
-            index = np.max(list(dct.keys())) + 1
-        elif int(index) in self.get_prefix_mapping_component("CHROMGAUSS_"):
-            raise ValueError(
-                f"Index '{index}' is already in use in this model. Please choose another."
-            )
+            dct = self.get_prefix_mapping_component("CHROMGAUSS_EPOCH_")
+            if dct:
+                index = np.max(list(dct.keys())) + 1
+            else:
+                index = 1  # Start at 1 if no events exist yet
+        elif int(index) in self.get_prefix_mapping_component("CHROMGAUSS_EPOCH_"):
+            if not force:
+                raise ValueError(
+                    f"Index '{index}' is already in use in this model. Please choose another."
+                )
+            else:
+                # Remove existing event so we can re-add with new values
+                self.remove_chrom_gauss_event(int(index))
 
         if isinstance(epoch, Time):
             epoch = epoch.mjd
         elif isinstance(epoch, u.Quantity):
             epoch = epoch.value
 
-        if isinstance(log10amp, u.Quantity):
-            log10amp = log10amp.to_value(u.s)
+        self.add_param(
+            prefixParameter(
+                name=f"CHROMGAUSS_EPOCH_{index}",
+                units="MJD",
+                description="Chromatic Gaussian event epoch",
+                parameter_type="MJD",
+                time_scale="utc",
+                value=epoch,
+                frozen=frozen,
+                tcb2tdb_scale_factor=1,
+                prefix_aliases=["CHROMGAUSS_EPOCH_"],
+            )
+        )
 
         self.add_param(
             prefixParameter(
                 name=f"CHROMGAUSS_LOGAMP_{index}",
-                units="s",
+                units="",
                 value=log10amp,
-                description="Log10 Chromatic Gaussian event amplitude",
+                description="Log10 Chromatic Gaussian event amplitude (log10 in seconds)",
                 parameter_type="float",
                 frozen=frozen,
                 tcb2tdb_scale_factor=1,
@@ -396,31 +404,42 @@ class ChromaticGaussianEvent(DelayComponent):
             )
         )
 
-        if isinstance(idx, u.Quantity):
-            idx = idx.to_value(u.s)
-
         self.add_param(
             prefixParameter(
-                name=f"CHROMGAUSS_IDX_{index}",
+                name=f"CHROMGAUSS_CHROMIDX_{index}",
                 units="",
-                value=idx,
+                value=chromidx,
                 description="Chromatic Gaussian event chromatic index",
                 parameter_type="float",
                 frozen=frozen,
                 tcb2tdb_scale_factor=1,
-                prefix_aliases=["CHROMGAUSS_IDX_"],
+                prefix_aliases=["CHROMGAUSS_CHROMIDX_"],
             )
         )
 
-        if isinstance(sigma, u.Quantity):
-            sigma = sigma.to_value(u.s)
+        if isinstance(sign, u.Quantity):
+            sign = sign.value
+        sign = np.sign(sign) # get the actual sign
+
+        self.add_param(
+            prefixParameter(
+                name=f"CHROMGAUSS_SIGN_{index}",
+                units="",
+                value=sign,
+                description="Chromatic Gaussian event sign",
+                parameter_type="float",
+                frozen=frozen,
+                tcb2tdb_scale_factor=1,
+                prefix_aliases=["CHROMGAUSS_SIGN_"],
+            )
+        )
 
         self.add_param(
             prefixParameter(
                 name=f"CHROMGAUSS_LOGSIG_{index}",
-                units="day",
+                units="",
                 value=log10sigma,
-                description="Log10 Chromatic Gaussian event standard deviation",
+                description="Log10 Chromatic Gaussian event standard deviation (log10 in days)",
                 parameter_type="float",
                 frozen=frozen,
                 tcb2tdb_scale_factor=1,
@@ -453,9 +472,17 @@ class ChromaticGaussianEvent(DelayComponent):
             )
         for index in indices:
             index_rf = f"{int(index):d}"
-            for prefix in ["CHROMGAUSS_EPOCH_", "CHROMGAUSS_LOGAMP_", "CHROMGAUSS_LOGSIG_", "CHROMGAUSS_IDX_"]:
-                self.remove_param(f"{prefix}{index_rf}")
+            for prefix in ["CHROMGAUSS_EPOCH_", "CHROMGAUSS_LOGAMP_", "CHROMGAUSS_LOGSIG_", "CHROMGAUSS_CHROMIDX_", "CHROMGAUSS_SIGN_"]:
+                param_name = f"{prefix}{index_rf}"
+                if param_name in self.params:
+                    self.remove_param(param_name)
+        
+        self.setup()
         self.validate()
+        # Also re-setup parent model if attached, so model-level derivative
+        # registry is cleaned up properly.
+        if hasattr(self, '_parent') and self._parent is not None:
+            self._parent.setup()
 
     def get_indices(self) -> np.ndarray:
         """Returns an array of integers corresponding to chromatic Gaussian event parameters.
@@ -470,22 +497,24 @@ class ChromaticGaussianEvent(DelayComponent):
 
     def setup(self) -> None:
         super().setup()
-        # Get DMX mapping.
-        # Register the DMX derivatives
+        # Get mapping.
+        # Register the ChromGauss derivatives
         for prefix_par in self.get_params_of_type("prefixParameter"):
             if prefix_par.startswith("CHROMGAUSS_EPOCH_"):
                 self.register_deriv_funcs(self.d_delay_d_epoch, prefix_par)
             elif prefix_par.startswith("CHROMGAUSS_LOGAMP_"):
-                self.register_deriv_funcs(self.d_delay_d_A, prefix_par)
+                self.register_deriv_funcs(self.d_delay_d_log10amp, prefix_par)
             elif prefix_par.startswith("CHROMGAUSS_LOGSIG_"):
-                self.register_deriv_funcs(self.d_delay_d_sigma, prefix_par)
-            elif prefix_par.startswith("CHROMGAUSS_IDX_"):
-                self.register_deriv_funcs(self.d_delay_d_idx, prefix_par)
+                self.register_deriv_funcs(self.d_delay_d_log10sigma, prefix_par)
+            elif prefix_par.startswith("CHROMGAUSS_CHROMIDX_"):
+                self.register_deriv_funcs(self.d_delay_d_chromidx, prefix_par)
+            elif prefix_par.startswith("CHROMGAUSS_SIGN_"):
+                self.register_deriv_funcs(self.d_delay_d_sign, prefix_par)
 
     def get_ffac(self, toas: TOAs) -> np.ndarray:
         """Compute f/fref where f is the observing frequency."""
         f = self._parent.barycentric_radio_freq(toas)
-        fref = self.CHROMGAUSSFREF.quantity
+        fref = self.CHROMGAUSS_FREF.quantity
         return (f / fref).to_value(u.dimensionless_unscaled)
 
     def chrom_gauss_delay_term(
@@ -495,11 +524,13 @@ class ChromaticGaussianEvent(DelayComponent):
         T = getattr(self, f"CHROMGAUSS_EPOCH_{ii}").value
         dt = (t_mjd - T) * u.day
 
-        log10Amp = getattr(self, f"CHROMGAUSS_LOGAMP_{ii}").quantity
-        idx = getattr(self, f"CHROMGAUSS_IDX_{ii}").quantity
-        log10sigma = getattr(self, f"CHROMGAUSS_LOGSIG_{ii}").quantity
+        log10Amp = getattr(self, f"CHROMGAUSS_LOGAMP_{ii}").value
+        chromidx = getattr(self, f"CHROMGAUSS_CHROMIDX_{ii}").value
+        log10sigma = getattr(self, f"CHROMGAUSS_LOGSIG_{ii}").value
+        sign = getattr(self, f"CHROMGAUSS_SIGN_{ii}").value
 
-        return   10**log10Amp * np.exp(-0.5 * (dt) ** 2 / (10**(2*log10sigma) )) * ffac **-idx
+        sigma = 10**(log10sigma) * u.day
+        return sign * 10**log10Amp * u.s * np.exp(-0.5 * (dt.value) ** 2 / (sigma.value)**2) * ffac **(-chromidx)
 
     def chrom_gauss_delay(self, toas: TOAs, acc_delay=None) -> u.Quantity:
         """Total chromatic Gaussian delay."""
@@ -520,7 +551,7 @@ class ChromaticGaussianEvent(DelayComponent):
         ffac = self.get_ffac(toas)
         return self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii) * np.log(10)
 
-    def d_delay_d_idx(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
+    def d_delay_d_chromidx(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
         """Derivative of delay w.r.t. chromatic Gaussian index."""
         ii = getattr(self, param).index
         ffac = self.get_ffac(toas)
@@ -534,11 +565,12 @@ class ChromaticGaussianEvent(DelayComponent):
         t0_mjd = getattr(self, f"CHROMGAUSS_EPOCH_{ii}").value
         dt = (toas["tdbld"] - t0_mjd) * u.day
 
-        log10sigma = getattr(self, f"CHROMGAUSS_LOGSIG_{ii}").quantity
+        log10sigma = getattr(self, f"CHROMGAUSS_LOGSIG_{ii}").value
+        sigma = 10**(log10sigma) * u.day
 
         return (
             self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii)
-            * (dt)^2 * np.log(10) * 10**(-2*log10sigma)
+            * (dt.value)**2 / (sigma.value)**2 * np.log(10)
         )
 
     def d_delay_d_epoch(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
@@ -549,6 +581,14 @@ class ChromaticGaussianEvent(DelayComponent):
         T = getattr(self, f"CHROMGAUSS_EPOCH_{ii}").value
         dt = (toas["tdbld"] - T) * u.day
 
-        log10sigma = getattr(self, f"CHROMGAUSS_LOGSIG_{ii}").quantity
+        log10sigma = getattr(self, f"CHROMGAUSS_LOGSIG_{ii}").value
 
-        return self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii) * (dt / (10**(2*log10sigma)))
+        return self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii) * (dt.value / (10**(2*log10sigma)))
+
+    def d_delay_d_sign(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
+        """Derivative of delay w.r.t. chromatic Gaussian sign."""
+        ii = getattr(self, param).index
+        ffac = self.get_ffac(toas)
+        # Derivative w.r.t. sign is just the delay term divided by sign
+        sign = getattr(self, f"CHROMGAUSS_SIGN_{ii}").value
+        return self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii) / sign
