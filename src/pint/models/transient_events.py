@@ -315,7 +315,7 @@ class ChromaticGaussianEvent(DelayComponent):
     The explicit mathematical form of the Gaussian event is as follows.
 
     .. math::
-            \\Delta_{\\text{Gaussian}}(t)=- 
+            \\Delta_{\\text{Gaussian}}(t)= \\sum_{i}A_{i}\\left(\\frac{f}{f_{\\text{ref}}}\\right)^{\\text{idx}_{i}}\\exp\\left[-\\frac{(t-T_{i})^2}{2\\sigma_{i}^2}\\right]
 
 
     Parameters supported:
