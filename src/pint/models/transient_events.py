@@ -419,7 +419,7 @@ class ChromaticGaussianEvent(DelayComponent):
 
         if isinstance(sign, u.Quantity):
             sign = sign.value
-        sign = np.sign(sign) # get the actual sign
+        sign = np.sign(sign)  # get the actual sign
 
         self.add_param(
             prefixParameter(
@@ -452,7 +452,9 @@ class ChromaticGaussianEvent(DelayComponent):
 
         return index
 
-    def remove_chrom_gauss_event(self, index: Union[float, int, List[int], np.ndarray]) -> None:
+    def remove_chrom_gauss_event(
+        self, index: Union[float, int, List[int], np.ndarray]
+    ) -> None:
         """Removes all chromatic Gaussian event parameters associated with a given index/list of indices.
 
         Parameters
@@ -472,16 +474,22 @@ class ChromaticGaussianEvent(DelayComponent):
             )
         for index in indices:
             index_rf = f"{int(index):d}"
-            for prefix in ["CHROMGAUSS_EPOCH_", "CHROMGAUSS_LOGAMP_", "CHROMGAUSS_LOGSIG_", "CHROMGAUSS_CHROMIDX_", "CHROMGAUSS_SIGN_"]:
+            for prefix in [
+                "CHROMGAUSS_EPOCH_",
+                "CHROMGAUSS_LOGAMP_",
+                "CHROMGAUSS_LOGSIG_",
+                "CHROMGAUSS_CHROMIDX_",
+                "CHROMGAUSS_SIGN_",
+            ]:
                 param_name = f"{prefix}{index_rf}"
                 if param_name in self.params:
                     self.remove_param(param_name)
-        
+
         self.setup()
         self.validate()
         # Also re-setup parent model if attached, so model-level derivative
         # registry is cleaned up properly.
-        if hasattr(self, '_parent') and self._parent is not None:
+        if hasattr(self, "_parent") and self._parent is not None:
             self._parent.setup()
 
     def get_indices(self) -> np.ndarray:
@@ -529,8 +537,14 @@ class ChromaticGaussianEvent(DelayComponent):
         log10sigma = getattr(self, f"CHROMGAUSS_LOGSIG_{ii}").value
         sign = getattr(self, f"CHROMGAUSS_SIGN_{ii}").value
 
-        sigma = 10**(log10sigma) * u.day
-        return sign * 10**log10Amp * u.s * np.exp(-0.5 * (dt.value) ** 2 / (sigma.value)**2) * ffac **(-chromidx)
+        sigma = 10 ** (log10sigma) * u.day
+        return (
+            sign
+            * 10**log10Amp
+            * u.s
+            * np.exp(-0.5 * (dt.value) ** 2 / (sigma.value) ** 2)
+            * ffac ** (-chromidx)
+        )
 
     def chrom_gauss_delay(self, toas: TOAs, acc_delay=None) -> u.Quantity:
         """Total chromatic Gaussian delay."""
@@ -557,7 +571,9 @@ class ChromaticGaussianEvent(DelayComponent):
         ffac = self.get_ffac(toas)
         return self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii) * np.log(ffac**-1)
 
-    def d_delay_d_log10sigma(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
+    def d_delay_d_log10sigma(
+        self, toas: TOAs, param: str, acc_delay=None
+    ) -> u.Quantity:
         """Derivative of delay w.r.t. chromatic Gaussian st. deviation."""
         ii = getattr(self, param).index
         ffac = self.get_ffac(toas)
@@ -566,11 +582,13 @@ class ChromaticGaussianEvent(DelayComponent):
         dt = (toas["tdbld"] - t0_mjd) * u.day
 
         log10sigma = getattr(self, f"CHROMGAUSS_LOGSIG_{ii}").value
-        sigma = 10**(log10sigma) * u.day
+        sigma = 10 ** (log10sigma) * u.day
 
         return (
             self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii)
-            * (dt.value)**2 / (sigma.value)**2 * np.log(10)
+            * (dt.value) ** 2
+            / (sigma.value) ** 2
+            * np.log(10)
         )
 
     def d_delay_d_epoch(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
@@ -583,7 +601,9 @@ class ChromaticGaussianEvent(DelayComponent):
 
         log10sigma = getattr(self, f"CHROMGAUSS_LOGSIG_{ii}").value
 
-        return self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii) * (dt.value / (10**(2*log10sigma)))
+        return self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii) * (
+            dt.value / (10 ** (2 * log10sigma))
+        )
 
     def d_delay_d_sign(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
         """Derivative of delay w.r.t. chromatic Gaussian sign."""
