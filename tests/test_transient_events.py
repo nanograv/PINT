@@ -355,7 +355,7 @@ def test_chromgauss_fit(chromgauss_par_model_and_toas):
     assert ftr.resids.reduced_chi2 < 1.5
 
     for p in m.free_params:
-        # Skip parameters with extremely tiny uncertainties (numerical precision)
+        # Skip parameters with extremely tiny uncertainties
         if ftr.model[p].uncertainty_value < 1e-15:
             continue
         assert (
