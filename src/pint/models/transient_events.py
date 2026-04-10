@@ -428,7 +428,7 @@ class ChromaticGaussianEvent(DelayComponent):
                 value=sign,
                 description="Chromatic Gaussian event sign",
                 parameter_type="float",
-                frozen=frozen,
+                frozen=False,
                 tcb2tdb_scale_factor=1,
                 prefix_aliases=["CHROMGAUSS_SIGN_"],
             )
@@ -547,7 +547,7 @@ class ChromaticGaussianEvent(DelayComponent):
         )
 
     def chrom_gauss_delay(self, toas: TOAs, acc_delay=None) -> u.Quantity:
-        """Total chromatic Gaussian delay."""
+        """Total delay across all chromatic Gaussian events."""
         indices = self.get_indices()
 
         ffac = self.get_ffac(toas)
@@ -587,7 +587,7 @@ class ChromaticGaussianEvent(DelayComponent):
         return (
             self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii)
             * (dt.value) ** 2
-            / (sigma.value) ** 2
+            / (10 ** (-2*log10sigma))
             * np.log(10)
         )
 
