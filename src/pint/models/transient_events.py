@@ -341,12 +341,8 @@ class ChromaticGaussianEvent(DelayComponent):
             )
         )
 
-        # Bootstrap a dummy event so the model builder can discover this
-        # component from par file prefix parameters (same pattern as
-        # SimpleExponentialDip).
-        self.add_chromatic_gaussian_event(
-            None, 0, 0, 0, 1, index=1, frozen=True
-        )
+        # Dummy event so the model builder can discover this component
+        self.add_chromatic_gaussian_event(None, 0, 0, 0, 1, index=1, frozen=True)
 
         # Register delay function once (it checks for events internally)
         self.delay_funcs_component += [self.chrom_gauss_delay]
@@ -604,9 +600,7 @@ class ChromaticGaussianEvent(DelayComponent):
         log10sigma = getattr(self, f"CHROMGAUSS_LOGSIG_{ii}").value
         sigma_sq = 10 ** (2 * log10sigma) * u.day**2
 
-        return self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii) * (
-            dt / sigma_sq
-        )
+        return self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii) * (dt / sigma_sq)
 
     def d_delay_d_sign(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
         """Derivative of delay w.r.t. chromatic Gaussian sign."""
