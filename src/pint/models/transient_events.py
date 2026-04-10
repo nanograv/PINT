@@ -341,6 +341,13 @@ class ChromaticGaussianEvent(DelayComponent):
             )
         )
 
+        # Bootstrap a dummy event so the model builder can discover this
+        # component from par file prefix parameters (same pattern as
+        # SimpleExponentialDip).
+        self.add_chromatic_gaussian_event(
+            None, 0, 0, 0, 1, index=1, frozen=True
+        )
+
         # Register delay function once (it checks for events internally)
         self.delay_funcs_component += [self.chrom_gauss_delay]
 
@@ -387,7 +394,6 @@ class ChromaticGaussianEvent(DelayComponent):
                 value=epoch,
                 frozen=frozen,
                 tcb2tdb_scale_factor=1,
-                prefix_aliases=["CHROMGAUSS_EPOCH_"],
             )
         )
 
@@ -400,7 +406,6 @@ class ChromaticGaussianEvent(DelayComponent):
                 parameter_type="float",
                 frozen=frozen,
                 tcb2tdb_scale_factor=1,
-                prefix_aliases=["CHROMGAUSS_LOGAMP_"],
             )
         )
 
@@ -413,7 +418,6 @@ class ChromaticGaussianEvent(DelayComponent):
                 parameter_type="float",
                 frozen=frozen,
                 tcb2tdb_scale_factor=1,
-                prefix_aliases=["CHROMGAUSS_CHROMIDX_"],
             )
         )
 
@@ -430,7 +434,6 @@ class ChromaticGaussianEvent(DelayComponent):
                 parameter_type="float",
                 frozen=False,
                 tcb2tdb_scale_factor=1,
-                prefix_aliases=["CHROMGAUSS_SIGN_"],
             )
         )
 
@@ -443,7 +446,6 @@ class ChromaticGaussianEvent(DelayComponent):
                 parameter_type="float",
                 frozen=frozen,
                 tcb2tdb_scale_factor=1,
-                prefix_aliases=["CHROMGAUSS_LOGSIG_"],
             )
         )
 
@@ -582,12 +584,12 @@ class ChromaticGaussianEvent(DelayComponent):
         dt = (toas["tdbld"] - t0_mjd) * u.day
 
         log10sigma = getattr(self, f"CHROMGAUSS_LOGSIG_{ii}").value
-        sigma = 10 ** (log10sigma) * u.day
+        # sigma = 10 ** (log10sigma) * u.day
 
         return (
             self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii)
             * (dt.value) ** 2
-            / (10 ** (-2*log10sigma))
+            / (10 ** (2 * log10sigma))
             * np.log(10)
         )
 
@@ -600,9 +602,10 @@ class ChromaticGaussianEvent(DelayComponent):
         dt = (toas["tdbld"] - T) * u.day
 
         log10sigma = getattr(self, f"CHROMGAUSS_LOGSIG_{ii}").value
+        sigma_sq = 10 ** (2 * log10sigma) * u.day**2
 
         return self.chrom_gauss_delay_term(toas["tdbld"], ffac, ii) * (
-            dt.value / (10 ** (2 * log10sigma))
+            dt / sigma_sq
         )
 
     def d_delay_d_sign(self, toas: TOAs, param: str, acc_delay=None) -> u.Quantity:
