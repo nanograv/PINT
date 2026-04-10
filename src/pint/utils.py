@@ -359,6 +359,9 @@ prefix_pattern = [
     re.compile(r"^([a-zA-Z]+)0*(\d+)$"),  # For the prefix like F12
     re.compile(r"^([a-zA-Z0-9]+_)(\d+)$"),  # For the prefix like DMXR1_3
     re.compile(r"([a-zA-Z]+_[a-zA-Z]+)(\d+)$"),  # for prefixes like NE_SW2?
+    re.compile(
+        r"^([a-zA-Z]+_[a-zA-Z]+_)(\d+)$"
+    ),  # for prefixes like CHROMGAUSS_EPOCH_1
 ]
 
 
