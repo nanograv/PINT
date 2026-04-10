@@ -358,9 +358,7 @@ def test_chromgauss_fit(chromgauss_par_model_and_toas):
         # Skip parameters with extremely tiny uncertainties
         if ftr.model[p].uncertainty_value < 1e-15:
             continue
-        assert (
-            abs(m[p].value - ftr.model[p].value) / ftr.model[p].uncertainty_value < 4
-        )
+        assert abs(m[p].value - ftr.model[p].value) / ftr.model[p].uncertainty_value < 4
 
 
 @pytest.fixture
@@ -440,6 +438,4 @@ def test_chromgauss_fit_two_events(chromgauss_par_two_events_model_and_toas):
         # Skip parameters with extremely tiny uncertainties
         if ftr.model[p].uncertainty_value < 1e-15:
             continue
-        assert (
-            abs(m[p].value - ftr.model[p].value) / ftr.model[p].uncertainty_value < 4
-        )
+        assert abs(m[p].value - ftr.model[p].value) / ftr.model[p].uncertainty_value < 4
