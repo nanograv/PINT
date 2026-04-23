@@ -8,10 +8,7 @@ from pint.models import get_model_and_toas, get_model
 from pint.models.timing_model import Component
 from pint.models.noise_model import NoiseComponent
 from pint.models.noise_model import (
-    TimeDomainMaternSWNoise,
-    TimeDomainQuasiPeriodicSWNoise,
-    TimeDomainRidgeSWNoise,
-    TimeDomainSqExpSWNoise,
+    TimeDomainSWNoise,
     project_basis_covariance,
 )
 from pint.simulation import make_fake_toas_uniform
@@ -72,40 +69,35 @@ def _base_model_and_toas():
     return get_model_and_toas(parfile, timfile)
 
 
-def _add_time_domain_sw_component(model, component_name):
-    """Attach one time-domain SW component and set parameters for DT interpolation mode.
+def _add_time_domain_sw_component(model, kernel):
+    """Attach a TimeDomainSWNoise component configured for the given kernel.
 
-    Note: these components intentionally share parameter names (e.g., TDSWDT),
-    so tests must add only one of them to a given model instance.
+    Parameters
+    ----------
+    kernel : str
+        One of ``'ridge'``, ``'sqexp'``, ``'matern'``, ``'quasi_periodic'``.
     """
-    td_sw_classes = {
-        "TimeDomainRidgeSWNoise": TimeDomainRidgeSWNoise,
-        "TimeDomainSqExpSWNoise": TimeDomainSqExpSWNoise,
-        "TimeDomainMaternSWNoise": TimeDomainMaternSWNoise,
-        "TimeDomainQuasiPeriodicSWNoise": TimeDomainQuasiPeriodicSWNoise,
-    }
-    component = td_sw_classes[component_name]()
+    component = TimeDomainSWNoise()
     model.add_component(component, validate=False)
 
+    model["TDSWKERNEL"].value = kernel
     model["TDSWDT"].value = 14.0
     model["TDSWINTERP_KIND"].value = "linear"
+    model["TDSWLOGSIG"].value = -7.0
 
-    if component_name == "TimeDomainRidgeSWNoise":
-        model["TDSWLOGSIG"].value = -7.0
-    elif component_name == "TimeDomainSqExpSWNoise":
-        model["TDSWLOGSIG"].value = -7.1
+    if kernel == "ridge":
+        pass  # only TDSWLOGSIG is required
+    elif kernel == "sqexp":
         model["TDSWLOGELL"].value = 1.2
-    elif component_name == "TimeDomainMaternSWNoise":
-        model["TDSWLOGSIG"].value = -7.2
+    elif kernel == "matern":
         model["TDSWLOGELL"].value = 1.0
         model["TDSWNU"].value = 1.5
-    elif component_name == "TimeDomainQuasiPeriodicSWNoise":
-        model["TDSWLOGSIG"].value = -7.3
+    elif kernel == "quasi_periodic":
         model["TDSWLOGELL"].value = 1.1
         model["TDSWLOGGAMP"].value = -0.2
         model["TDSWLOGP"].value = 1.5
     else:
-        raise ValueError(f"Unsupported time-domain SW component: {component_name}")
+        raise ValueError(f"Unsupported time-domain SW kernel: {kernel}")
 
     model.validate()
     return component
@@ -201,25 +193,16 @@ def test_noise_basis_weights_funcs(model_and_toas, component_label):
     assert np.allclose(basis_, basis) and np.allclose(weights, weights_)
 
 
-@pytest.mark.parametrize(
-    "component_name",
-    [
-        "TimeDomainRidgeSWNoise",
-        "TimeDomainSqExpSWNoise",
-        "TimeDomainMaternSWNoise",
-        "TimeDomainQuasiPeriodicSWNoise",
-    ],
-)
-def test_noise_weights_sign_time_domain_sw_integration(component_name):
-    """Integration test: each time-domain SW model should produce non-negative weights.
+@pytest.mark.parametrize("kernel", ["ridge", "sqexp", "matern", "quasi_periodic"])
+def test_noise_weights_sign_time_domain_sw_integration(kernel):
+    """Integration test: each time-domain SW kernel should produce non-negative weights.
 
-    This extends the existing `test_noise_weights_sign` coverage to new
-    time-domain SW components that are not included in the default
-    `correlated_noise_component_labels` parametrization.
+    This extends the existing ``test_noise_weights_sign`` coverage to the unified
+    TimeDomainSWNoise component with each supported kernel.
     """
 
     model, toas = _base_model_and_toas()
-    component = _add_time_domain_sw_component(model, component_name)
+    component = _add_time_domain_sw_component(model, kernel)
 
     basis, weights = component.basis_funcs[0](toas)
 
@@ -227,24 +210,15 @@ def test_noise_weights_sign_time_domain_sw_integration(component_name):
     assert np.all(weights >= 0)
 
 
-@pytest.mark.parametrize(
-    "component_name",
-    [
-        "TimeDomainRidgeSWNoise",
-        "TimeDomainSqExpSWNoise",
-        "TimeDomainMaternSWNoise",
-        "TimeDomainQuasiPeriodicSWNoise",
-    ],
-)
-def test_time_domain_sw_covariance_matches_basis_weights(component_name):
-    """Integration test: covariance must equal basis*weights*basis^T for time-domain SW models.
+@pytest.mark.parametrize("kernel", ["ridge", "sqexp", "matern", "quasi_periodic"])
+def test_time_domain_sw_covariance_matches_basis_weights(kernel):
+    """Integration test: covariance must equal basis*weights*basis^T for each kernel.
 
-    This mirrors `test_covariance_matrix_relation` but specifically targets
-    newly added time-domain SW components.
+    Mirrors ``test_covariance_matrix_relation`` for the unified TimeDomainSWNoise.
     """
 
     model, toas = _base_model_and_toas()
-    component = _add_time_domain_sw_component(model, component_name)
+    component = _add_time_domain_sw_component(model, kernel)
 
     basis, weights = component.basis_funcs[0](toas)
     cov = component.covariance_matrix_funcs[0](toas)
@@ -284,3 +258,40 @@ def test_white_noise_model_derivs():
     assert np.isclose(
         dq2[-1], sigma[-1] * m.EQUAD2.quantity * (m.EFAC2.quantity / sigma[-1]) ** 2
     )
+
+
+# ---------------------------------------------------------------------------
+# TimeDomainSWNoise – kernel parameter validation tests
+# ---------------------------------------------------------------------------
+
+
+def test_time_domain_sw_invalid_kernel_rejected():
+    """TimeDomainSWNoise should raise ValueError for an unknown kernel name."""
+    model, _ = _base_model_and_toas()
+    component = TimeDomainSWNoise()
+    model.add_component(component, validate=False)
+    model["TDSWKERNEL"].value = "bogus_kernel"
+    model["TDSWLOGSIG"].value = -7.0
+    with pytest.raises(ValueError, match="TDSWKERNEL"):
+        model.validate()
+
+
+@pytest.mark.parametrize(
+    "kernel, missing_param",
+    [
+        ("sqexp", "TDSWLOGELL"),
+        ("matern", "TDSWLOGELL"),
+        ("quasi_periodic", "TDSWLOGELL"),
+    ],
+)
+def test_time_domain_sw_missing_required_param(kernel, missing_param):
+    """TimeDomainSWNoise validate() should raise when a kernel-required param is absent."""
+    model, _ = _base_model_and_toas()
+    component = TimeDomainSWNoise()
+    model.add_component(component, validate=False)
+    model["TDSWKERNEL"].value = kernel
+    model["TDSWLOGSIG"].value = -7.0
+    # deliberately do NOT set missing_param (or extra required params for qp)
+    # For quasi_periodic we need TDSWLOGELL at minimum to fail – leave it None.
+    with pytest.raises(ValueError, match=missing_param):
+        model.validate()
