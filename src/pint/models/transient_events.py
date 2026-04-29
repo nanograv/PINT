@@ -309,19 +309,47 @@ class ChromaticGaussianEvent(DelayComponent):
     r"""Simple chromatic Gaussian model for extreme scattering events or other chromatic transient features
 
     This phenomenological model is defined as a Gaussian in time multiplied by a power law in radio frequency with variable chromaticity.
-    The model parameters include the event epoch, sign, amplitude, chromatic index, and standard deviation of the Gaussian.
-    See Coles et al. (2015), The Astrophysical Journal, 808, 113 (arXiv:1506.07948) for more details.
+    The model parameters include the event epoch, sign, log10 amplitude, chromatic index, and log10 standard deviation of the Gaussian.
+    See Coles et al. 2015 (https://arxiv.org/abs/1506.07948) for more details.
+    See Reardon et al. 2023 (https://arxiv.org/abs/2306.16229) for an application in PTAs.
+    Note a typo in Reardon et al., which lacks a negative sign in exponential.
     The explicit mathematical form of the Gaussian event is as follows.
 
     .. math::
 
-        \Delta_{\text{Gaussian}}(t)= \sum_{i}A_{i}\left(\frac{f}{f_{\text{ref}}}\right)^{\text{chromidx}_{i}}\exp\left[-\frac{(t-T_{i})^2}{2\sigma_{i}^2}\right]
+        \Delta_{\text{Gaussian}}(t) = \sum_{i} \text{SIGN}_{i} \cdot 10^{\text{LOGAMP}_{i}}
+        \left(\frac{f}{f_{\text{ref}}}\right)^{\text{CHROMIDX}_{i}}
+        \exp\left[-\frac{(t-\text{EPOCH}_{i})^2}{2\left(10^{\text{LOGSIG}_{i}}\right)^2}\right]
+
+    where :math:`\text{LOGAMP}_{i} = \log_{10}(A_i / \text{s})`,
+    :math:`\text{LOGSIG}_{i} = \log_{10}(\sigma_i / \text{days})`,
+    :math:`\text{EPOCH}_{i}` is in MJD, :math:`f_{\text{ref}} = \text{CHROMGAUSS\_FREF}` in MHz,
+    and :math:`\text{SIGN}_{i} \in \{-1, +1\}`.
 
 
     Parameters supported:
 
     .. paramtable::
         :class: pint.models.transient_events.ChromaticGaussianEvent
+    
+    Examples
+    --------
+    Add a chromatic Gaussian event to an existing PINT timing model::
+
+    >>> import numpy as np
+    >>> from pint.models.transient_events import ChromaticGaussianEvent
+    >>> chrom_gauss = ChromaticGaussianEvent()
+    >>> model.add_component(chrom_gauss)
+    >>> chrom_comp = model.components['ChromaticGaussianEvent']
+    >>> chrom_comp.add_chromatic_gaussian_event(
+    ...     55000, # EPOCH (MJD)
+    ...     np.log10(5e-6), # LOGAMP log10(s)
+    ...     4, # CHROMIDX: chromatic index (f/rref)^-chromidx
+    ...     np.log10(1000), # LOGSIGMA log10(days)
+    ...     1, # SIGN: event sign
+    ...     index=1,
+    ...     force=True,
+    ... )
     """
 
     register = True
@@ -354,11 +382,14 @@ class ChromaticGaussianEvent(DelayComponent):
         chromidx: Union[float, u.Quantity],
         log10sigma: Union[float, u.Quantity],
         sign: Union[int, float, u.Quantity],
-        index: Optional[int] = None,
+        index: Optional[int] = 1,
         frozen: bool = True,
         force: bool = False,
     ) -> int:
-        """Add a chromatic Gaussian event to the model."""
+        """
+        Add a chromatic Gaussian event to the model.
+        Use force = True to overwrite existing event at given index.
+        """
 
         if index is None:
             dct = self.get_prefix_mapping_component("CHROMGAUSS_EPOCH_")
@@ -373,7 +404,7 @@ class ChromaticGaussianEvent(DelayComponent):
                 )
             else:
                 # Remove existing event so we can re-add with new values
-                self.remove_chrom_gauss_event(int(index))
+                self.remove_chromatic_gaussian_event(int(index))
 
         if isinstance(epoch, Time):
             epoch = epoch.mjd
@@ -428,7 +459,7 @@ class ChromaticGaussianEvent(DelayComponent):
                 value=sign,
                 description="Chromatic Gaussian event sign",
                 parameter_type="float",
-                frozen=False,
+                frozen=True,
                 tcb2tdb_scale_factor=1,
             )
         )
@@ -450,7 +481,7 @@ class ChromaticGaussianEvent(DelayComponent):
 
         return index
 
-    def remove_chrom_gauss_event(
+    def remove_chromatic_gaussian_event(
         self, index: Union[float, int, List[int], np.ndarray]
     ) -> None:
         """Removes all chromatic Gaussian event parameters associated with a given index/list of indices.
