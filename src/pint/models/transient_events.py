@@ -336,7 +336,7 @@ class ChromaticGaussianEvent(DelayComponent):
 
     Examples
     --------
-    Add a chromatic Gaussian event to an existing PINT timing model::
+    Add a chromatic Gaussian event to an existing PINT timing model:
 
     >>> import numpy as np
     >>> from pint.models.transient_events import ChromaticGaussianEvent
