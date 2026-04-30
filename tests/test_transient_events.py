@@ -114,7 +114,7 @@ def _add_chromgauss_component(model):
     """Helper to add a ChromaticGaussianEvent component to a model."""
     comp = ChromaticGaussianEvent()
     model.add_component(comp)
-    comp.remove_chrom_gauss_event(1)
+    comp.remove_chromatic_gaussian_event(1)
     return model
 
 
@@ -171,6 +171,7 @@ def test_chromgauss_add_two(base_model, base_toas):
         chromidx=2.0,
         log10sigma=1.3,
         sign=-1,
+        index=2,
     )
 
     assert idx1 == 1
@@ -195,12 +196,12 @@ def test_chromgauss_remove(base_model, base_toas):
         epoch=55000.0, log10amp=-6.0, chromidx=2.0, log10sigma=1.5, sign=1
     )
     comp.add_chromatic_gaussian_event(
-        epoch=56000.0, log10amp=-5.5, chromidx=2.0, log10sigma=1.3, sign=-1
+        epoch=56000.0, log10amp=-5.5, chromidx=2.0, log10sigma=1.3, sign=-1, index=2
     )
     assert len(comp.get_indices()) == 2
 
     # Remove event 1
-    comp.remove_chrom_gauss_event(1)
+    comp.remove_chromatic_gaussian_event(1)
     assert len(comp.get_indices()) == 1
     assert 2 in comp.get_indices()
     assert 1 not in comp.get_indices()
@@ -211,7 +212,7 @@ def test_chromgauss_remove(base_model, base_toas):
     assert np.all(np.isfinite(res.calc_time_resids().value))
 
     # Remove event 2
-    comp.remove_chrom_gauss_event(2)
+    comp.remove_chromatic_gaussian_event(2)
     assert len(comp.get_indices()) == 0
 
     # Delay should be zero with no events
@@ -231,10 +232,11 @@ def test_chromgauss_remove_multiple(base_model):
             chromidx=2.0,
             log10sigma=1.5,
             sign=1,
+            index=i + 1,
         )
     assert len(comp.get_indices()) == 3
 
-    comp.remove_chrom_gauss_event([1, 3])
+    comp.remove_chromatic_gaussian_event([1, 3])
     assert len(comp.get_indices()) == 1
     assert 2 in comp.get_indices()
 

@@ -331,7 +331,7 @@ class ChromaticGaussianEvent(DelayComponent):
 
     .. paramtable::
         :class: pint.models.transient_events.ChromaticGaussianEvent
-    
+
     Examples
     --------
     Add a chromatic Gaussian event to an existing PINT timing model::
