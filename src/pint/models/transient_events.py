@@ -352,6 +352,19 @@ class ChromaticGaussianEvent(DelayComponent):
     ...     index=1,
     ...     force=True,
     ... )
+
+    Notes
+    -----
+    The above example will appear in the par file as such::
+
+        CHROMGAUSS_FREF         1400
+        CHROMGAUSS_EPOCH_1      55000.0    1
+        CHROMGAUSS_LOGAMP_1    -5.301      1
+        CHROMGAUSS_CHROMIDX_1   4.0        0
+        CHROMGAUSS_LOGSIG_1     2.477      1
+        CHROMGAUSS_SIGN_1       1          0
+
+    For an additional event replace the ``_1`` suffix with ``_2``.
     """
 
     register = True
