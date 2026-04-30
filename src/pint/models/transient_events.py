@@ -315,15 +315,17 @@ class ChromaticGaussianEvent(DelayComponent):
     Note a typo in Reardon et al., which lacks a negative sign in exponential.
     The explicit mathematical form of the Gaussian event is as follows.
 
+    The derivatives w.r.t SIGN and EPOCH can be quite large so it is recommended to fix SIGN and start from a good estimate of EPOCH.
+
     .. math::
 
         \Delta_{\text{Gaussian}}(t) = \sum_{i} \text{SIGN}_{i} \cdot 10^{\text{LOGAMP}_{i}}
-        \left(\frac{f}{f_{\text{ref}}}\right)^{\text{CHROMIDX}_{i}}
+        \left(\frac{f}{f_{\text{ref}}}\right)^{-\text{CHROMIDX}_{i}}
         \exp\left[-\frac{(t-\text{EPOCH}_{i})^2}{2\left(10^{\text{LOGSIG}_{i}}\right)^2}\right]
 
     where :math:`\text{LOGAMP}_{i} = \log_{10}(A_i / \text{s})`,
     :math:`\text{LOGSIG}_{i} = \log_{10}(\sigma_i / \text{days})`,
-    :math:`\text{EPOCH}_{i}` is in MJD, :math:`f_{\text{ref}} = \text{CHROMGAUSS\_FREF}` in MHz,
+    :math:`\text{EPOCH}_{i}` is in MJD, :math:`f_{\text{ref}} = \text{CHROMGAUSS_FREF}` in MHz,
     and :math:`\text{SIGN}_{i} \in \{-1, +1\}`.
 
 
@@ -344,8 +346,8 @@ class ChromaticGaussianEvent(DelayComponent):
     >>> chrom_comp.add_chromatic_gaussian_event(
     ...     55000, # EPOCH (MJD)
     ...     np.log10(5e-6), # LOGAMP log10(s)
-    ...     4, # CHROMIDX: chromatic index (f/rref)^-chromidx
-    ...     np.log10(1000), # LOGSIGMA log10(days)
+    ...     4, # CHROMIDX: chromatic index (f/fref)^-chromidx
+    ...     np.log10(300), # LOGSIGMA log10(days)
     ...     1, # SIGN: event sign
     ...     index=1,
     ...     force=True,
