@@ -310,12 +310,10 @@ class ChromaticGaussianEvent(DelayComponent):
 
     This phenomenological model is defined as a Gaussian in time multiplied by a power law in radio frequency with variable chromaticity.
     The model parameters include the event epoch, sign, log10 amplitude, chromatic index, and log10 standard deviation of the Gaussian.
-    See Coles et al. 2015 (https://arxiv.org/abs/1506.07948) for more details.
-    See Reardon et al. 2023 (https://arxiv.org/abs/2306.16229) for an application in PTAs.
-    Note a typo in Reardon et al., which lacks a negative sign in exponential.
+    See Coles et al. 2015 (https://arxiv.org/abs/1506.07948) for more details at extreme scattering events.
+    See Reardon et al. 2023 (https://arxiv.org/abs/2306.16229) for an application of this model in PTAs,
+    but note a typo in Reardon et al., which lacks a negative sign in the exponential.
     The explicit mathematical form of the Gaussian event is as follows.
-
-    The derivatives w.r.t SIGN and EPOCH can be quite large so it is recommended to fix SIGN and start from a good estimate of EPOCH.
 
     .. math::
 
@@ -365,6 +363,7 @@ class ChromaticGaussianEvent(DelayComponent):
         CHROMGAUSS_SIGN_1       1          0
 
     For an additional event replace the ``_1`` suffix with ``_2``.
+    The derivatives w.r.t SIGN and EPOCH can be quite large so it is recommended to fix SIGN and start from a good estimate of EPOCH.
     """
 
     register = True
