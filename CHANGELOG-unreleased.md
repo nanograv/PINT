@@ -22,4 +22,5 @@ the released changes.
 - Use VLBI astrometric measurements along with coordinate offset in the timing model
 ### Fixed
 - Fix docstring of `make_fake_toas_uniform`
+- `PINTk` bug when using random models with jumps
 ### Removed
