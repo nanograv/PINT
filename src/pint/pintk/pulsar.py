@@ -26,7 +26,6 @@ from pint.utils import FTest, akaike_information_criterion
 import pint.logging
 from loguru import logger as log
 
-
 plot_labels = [
     "pre-fit",
     "post-fit",
@@ -104,6 +103,7 @@ class Pulsar:
         # turns pre-existing jump flags in toas.table['flags'] into parameters in parfile
         self.prefit_model.jump_flags_to_params(self.all_toas)
         self.selected_toas = copy.deepcopy(self.all_toas)
+
         print("The prefit model as a parfile:")
         print(self.prefit_model.as_parfile())
         # adds extra prefix params for fitting
@@ -626,6 +626,7 @@ class Pulsar:
 
         # These are the currently selected TOAs in the fit
         sim_sel = copy.deepcopy(self.selected_toas)
+
         # These are single TOAs from each cluster of TOAs
         inds = np.zeros(sim_sel.ntoas, dtype=bool)
         inds[np.unique(sim_sel.get_clusters(), return_index=True)[1]] |= True
@@ -662,6 +663,10 @@ class Pulsar:
         self.faketoas1.compute_pulse_numbers(self.postfit_model)
         self.faketoas1.get_clusters(add_column=True)
 
+        if "f" in self.faketoas1.table.colnames:
+            self.faketoas1.table.remove_column("f")
+        if "f" in sim_sel.table.colnames:
+            sim_sel.table.remove_column("f")
         # Combine our TOAs
         toas = merge_TOAs([sim_sel, self.faketoas1])
         zero_residuals(toas, self.postfit_model)

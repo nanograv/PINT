@@ -1,4 +1,4 @@
-"""Phase jumps. """
+"""Phase jumps."""
 
 import astropy.units as u
 import numpy
@@ -192,6 +192,8 @@ class PhaseJump(PhaseComponent):
                     d["jump"] = str(jump_par.index)
                 log.info(f"Set up on {jump_par=} {d=}")
             log.info(f"TOAs {toas['jump']=}")
+        if "f" in toas.table.colnames:
+            toas.table.remove_column("f")
 
     def add_jump_and_flags(self, toa_table):
         """Add jump object to PhaseJump and appropriate flags to TOA tables.
