@@ -65,6 +65,19 @@ def test_invalid_parfiles():
             m = get_model(_delete_line(lines))
 
 
+def test_orbwaves_phase():
+    m, t = get_model_and_toas(
+        datadir / "J1048+2339_orbwaves.par", datadir / "J1048+2339_3PC_fake.tim"
+    )
+
+    ph_array = m.orbital_phase(m.get_barycentric_toas(t))
+    assert ph_array is not None
+
+    ph_toa = m.orbital_phase(t)
+    assert ph_toa is not None
+
+
 if __name__ == "__main__":
     test_orbwaves_fit()
     test_invalid_parfiles()
+    test_orbwaves_phase()
