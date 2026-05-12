@@ -50,15 +50,15 @@ class BinaryDDK(BinaryDD):
     of the system from Earth, the finite size of the system, and the
     interaction of these with the proper motion.
 
-    From Kopeikin (1995) this includes :math:`\Delta_{\pi M}` (Equation 17),
-    the mixed annual-orbital parallax term, which changes :math:`a_1` and :math:`\omega`
+    From Kopeikin (1995) this includes :math:`\\Delta_{\\pi M}` (Equation 17),
+    the mixed annual-orbital parallax term, which changes :math:`a_1` and :math:`\\omega`
     (:meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_a1_parallax`
     and :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_omega_parallax`).
 
-    It does not include :math:`\Delta_{\pi P}`, the pure pulsar orbital parallax term
+    It does not include :math:`\\Delta_{\\pi P}`, the pure pulsar orbital parallax term
     (Equation 14).
 
-    From Kopeikin (1996) this includes apparent changes in :math:`\omega`, :math:`a_1`, and
+    From Kopeikin (1996) this includes apparent changes in :math:`\\omega`, :math:`a_1`, and
     :math:`i` due to the proper motion (:meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_omega_proper_motion`,
     :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_a1_proper_motion`,
     :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_kin_proper_motion`)
@@ -73,7 +73,7 @@ class BinaryDDK(BinaryDD):
        KIN
             the inclination angle: :math:`i`
        KOM
-            the longitude of the ascending node, Kopeikin (1995) Eq 9: :math:`\Omega`
+            the longitude of the ascending node, Kopeikin (1995) Eq 9: :math:`\\Omega`
        K96
             flag for Kopeikin binary model proper motion correction
 
@@ -239,19 +239,19 @@ class BinaryDDK(BinaryDD):
 
         We first define the symmetry point where a1dot is zero (in equatorial coordinates):
 
-        :math:`KOM_0 = \tan^{-1} (\mu_{\delta} / \mu_{\alpha})`
+        :math:`KOM_0 = \\tan^{-1} (\\mu_{\\delta} / \\mu_{\\alpha})`
 
         The solutions are then:
 
         :math:`(KIN, KOM)`
 
-        :math:`(KIN, 2KOM_0 - KOM - 180^{\circ})`
+        :math:`(KIN, 2KOM_0 - KOM - 180^{\\circ})`
 
-        :math:`(180^{\circ}-KIN, KOM+180^{\circ})`
+        :math:`(180^{\\circ}-KIN, KOM+180^{\\circ})`
 
-        :math:`(180^{\circ}-KIN, 2KOM_0 - KOM)`
+        :math:`(180^{\\circ}-KIN, 2KOM_0 - KOM)`
 
-        All values will be between 0 and :math:`360^{\circ}`.
+        All values will be between 0 and :math:`360^{\\circ}`.
 
         Returns
         -------

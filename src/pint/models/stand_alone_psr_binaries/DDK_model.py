@@ -13,12 +13,12 @@ class DDKmodel(DDmodel):
 
     The main difference is that DDK model considers the effects on the pulsar binary parameters from the annual parallax of earth and the proper motion of the pulsar.
 
-    From Kopeikin (1995) this includes :math:`\Delta_{\pi M}` (Equation 17), the mixed annual-orbital parallax term, which changes :math:`a_1` and :math:`\omega`
+    From Kopeikin (1995) this includes :math:`\\Delta_{\\pi M}` (Equation 17), the mixed annual-orbital parallax term, which changes :math:`a_1` and :math:`\\omega`
     (:meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_a1_parallax` and :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_omega_parallax`).
 
-    It does not include :math:`\Delta_{\pi P}`, the pure pulsar orbital parallax term (Equation 14).
+    It does not include :math:`\\Delta_{\\pi P}`, the pure pulsar orbital parallax term (Equation 14).
 
-    From Kopeikin (1996) this includes apparent changes in :math:`\omega`, :math:`a_1`, and :math:`i` due to the proper motion
+    From Kopeikin (1996) this includes apparent changes in :math:`\\omega`, :math:`a_1`, and :math:`i` due to the proper motion
     (:meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_omega_proper_motion`, :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_a1_proper_motion`,
     :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_kin_proper_motion`) (Equations 8, 9, 10).
 
@@ -28,7 +28,7 @@ class DDKmodel(DDmodel):
        KIN
             the inclination angle: :math:`i`
        KOM
-            the longitude of the ascending node, Kopeikin (1995) Eq 9: :math:`\Omega`
+            the longitude of the ascending node, Kopeikin (1995) Eq 9: :math:`\\Omega`
        K96
             flag for Kopeikin binary model proper motion correction
 
@@ -161,9 +161,9 @@ class DDKmodel(DDmodel):
 
         .. math::
 
-            ki = KIN + \delta_{KIN}
+            ki = KIN + \\delta_{KIN}
 
-            \delta_{KIN} = (-\mu_{long} \sin(KOM) + \mu_{lat} \cos(KOM)) (t-T_0)
+            \\delta_{KIN} = (-\\mu_{long} \\sin(KOM) + \\mu_{lat} \\cos(KOM)) (t-T_0)
 
         """
         d_KIN = (
@@ -238,11 +238,11 @@ class DDKmodel(DDmodel):
 
         .. math::
 
-            \delta_x = a_1 \cot(kin)  (-\mu_{long}\sin(KOM) + \mu_{lat}\cos(KOM)) (t-T_0)
+            \\delta_x = a_1 \\cot(kin)  (-\\mu_{long}\\sin(KOM) + \\mu_{lat}\\cos(KOM)) (t-T_0)
 
-            \delta_{kin} = (-\mu_{long} \sin(KOM) + \mu_{lat} \cos(KOM)) (t-T_0)
+            \\delta_{kin} = (-\\mu_{long} \\sin(KOM) + \\mu_{lat} \\cos(KOM)) (t-T_0)
 
-            \delta_x = a_1 \delta_{kin}  \cot(kin)
+            \\delta_x = a_1 \\delta_{kin}  \\cot(kin)
 
         """
         a1 = self.a1_k(False, False)
@@ -296,7 +296,7 @@ class DDKmodel(DDmodel):
 
         .. math::
 
-            \delta_{\Omega} = \csc(i) (\mu_{long}\cos(KOM) + \mu_{lat} \sin(KOM)) (t-T_0)
+            \\delta_{\\Omega} = \\csc(i) (\\mu_{long}\\cos(KOM) + \\mu_{lat} \\sin(KOM)) (t-T_0)
 
         """
         kin = self.kin()
@@ -355,7 +355,7 @@ class DDKmodel(DDmodel):
 
     def delta_I0(self):
         """
-        :math:`\Delta_{I0}`
+        :math:`\\Delta_{I0}`
 
         Reference: (Kopeikin 1995 Eq 15)
         """
@@ -363,7 +363,7 @@ class DDKmodel(DDmodel):
 
     def delta_J0(self):
         """
-        :math:`\Delta_{J0}`
+        :math:`\\Delta_{J0}`
 
         Reference: (Kopeikin 1995 Eq 16)
         """
@@ -378,15 +378,15 @@ class DDKmodel(DDmodel):
 
         .. math::
 
-            x_{obs} = \\frac{a_p  \sin(i)_{obs}}{c}
+            x_{obs} = \\frac{a_p  \\sin(i)_{obs}}{c}
 
         Since :math:`a_p` and :math:`c` will not be changed by parallax:
 
         .. math::
 
-            x_{obs} = \\frac{a_p}{c}(\sin(i)_{\\rm intrisic} + \delta_{\sin(i)})
+            x_{obs} = \\frac{a_p}{c}(\\sin(i)_{\\rm intrisic} + \\delta_{\\sin(i)})
 
-            \delta_{\sin(i)} = \sin(i)_{\\rm intrisic}  \\frac{\cot(i)_{\\rm intrisic}}{d} (\Delta_{I0} \sin KOM - \Delta_{J0}  \cos KOM)
+            \\delta_{\\sin(i)} = \\sin(i)_{\\rm intrisic}  \\frac{\cot(i)_{\\rm intrisic}}{d} (\\Delta_{I0} \\sin KOM - \\Delta_{J0}  \\cos KOM)
 
         """
         PX_kpc = self.PX.to(u.kpc, equivalencies=u.parallax())
