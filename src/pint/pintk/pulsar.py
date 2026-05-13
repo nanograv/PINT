@@ -103,7 +103,6 @@ class Pulsar:
         # turns pre-existing jump flags in toas.table['flags'] into parameters in parfile
         self.prefit_model.jump_flags_to_params(self.all_toas)
         self.selected_toas = copy.deepcopy(self.all_toas)
-
         print("The prefit model as a parfile:")
         print(self.prefit_model.as_parfile())
         # adds extra prefix params for fitting
@@ -626,7 +625,6 @@ class Pulsar:
 
         # These are the currently selected TOAs in the fit
         sim_sel = copy.deepcopy(self.selected_toas)
-
         # These are single TOAs from each cluster of TOAs
         inds = np.zeros(sim_sel.ntoas, dtype=bool)
         inds[np.unique(sim_sel.get_clusters(), return_index=True)[1]] |= True
