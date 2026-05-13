@@ -3577,7 +3577,7 @@ class TimingModel:
                         omdot
                         / (
                             3
-                            * (c.G * u.Msun / c.c**3).to_value(u.s) ** (2.0 / 3)
+                            * pint.Tsun ** (2.0 / 3)
                             * ((pb * 86400 / 2 / np.pi)) ** (-5.0 / 3)
                             * (1 - e**2) ** -1
                         )
