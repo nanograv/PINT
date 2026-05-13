@@ -151,9 +151,11 @@ def get_Fermi_TOAs(
     minmjd=-np.inf,
     maxmjd=np.inf,
     fermiobs="Fermi",
+    model=None,
     ephem=None,
-    planets=False,
-    include_bipm=False,
+    planets=None,
+    include_bipm=None,
+    bipm_version=None,
     errors=_default_uncertainty,
 ):
     """
@@ -319,8 +321,10 @@ def get_Fermi_TOAs(
         t,
         obs,
         errors=errors,
-        include_bipm=include_bipm,
-        planets=planets,
+        model=model,
         ephem=ephem,
+        include_bipm=include_bipm,
+        bipm_version=bipm_version,
+        planets=planets,
         flags=flags,
     )
