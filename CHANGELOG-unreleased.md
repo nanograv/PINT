@@ -11,4 +11,5 @@ the released changes.
 ### Changed
 ### Added
 ### Fixed
+- Fixed bug where "include_bipm" flag was being ignored when loading Fermi TOAs with weights, now defaults to using EPHEM, CLOCK and PLANET_SHAPIRO from the timing model
 ### Removed
