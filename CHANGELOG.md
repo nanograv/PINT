@@ -7,6 +7,22 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 This file contains the released changes to the codebase. See CHANGELOG-unreleased.md for
 the unreleased changes. This file should only be changed while tagging a new version.
 
+## [1.1.5] 2026-05-06
+### Changed
+- Change `StepProblem` and `MaxIterReached` into warnings
+- Removed numpy < 2.4 restriction
+- Derived quantities use `pint.GMsun` and `pint.Tsun` rather than `astropy.constants.G`
+### Added
+- Anderson-Darling test for normal data with fixed mean/variance
+- KS test to check if the whitened residuals are unit-normal distributed
+- Warning about setting of TZRMJD from TOAs
+- Method to zero out mean residual based on TZRMJD
+- `gridutils.tuple_chisq` and `gridutils.tuple_chisq_derived` now return DOF and can handle unfrozen parameters 
+- Easy method to add new parameters
+- Use VLBI astrometric measurements along with coordinate offset in the timing model
+### Fixed
+- Fix docstring of `make_fake_toas_uniform`
+
 ## [1.1.4] 2025-08-18
 ### Changed
 - Simulation functions no longer subtract the residual mean by default.
