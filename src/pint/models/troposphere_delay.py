@@ -128,6 +128,16 @@ class TroposphereDelay(DelayComponent):
             array[0] = array[1]
             array[-1] = array[-2]
 
+    def recompute_troposphere_delay(
+        self, toas: pint.toa.TOAs, acc_delay=None
+    ) -> u.Quantity:
+        """Recompute tropospheric delay if the TOAs have changed"""
+        if "alt" in toas.table.colnames:
+            toas.table.remove_column("alt")
+        if "tropo_delay" in toas.table.colnames:
+            toas.table.remove_column("tropo_delay")
+        return self.troposphere_delay(toas)
+
     def troposphere_delay(self, toas: pint.toa.TOAs, acc_delay=None) -> u.Quantity:
         """Compute tropospheric delay
 
