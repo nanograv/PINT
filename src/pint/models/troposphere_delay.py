@@ -156,7 +156,7 @@ class TroposphereDelay(DelayComponent):
 
                 # now actually calculate the atmospheric delay based on the models
                 delay[grp] = self.delay_model(
-                    toas["alt"].quantity, obs.lat, obs.height, tbl[grp]["tdbld"]
+                    toas[grp]["alt"].quantity, obs.lat, obs.height, tbl[grp]["tdbld"]
                 )
         return delay * u.s
 
