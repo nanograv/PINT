@@ -6,6 +6,7 @@ import numpy as np
 import scipy.interpolate
 from astropy.coordinates import AltAz, SkyCoord, EarthLocation
 from astropy.time import Time
+from astropy.table import Column
 from loguru import logger as log
 
 from pint.models.parameter import boolParameter
@@ -109,7 +110,6 @@ class TroposphereDelay(DelayComponent):
                 description="Enable Troposphere Delay Model",
             )
         )
-        self._troposphere_delay = None
         self.delay_funcs_component += [self.troposphere_delay]
 
         # copy over the arrays to provide constant values within 15 deg
@@ -139,8 +139,8 @@ class TroposphereDelay(DelayComponent):
 
         # if not correcting for troposphere, return the default zero delay
         if self.CORRECT_TROPOSPHERE.value:
-            if self._troposphere_delay is not None:
-                return self._troposphere_delay
+            if "tropo_delay" in toas.table.colnames:
+                return toas.table["tropo_delay"].quantity
 
             # This should only be done once
             if not "alt" in toas.table.colnames:
@@ -161,8 +161,9 @@ class TroposphereDelay(DelayComponent):
                 delay[grp] = self.delay_model(
                     toas[grp]["alt"].quantity, obs.lat, obs.height, tbl[grp]["tdbld"]
                 )
-        self._troposphere_delay = delay * u.s
-        return self._troposphere_delay
+            toas.table.add_column(Column(name="tropo_delay", data=delay * u.s))
+
+        return delay * u.s
 
     def _validate_altitudes(self, alt: u.Quantity, obs: str = "") -> np.ndarray:
         """This method checks if any of the TOAs occur at invalid altitudes
