@@ -9,6 +9,7 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Moved altitude calculation to TOAs object, to make it only happen once
 ### Added
 ### Fixed
 - When flags are created based off jumps uses strings instead of None
