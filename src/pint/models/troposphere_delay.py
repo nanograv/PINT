@@ -109,7 +109,7 @@ class TroposphereDelay(DelayComponent):
                 description="Enable Troposphere Delay Model",
             )
         )
-
+        self._troposphere_delay = None
         self.delay_funcs_component += [self.troposphere_delay]
 
         # copy over the arrays to provide constant values within 15 deg
@@ -134,6 +134,8 @@ class TroposphereDelay(DelayComponent):
         Pass in the TOAs and it will calculate the delay for each TOA,
         accounting for the observatory location, target coordinates, and time of observation
         """
+        if self._troposphere_delay is not None:
+            return self._troposphere_delay
         tbl = toas.table
         delay = np.zeros(len(tbl))
 
@@ -158,7 +160,8 @@ class TroposphereDelay(DelayComponent):
                 delay[grp] = self.delay_model(
                     toas[grp]["alt"].quantity, obs.lat, obs.height, tbl[grp]["tdbld"]
                 )
-        return delay * u.s
+        self._troposphere_delay = delay * u.s
+        return self._troposphere_delay
 
     def _validate_altitudes(self, alt: u.Quantity, obs: str = "") -> np.ndarray:
         """This method checks if any of the TOAs occur at invalid altitudes
