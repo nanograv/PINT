@@ -134,13 +134,14 @@ class TroposphereDelay(DelayComponent):
         Pass in the TOAs and it will calculate the delay for each TOA,
         accounting for the observatory location, target coordinates, and time of observation
         """
-        if self._troposphere_delay is not None:
-            return self._troposphere_delay
         tbl = toas.table
         delay = np.zeros(len(tbl))
 
         # if not correcting for troposphere, return the default zero delay
         if self.CORRECT_TROPOSPHERE.value:
+            if self._troposphere_delay is not None:
+                return self._troposphere_delay
+
             # This should only be done once
             if not "alt" in toas.table.colnames:
                 toas.compute_altitude(self)
