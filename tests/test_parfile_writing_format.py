@@ -127,7 +127,9 @@ def test_formats():
 
 def test_EFAC():
     """Should become T2EFAC in TEMPO/TEMPO2"""
-    model = get_model(StringIO("""
+    model = get_model(
+        StringIO(
+            """
         PSRJ J1234+5678
         ELAT 0
         ELONG 0
@@ -135,7 +137,9 @@ def test_EFAC():
         F0 1
         PEPOCH 58000
         EFAC mjd 57000 58000 2
-        """))
+        """
+        )
+    )
     assert any(
         l.startswith("EFAC") for l in model.as_parfile(format="pint").split("\n")
     )
@@ -158,7 +162,9 @@ def test_EFAC():
 
 def test_EQUAD():
     """Should become T2EQUAD in TEMPO/TEMPO2"""
-    model = get_model(StringIO("""
+    model = get_model(
+        StringIO(
+            """
         PSRJ J1234+5678
         ELAT 0
         ELONG 0
@@ -166,7 +172,9 @@ def test_EQUAD():
         F0 1
         PEPOCH 58000
         EQUAD mjd 57000 58000 2
-        """))
+        """
+        )
+    )
     assert any(
         l.startswith("EQUAD") for l in model.as_parfile(format="pint").split("\n")
     )
@@ -189,7 +197,9 @@ def test_EQUAD():
 
 def test_DM001_vs_DM1_pint_tempo_read_write():
     """Ensure all parfile formats write out DMn the way it was read in. May want to change later."""
-    model = get_model(StringIO("""
+    model = get_model(
+        StringIO(
+            """
         PSRJ J1234+5678
         ELAT 0
         ELONG 0
@@ -199,7 +209,9 @@ def test_DM001_vs_DM1_pint_tempo_read_write():
         DM001 0 1 0
         DM2 0 1 0
         DM0010 0 1 0
-        """))
+        """
+        )
+    )
     assert "DM1" in model.params
     assert "DM10" in model.params
     assert any(
@@ -221,7 +233,9 @@ def test_DM001_vs_DM1_pint_tempo_read_write():
 
 
 def test_NHARMS():
-    model = get_model(StringIO("""
+    model = get_model(
+        StringIO(
+            """
         PSR                            J1802-2124
         EPHEM                               DE440
         CLOCK                        TT(BIPM2019)
@@ -260,7 +274,9 @@ def test_NHARMS():
         TZRMJD             58133.7623761140993056
         TZRSITE                                GB
         TZRFRQ                           1455.314
-        """))
+        """
+        )
+    )
     for line in model.as_parfile(format="tempo").split("\n"):
         if line.startswith("NHARMS"):
             d = line.split()
