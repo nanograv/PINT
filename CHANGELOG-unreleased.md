@@ -12,4 +12,5 @@ the released changes.
 ### Added
 ### Fixed
 - When flags are created based off jumps uses strings instead of None
+- Make `get_prefix_timeranges` work for SWX.
 ### Removed
