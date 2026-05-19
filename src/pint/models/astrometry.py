@@ -410,7 +410,11 @@ class AstrometryEquatorial(Astrometry):
             float(self.PMRA.value),
             float(self.PMDEC.value),
             float(self.PX.value),
-            float(self.POSEPOCH.value),
+            (
+                float(self.POSEPOCH.value)
+                if isinstance(self.POSEPOCH, u.Quantity)
+                else None
+            ),
         )
 
     def validate(self):
@@ -924,7 +928,11 @@ class AstrometryEcliptic(Astrometry):
             float(self.PMELONG.value),
             float(self.PMELAT.value),
             float(self.PX.value),
-            float(self.POSEPOCH.value),
+            (
+                float(self.POSEPOCH.value)
+                if isinstance(self.POSEPOCH, u.Quantity)
+                else None
+            ),
             str(self.ECL.value),
         )
 
