@@ -114,7 +114,7 @@ class Astrometry(DelayComponent):
     def _astrometric_params_tuple(self):
         raise NotImplementedError
 
-    def clear_cache(self):
+    def clear_ssb_cache(self):
         self._ssb_cache = None
         self._ssb_cache_key = None
 
