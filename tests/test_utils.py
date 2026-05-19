@@ -825,6 +825,29 @@ def test_find_dmx():
     assert len(find_prefix_bytime(model, "DMX", 53500)) == 0
 
 
+def test_find_swx():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    SWXR1_0001 54000
+    SWXR2_0001 55000
+    SWXDM_0001 1
+    SWXP_0001 2
+    SWXR1_0002 55000
+    SWXR2_0002 56000
+    SWXDM_0002 2
+    SWXP_0002 2
+    """
+
+    model = tm.get_model(io.StringIO(par))
+    assert find_prefix_bytime(model, "SWX", 54500) == 1
+    assert len(find_prefix_bytime(model, "SWX", 53500)) == 0
+
+
 def test_merge_dmx():
     par = """
     PSR J1234+5678
