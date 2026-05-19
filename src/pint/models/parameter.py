@@ -507,6 +507,10 @@ class Parameter:
             )
         elif self.name == "DMDATA" and format.lower() != "pint":
             line = "%-15s %d" % (self.name, int(self.value))
+        elif (
+            self.name == "TZRFRQ" and format.lower() == "tempo" and np.isinf(self.value)
+        ):
+            line = "%-15s %d" % (self.name, 0)
 
         if self.uncertainty is not None:
             line += " %d %s" % (

@@ -12,4 +12,5 @@ the released changes.
 ### Added
 ### Fixed
 - When flags are created based off jumps uses strings instead of None
+- When writing tempo format parfiles, use 0 instead of inf for TZRFRQ
 ### Removed
