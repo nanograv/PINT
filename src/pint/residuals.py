@@ -11,6 +11,7 @@ import collections
 import copy
 from typing import Dict, List, Literal, Optional, Tuple, Union
 import warnings
+import os
 
 import astropy.units as u
 import numpy as np
@@ -38,6 +39,8 @@ __all__ = [
     "WidebandDMResiduals",
     "CombinedResiduals",
 ]
+
+_woodbury_cache: dict = {}
 
 
 class Residuals:
@@ -650,6 +653,11 @@ class Residuals:
 
         If `lognorm=True` is given, the log-normalization-factor of the likelihood
         function will also be returned.
+
+        Notes
+        -----
+        Some of the matrix computations here are slow, so when the noise parameters are fixed they are cached by default unless
+        ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_GLS_CACHE=```
         """
 
         assert self.model.has_correlated_errors
@@ -663,7 +671,33 @@ class Residuals:
             U = np.append(U, np.ones((len(self.toas), 1)), axis=1)
             Phidiag = np.append(Phidiag, [1e40])
 
-        chi2, logdet_C = woodbury_dot(Ndiag, U, Phidiag, s, s)
+        use_cache = not (
+            os.environ.get("PINT_DISABLE_CACHE") == "1"
+            or os.environ.get("PINT_DISABLE_GLS_CACHE") == "1"
+        )
+        key = id(self.toas)
+        if (
+            use_cache
+            and _woodbury_cache.get("key") is not None
+            and _woodbury_cache["key"] == key
+        ):
+            log.debug("Using cached woodbury calculation")
+            _precomputed = _woodbury_cache["value"]
+        else:
+            Sigma = np.diag(1 / Phidiag) + (U.T / Ndiag) @ U
+            Sigma_cf = cho_factor(Sigma)
+            logdet_N = np.sum(np.log(Ndiag))
+            logdet_Phi = np.sum(np.log(Phidiag))
+            _, logdet_Sigma = np.linalg.slogdet(Sigma.astype(float))
+            _precomputed = {
+                "Sigma_cf": Sigma_cf,
+                "logdet_C": logdet_N + logdet_Phi + logdet_Sigma,
+            }
+            if use_cache:
+                _woodbury_cache["key"] = key
+                _woodbury_cache["value"] = _precomputed
+
+        chi2, logdet_C = woodbury_dot(Ndiag, U, Phidiag, s, s, precomputed=_precomputed)
 
         return (chi2, logdet_C / 2) if lognorm else chi2
 

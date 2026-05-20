@@ -3095,7 +3095,12 @@ def sherman_morrison_dot(
 
 
 def woodbury_dot(
-    Ndiag: np.ndarray, U: np.ndarray, Phidiag: np.ndarray, x: np.ndarray, y: np.ndarray
+    Ndiag: np.ndarray,
+    U: np.ndarray,
+    Phidiag: np.ndarray,
+    x: np.ndarray,
+    y: np.ndarray,
+    precomputed: Optional[Dict] = None,
 ) -> Tuple[float, float]:
     """
     Compute an inner product of the form
@@ -3130,21 +3135,29 @@ def woodbury_dot(
         The inner product
     logdetC: float
         log-determinant of C
+
+    Notes
+    -----
+    If ``precomputed`` is not None, it will contain a dictionary with keys ``Sigma_cf`` and ``logdet_C``.
+    Those don't change within fit iterations.  So it will use those values rather than recomputing.
     """
 
     x_Ninv_y = np.sum(x * y / Ndiag)
     x_Ninv_U = (x / Ndiag) @ U
     y_Ninv_U = (y / Ndiag) @ U
-    Sigma = np.diag(1 / Phidiag) + (U.T / Ndiag) @ U
-    Sigma_cf = cho_factor(Sigma)
+
+    if precomputed is not None:
+        Sigma_cf = precomputed["Sigma_cf"]
+        logdet_C = precomputed["logdet_C"]
+    else:
+        Sigma = np.diag(1 / Phidiag) + (U.T / Ndiag) @ U
+        Sigma_cf = cho_factor(Sigma)
+        logdet_N = np.sum(np.log(Ndiag))
+        logdet_Phi = np.sum(np.log(Phidiag))
+        _, logdet_Sigma = np.linalg.slogdet(Sigma.astype(float))
+        logdet_C = logdet_N + logdet_Phi + logdet_Sigma
 
     x_Cinv_y = x_Ninv_y - x_Ninv_U @ cho_solve(Sigma_cf, y_Ninv_U)
-
-    logdet_N = np.sum(np.log(Ndiag))
-    logdet_Phi = np.sum(np.log(Phidiag))
-    _, logdet_Sigma = np.linalg.slogdet(Sigma.astype(float))
-
-    logdet_C = logdet_N + logdet_Phi + logdet_Sigma
 
     return x_Cinv_y, logdet_C
 

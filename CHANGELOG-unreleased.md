@@ -9,6 +9,7 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Caching of intermediate woodbury calculation
 ### Added
 ### Fixed
 - When flags are created based off jumps uses strings instead of None
