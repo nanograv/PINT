@@ -1,5 +1,6 @@
 """Delay due to Earth's troposphere"""
 
+import os
 import astropy.constants as const
 import astropy.units as u
 import numpy as np
@@ -14,6 +15,11 @@ from pint.models.timing_model import DelayComponent
 from pint.observatory import get_observatory
 from pint.observatory.topo_obs import TopoObs
 import pint.toa
+
+use_cache = not (
+    os.environ.get("PINT_DISABLE_CACHE", None) == "1"
+    or os.environ.get("PINT_DISABLE_TROPOSPHERE_CACHE", None) == "1"
+)
 
 
 class TroposphereDelay(DelayComponent):
@@ -149,11 +155,12 @@ class TroposphereDelay(DelayComponent):
 
         # if not correcting for troposphere, return the default zero delay
         if self.CORRECT_TROPOSPHERE.value:
-            if "tropo_delay" in toas.table.colnames:
+            if "tropo_delay" in toas.table.colnames and use_cache:
+                log.debug("Using cached troposphere delays")
                 return toas.table["tropo_delay"].quantity
 
-            # This should only be done once
-            if not "alt" in toas.table.colnames:
+            # This should only be done once if using the cache
+            if not "alt" in toas.table.colnames or not use_cache:
                 toas.compute_altitude(self)
             for key, grp in toas.get_obs_groups():
                 obsobj = get_observatory(key)
@@ -171,7 +178,10 @@ class TroposphereDelay(DelayComponent):
                 delay[grp] = self.delay_model(
                     toas[grp]["alt"].quantity, obs.lat, obs.height, tbl[grp]["tdbld"]
                 )
-            toas.table.add_column(Column(name="tropo_delay", data=delay * u.s))
+            if "tropo_delay" not in toas.table.colnames:
+                toas.table.add_column(Column(name="tropo_delay", data=delay * u.s))
+            elif not use_cache:
+                toas.table.replace_column("tropo_delay", delay * u.s)
 
         return delay * u.s
 

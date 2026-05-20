@@ -2532,8 +2532,11 @@ class TOAs:
                     altitudes[grp] = coord.transform_to(
                         AltAz(location=locs, obstime=mjds[grp])
                     ).alt
-        # Now add the new column to the table
-        self.table.add_column(table.Column(name="alt", data=altitudes))
+        if not "alt" in self.table.colnames:
+            # Now add the new column to the table
+            self.table.add_column(table.Column(name="alt", data=altitudes))
+        else:
+            self.table.replace_column("alt", altitudes)
 
     def update_mjd_float(self) -> None:
         """Update the ``mjd_float`` column from the ``mjd`` column"""
