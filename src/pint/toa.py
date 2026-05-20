@@ -2536,7 +2536,7 @@ class TOAs:
             # Now add the new column to the table
             self.table.add_column(table.Column(name="alt", data=altitudes))
         else:
-            self.table.replace_column("alt", altitudes)
+            self.table["alt"] = altitudes
 
     def update_mjd_float(self) -> None:
         """Update the ``mjd_float`` column from the ``mjd`` column"""

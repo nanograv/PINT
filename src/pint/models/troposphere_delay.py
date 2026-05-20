@@ -181,7 +181,7 @@ class TroposphereDelay(DelayComponent):
             if "tropo_delay" not in toas.table.colnames:
                 toas.table.add_column(Column(name="tropo_delay", data=delay * u.s))
             elif not use_cache:
-                toas.table.replace_column("tropo_delay", delay * u.s)
+                toas.table["tropo_delay"] = delay * u.s
 
         return delay * u.s
 
