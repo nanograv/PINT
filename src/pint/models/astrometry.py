@@ -114,9 +114,8 @@ class Astrometry(DelayComponent):
 
         self.delay_funcs_component += [self.solar_system_geometric_delay]
         self.register_deriv_funcs(self.d_delay_astrometry_d_PX, "PX")
-        if use_cache:
-            self._ssb_cache_key = None
-            self._ssb_cache = None
+        self._ssb_cache_key = None
+        self._ssb_cache = None
 
     def _astrometric_params_tuple(self):
         raise NotImplementedError
@@ -590,7 +589,7 @@ class AstrometryEquatorial(Astrometry):
 
         key = (_epoch_fingerprint(epoch), self._astrometric_params_tuple())
         if key == self._ssb_cache_key and self._ssb_cache is not None and use_cache:
-            log.debug("Using cached ssb_to_psr data")
+            log.debug(f"Using cached ssb_to_psr data")
             return self._ssb_cache.copy()
 
         # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
