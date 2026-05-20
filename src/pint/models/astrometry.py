@@ -533,8 +533,8 @@ class AstrometryEquatorial(Astrometry):
         astropy.coordinates.SkyCoord
         """
         if ecl is None:
-            log.debug("ECL not specified; using IERS2010.")
             ecl = "IERS2010"
+            log.debug(f"ECL not specified; using {ecl}.")
 
         pos_icrs = self.get_psr_coords(epoch=epoch)
         return pos_icrs.transform_to(PulsarEcliptic(ecl=ecl))
@@ -636,8 +636,9 @@ class AstrometryEquatorial(Astrometry):
         Omega = self.vlbi_coord_rotation()
         Khat = self.xyz_from_radec(ra, dec)
         result = Omega @ Khat if Omega is not None else Khat
-        self._ssb_cache = result.copy()
-        self._ssb_cache_key = key
+        if use_cache:
+            self._ssb_cache = result.copy()
+            self._ssb_cache_key = key
         return result
 
     def xyz_from_radec(self, ra, dec):
@@ -1119,8 +1120,8 @@ class AstrometryEcliptic(Astrometry):
             return super().ssb_to_psb_xyz_ECL(epoch=epoch, ecl=ecl)
 
         if ecl is None:
-            log.debug("ECL not specified; using IERS2010.")
             ecl = "IERS2010"
+            log.debug(f"ECL not specified; using {ecl}.")
         if epoch is None or (self.PMELONG.value == 0 and self.PMELAT.value == 0):
             # return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
             lon, lat = self.ELONG.quantity, self.ELAT.quantity
