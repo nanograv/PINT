@@ -114,15 +114,19 @@ class Astrometry(DelayComponent):
 
         self.delay_funcs_component += [self.solar_system_geometric_delay]
         self.register_deriv_funcs(self.d_delay_astrometry_d_PX, "PX")
-        self._ssb_cache_key = None
-        self._ssb_cache = None
+        self._ssb_cache_key_ecl = None
+        self._ssb_cache_ecl = None
+        self._ssb_cache_key_icrs = None
+        self._ssb_cache_icrs = None
 
     def _astrometric_params_tuple(self):
         raise NotImplementedError
 
     def clear_ssb_cache(self):
-        self._ssb_cache = None
-        self._ssb_cache_key = None
+        self._ssb_cache_ecl = None
+        self._ssb_cache_key_ecl = None
+        self._ssb_cache_icrs = None
+        self._ssb_cache_key_icrs = None
 
     def ssb_to_psb_xyz_ICRS(self, epoch: Optional[time_like] = None) -> u.Quantity:
         """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
@@ -143,7 +147,21 @@ class Astrometry(DelayComponent):
 
         # this is somewhat slow, since it repeatedly created different SkyCoord Objects
         # but for consistency only change the method in the subclasses below
-        return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
+        key = (_epoch_fingerprint(epoch), self._astrometric_params_tuple())
+        if (
+            key == self._ssb_cache_key_icrs
+            and self._ssb_cache_icrs is not None
+            and use_cache
+        ):
+            log.debug(f"Using cached ssb_to_psr data")
+            return self._ssb_cache_icrs.copy()
+
+        result = self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
+        if use_cache:
+            self._ssb_cache_icrs = result.copy()
+            self._ssb_cache_key_icrs = key
+
+        return result
 
     def ssb_to_psb_xyz_ECL(
         self, epoch: Optional[time_like] = None, ecl: str = None
@@ -164,8 +182,20 @@ class Astrometry(DelayComponent):
         np.ndarray :
             (len(epoch), 3) array of unit vectors
         """
-        # TODO: would it be better for this to return a 6-vector (pos, vel)?
-        return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
+        key = (_epoch_fingerprint(epoch), self._astrometric_params_tuple())
+        if (
+            key == self._ssb_cache_key_ecl
+            and self._ssb_cache_ecl is not None
+            and use_cache
+        ):
+            log.debug(f"Using cached ssb_to_psr data")
+            return self._ssb_cache_ecl.copy()
+        result = self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
+        if use_cache:
+            self._ssb_cache_ecl = result.copy()
+            self._ssb_cache_key_ecl = key
+
+        return result
 
     def sun_angle(
         self, toas: pint.toa.TOAs, heliocenter: bool = True, also_distance: bool = False
@@ -588,9 +618,13 @@ class AstrometryEquatorial(Astrometry):
         # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
         key = (_epoch_fingerprint(epoch), self._astrometric_params_tuple())
-        if key == self._ssb_cache_key and self._ssb_cache is not None and use_cache:
+        if (
+            key == self._ssb_cache_key_icrs
+            and self._ssb_cache_icrs is not None
+            and use_cache
+        ):
             log.debug(f"Using cached ssb_to_psr data")
-            return self._ssb_cache.copy()
+            return self._ssb_cache_icrs.copy()
 
         # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
         # does, which is to use https://github.com/liberfa/erfa/blob/master/src/starpm.c
@@ -637,8 +671,8 @@ class AstrometryEquatorial(Astrometry):
         Khat = self.xyz_from_radec(ra, dec)
         result = Omega @ Khat if Omega is not None else Khat
         if use_cache:
-            self._ssb_cache = result.copy()
-            self._ssb_cache_key = key
+            self._ssb_cache_icrs = result.copy()
+            self._ssb_cache_key_icrs = key
         return result
 
     def xyz_from_radec(self, ra, dec):
@@ -1104,9 +1138,13 @@ class AstrometryEcliptic(Astrometry):
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
 
         key = (_epoch_fingerprint(epoch), self._astrometric_params_tuple())
-        if key == self._ssb_cache_key and self._ssb_cache is not None and use_cache:
+        if (
+            key == self._ssb_cache_key_ecl
+            and self._ssb_cache_ecl is not None
+            and use_cache
+        ):
             log.debug("Using cached ssb_to_psr data")
-            return self._ssb_cache.copy()
+            return self._ssb_cache_ecl.copy()
 
         # this was somewhat slow, since it repeatedly created different SkyCoord Objects
         # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
@@ -1169,8 +1207,8 @@ class AstrometryEcliptic(Astrometry):
         Omega = self.vlbi_coord_rotation()
         result = Omega @ Khat if Omega is not None else Khat
         if use_cache:
-            self._ssb_cache = result.copy()
-            self._ssb_cache_key = key
+            self._ssb_cache_ecl = result.copy()
+            self._ssb_cache_key_ecl = key
         return result
 
     def xyz_from_latlong(self, lon, lat):
