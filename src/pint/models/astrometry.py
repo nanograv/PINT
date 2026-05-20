@@ -3,6 +3,7 @@
 import copy
 import sys
 import warnings
+import os
 from typing import Optional, Tuple
 
 import astropy.constants as const
@@ -36,6 +37,11 @@ __all__ = [
     "AstrometryEcliptic",
     "Astrometry",
 ]
+
+use_cache = not (
+    os.environ.get("PINT_DISABLE_CACHE", None) == "1"
+    or os.environ.get("PINT_DISABLE_ASTROMETRY_CACHE", None) == "1"
+)
 
 
 def _epoch_fingerprint(epoch: Optional[time_like]) -> Tuple[Tuple, bytes]:
@@ -108,8 +114,9 @@ class Astrometry(DelayComponent):
 
         self.delay_funcs_component += [self.solar_system_geometric_delay]
         self.register_deriv_funcs(self.d_delay_astrometry_d_PX, "PX")
-        self._ssb_cache_key = None
-        self._ssb_cache = None
+        if use_cache:
+            self._ssb_cache_key = None
+            self._ssb_cache = None
 
     def _astrometric_params_tuple(self):
         raise NotImplementedError
@@ -570,6 +577,11 @@ class AstrometryEquatorial(Astrometry):
         -------
         np.ndarray :
             (len(epoch), 3) array of unit vectors
+
+        Notes
+        -----
+        This calculation can be slow, so it's result is cached by default unless
+        ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_ASTROMETRY_CACHE=```
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
 
@@ -577,7 +589,8 @@ class AstrometryEquatorial(Astrometry):
         # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
         key = (_epoch_fingerprint(epoch), self._astrometric_params_tuple())
-        if key == self._ssb_cache_key and self._ssb_cache is not None:
+        if key == self._ssb_cache_key and self._ssb_cache is not None and use_cache:
+            log.debug("Using cached ssb_to_psr data")
             return self._ssb_cache.copy()
 
         # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
@@ -1082,11 +1095,17 @@ class AstrometryEcliptic(Astrometry):
         -------
         np.ndarray :
             (len(epoch), 3) array of unit vectors
+
+        Notes
+        -----
+        This calculation can be slow, so it's result is cached by default unless
+        ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_ASTROMETRY_CACHE=```
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
 
         key = (_epoch_fingerprint(epoch), self._astrometric_params_tuple())
-        if key == self._ssb_cache_key and self._ssb_cache is not None:
+        if key == self._ssb_cache_key and self._ssb_cache is not None and use_cache:
+            log.debug("Using cached ssb_to_psr data")
             return self._ssb_cache.copy()
 
         # this was somewhat slow, since it repeatedly created different SkyCoord Objects
@@ -1149,8 +1168,9 @@ class AstrometryEcliptic(Astrometry):
         # Reference: Madison+ 2023, The Astrophysical Journal 777 104 (Equations 9, 10)
         Omega = self.vlbi_coord_rotation()
         result = Omega @ Khat if Omega is not None else Khat
-        self._ssb_cache = result.copy()
-        self._ssb_cache_key = key
+        if use_cache:
+            self._ssb_cache = result.copy()
+            self._ssb_cache_key = key
         return result
 
     def xyz_from_latlong(self, lon, lat):
