@@ -1273,7 +1273,9 @@ def get_prefix_timeranges(
     """
     if prefixname.endswith("_"):
         prefixname = prefixname[:-1]
-    prefix_mapping = model.get_prefix_mapping(f"{prefixname}_")
+    prefix_mapping = model.get_prefix_mapping(
+        f"{prefixname}DM_" if prefixname == "SWX" else f"{prefixname}_"
+    )
     r1 = np.zeros(len(prefix_mapping))
     r2 = np.zeros(len(prefix_mapping))
     indices = np.zeros(len(prefix_mapping), dtype=np.int32)

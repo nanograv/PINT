@@ -13,4 +13,5 @@ the released changes.
 - `ssb_to_psb_xyz_ECL` and `ssb_to_psb_xyz_ICRS` are now cached
 ### Fixed
 - When flags are created based off jumps uses strings instead of None
+- Make `get_prefix_timeranges` work for SWX.
 ### Removed
