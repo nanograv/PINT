@@ -382,10 +382,10 @@ class AstrometryEquatorial(Astrometry):
         """
         if epoch is None or (self.PMRA.value == 0.0 and self.PMDEC.value == 0.0):
             return coords.SkyCoord(
-                ra=self.RAJ.quantity,
-                dec=self.DECJ.quantity,
-                pm_ra_cosdec=self.PMRA.quantity,
-                pm_dec=self.PMDEC.quantity,
+                ra=self.RAJ.quantity.astype(np.float64),
+                dec=self.DECJ.quantity.astype(np.float64),
+                pm_ra_cosdec=self.PMRA.quantity.astype(np.float64),
+                pm_dec=self.PMDEC.quantity.astype(np.float64),
                 obstime=self.POSEPOCH.quantity,
                 frame=coords.ICRS,
             )
@@ -511,17 +511,19 @@ class AstrometryEquatorial(Astrometry):
             warnings.simplefilter("ignore", ErfaWarning)
             # note that starpm wants mu_alpha not mu_alpha * cos(delta)
             starpmout = pmsafe(
-                self.RAJ.quantity.to_value(u.radian),
-                self.DECJ.quantity.to_value(u.radian),
-                self.PMRA.quantity.to_value(u.radian / u.yr)
-                / np.cos(self.DECJ.quantity).value,
-                self.PMDEC.quantity.to_value(u.radian / u.yr),
-                self.PX.quantity.to_value(u.arcsec),
+                np.float64(self.RAJ.quantity.to_value(u.radian)),
+                np.float64(self.DECJ.quantity.to_value(u.radian)),
+                np.float64(
+                    self.PMRA.quantity.to_value(u.radian / u.yr)
+                    / np.cos(self.DECJ.quantity).value
+                ),
+                np.float64(self.PMDEC.quantity.to_value(u.radian / u.yr)),
+                np.float64(self.PX.quantity.to_value(u.arcsec)),
                 0.0,
-                self.POSEPOCH.quantity.jd1,
-                self.POSEPOCH.quantity.jd2,
+                np.float64(self.POSEPOCH.quantity.jd1),
+                np.float64(self.POSEPOCH.quantity.jd2),
                 jd1,
-                jd2,
+                np.float64(jd2),
             )
         # ra,dec now in radians
         ra, dec = starpmout[0], starpmout[1]
@@ -702,19 +704,19 @@ class AstrometryEquatorial(Astrometry):
         # put it in here as pm_ra_cosdec since astropy complains otherwise
         dt = 1 * u.yr
         c = coords.SkyCoord(
-            ra=self.RAJ.quantity,
-            dec=self.DECJ.quantity,
+            ra=self.RAJ.quantity.astype(np.float64),
+            dec=self.DECJ.quantity.astype(np.float64),
             obstime=self.POSEPOCH.quantity,
             pm_ra_cosdec=(
                 self.RAJ.uncertainty * np.cos(self.DECJ.quantity) / dt
                 if self.RAJ.uncertainty is not None
                 else 0 * self.RAJ.units / dt
-            ),
+            ).astype(np.float64),
             pm_dec=(
                 self.DECJ.uncertainty / dt
                 if self.DECJ.uncertainty is not None
                 else 0 * self.DECJ.units / dt
-            ),
+            ).astype(np.float64),
             frame=coords.ICRS,
         )
         c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
@@ -723,19 +725,19 @@ class AstrometryEquatorial(Astrometry):
         # use fake proper motions to convert uncertainties on proper motion
         # assume that the PM_RA _does_ include cos(DEC)
         c = coords.SkyCoord(
-            ra=self.RAJ.quantity,
-            dec=self.DECJ.quantity,
+            ra=self.RAJ.quantity.astype(np.float64),
+            dec=self.DECJ.quantity.astype(np.float64),
             obstime=self.POSEPOCH.quantity,
             pm_ra_cosdec=(
                 self.PMRA.uncertainty
                 if self.PMRA.uncertainty is not None
                 else 0 * self.PMRA.units
-            ),
+            ).astype(np.float64),
             pm_dec=(
                 self.PMDEC.uncertainty
                 if self.PMDEC.uncertainty is not None
                 else 0 * self.PMDEC.units
-            ),
+            ).astype(np.float64),
             frame=coords.ICRS,
         )
         c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
@@ -875,10 +877,10 @@ class AstrometryEcliptic(Astrometry):
             # Compute only once
             return coords.SkyCoord(
                 obliquity=obliquity,
-                lon=self.ELONG.quantity,
-                lat=self.ELAT.quantity,
-                pm_lon_coslat=self.PMELONG.quantity,
-                pm_lat=self.PMELAT.quantity,
+                lon=self.ELONG.quantity.astype(np.float64),
+                lat=self.ELAT.quantity.astype(np.float64),
+                pm_lon_coslat=self.PMELONG.quantity.astype(np.float64),
+                pm_lat=self.PMELAT.quantity.astype(np.float64),
                 obstime=self.POSEPOCH.quantity,
                 frame=PulsarEcliptic,
             )
@@ -1010,16 +1012,16 @@ class AstrometryEcliptic(Astrometry):
             warnings.simplefilter("ignore", ErfaWarning)
             # note that pmsafe wants mu_lon not mu_lon * cos(lat)
             starpmout = pmsafe(
-                lon,
-                lat,
-                pm_lon,
-                pm_lat,
-                self.PX.quantity.to_value(u.arcsec),
+                np.float64(lon),
+                np.float64(lat),
+                np.float64(pm_lon),
+                np.float64(pm_lat),
+                np.float64(self.PX.quantity.to_value(u.arcsec)),
                 0.0,
-                self.POSEPOCH.quantity.jd1,
-                self.POSEPOCH.quantity.jd2,
-                jd1,
-                jd2,
+                np.float64(self.POSEPOCH.quantity.jd1),
+                np.float64(self.POSEPOCH.quantity.jd2),
+                np.float64(jd1),
+                np.float64(jd2),
             )
         # lon,lat now in radians
         lon, lat = starpmout[0], starpmout[1]
@@ -1242,20 +1244,20 @@ class AstrometryEcliptic(Astrometry):
         # put it in here as pm_ra_cosdec since astropy complains otherwise
         dt = 1 * u.yr
         c = coords.SkyCoord(
-            lon=self.ELONG.quantity,
-            lat=self.ELAT.quantity,
+            lon=self.ELONG.quantity.astype(np.float64),
+            lat=self.ELAT.quantity.astype(np.float64),
             obliquity=OBL[self.ECL.value],
             obstime=self.POSEPOCH.quantity,
             pm_lon_coslat=(
                 self.ELONG.uncertainty * np.cos(self.ELAT.quantity) / dt
                 if self.ELONG.uncertainty is not None
                 else 0 * self.ELONG.units / dt
-            ),
+            ).astype(np.float64),
             pm_lat=(
                 self.ELAT.uncertainty / dt
                 if self.ELAT.uncertainty is not None
                 else 0 * self.ELAT.units / dt
-            ),
+            ).astype(np.float64),
             frame=PulsarEcliptic,
         )
         c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
@@ -1264,20 +1266,20 @@ class AstrometryEcliptic(Astrometry):
         # use fake proper motions to convert uncertainties on proper motion
         # assume that PMELONG uncertainty includes cos(DEC)
         c = coords.SkyCoord(
-            lon=self.ELONG.quantity,
-            lat=self.ELAT.quantity,
+            lon=self.ELONG.quantity.astype(np.float64),
+            lat=self.ELAT.quantity.astype(np.float64),
             obliquity=OBL[self.ECL.value],
             obstime=self.POSEPOCH.quantity,
             pm_lon_coslat=(
                 self.PMELONG.uncertainty
                 if self.PMELONG.uncertainty is not None
                 else 0 * self.PMELONG.units
-            ),
+            ).astype(np.float64),
             pm_lat=(
                 self.PMELAT.uncertainty
                 if self.PMELAT.uncertainty is not None
                 else 0 * self.PMELAT.units
-            ),
+            ).astype(np.float64),
             frame=PulsarEcliptic,
         )
         c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
@@ -1321,20 +1323,20 @@ class AstrometryEcliptic(Astrometry):
         # put it in as pm_lon_coslat since astropy complains otherwise
         dt = 1 * u.yr
         c = coords.SkyCoord(
-            lon=self.ELONG.quantity,
-            lat=self.ELAT.quantity,
+            lon=self.ELONG.quantity.astype(np.float64),
+            lat=self.ELAT.quantity.astype(np.float64),
             obliquity=OBL[self.ECL.value],
             obstime=self.POSEPOCH.quantity,
             pm_lon_coslat=(
                 self.ELONG.uncertainty * np.cos(self.ELAT.quantity) / dt
                 if self.ELONG.uncertainty is not None
                 else 0 * self.ELONG.units / dt
-            ),
+            ).astype(np.float64),
             pm_lat=(
                 self.ELAT.uncertainty / dt
                 if self.ELAT.uncertainty is not None
                 else 0 * self.ELAT.units / dt
-            ),
+            ).astype(np.float64),
             frame=PulsarEcliptic,
         )
         c_ICRS = c.transform_to(coords.ICRS)
@@ -1344,20 +1346,20 @@ class AstrometryEcliptic(Astrometry):
         # use fake proper motions to convert uncertainties on proper motion
         # assume that PMELONG uncertainty includes cos(DEC)
         c = coords.SkyCoord(
-            lon=self.ELONG.quantity,
-            lat=self.ELAT.quantity,
+            lon=self.ELONG.quantity.astype(np.float64),
+            lat=self.ELAT.quantity.astype(np.float64),
             obliquity=OBL[self.ECL.value],
             obstime=self.POSEPOCH.quantity,
             pm_lon_coslat=(
                 self.PMELONG.uncertainty
                 if self.PMELONG.uncertainty is not None
                 else 0 * self.PMELONG.units
-            ),
+            ).astype(np.float64),
             pm_lat=(
                 self.PMELAT.uncertainty
                 if self.PMELAT.uncertainty is not None
                 else 0 * self.PMELAT.units
-            ),
+            ).astype(np.float64),
             frame=PulsarEcliptic,
         )
         c_ICRS = c.transform_to(coords.ICRS)

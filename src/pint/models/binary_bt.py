@@ -271,7 +271,7 @@ class BinaryBTPiecewise(PulsarBinary):
                     param_unit = u.d
                     if isinstance(paramx, u.quantity.Quantity):
                         paramx = paramx.value
-                    elif isinstance(paramx, np.float128):
+                    elif isinstance(paramx, np.longdouble):
                         paramx = paramx
                     elif isinstance(paramx, Time):
                         paramx = paramx.mjd

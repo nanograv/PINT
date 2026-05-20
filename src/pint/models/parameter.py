@@ -1186,7 +1186,9 @@ class MJDParameter(Parameter):
         mjd float
         mjd string (in pulsar_mjd format)
         """
-        if isinstance(val, numbers.Number):
+        if isinstance(val, numbers.Number) or (
+            isinstance(val, np.ndarray) and val.ndim == 0 and not hasattr(val, "unit")
+        ):
             val = np.longdouble(val)
             result = time_from_longdouble(val, self.time_scale)
         elif isinstance(val, (str, bytes)):
@@ -1349,7 +1351,12 @@ class AngleParameter(Parameter):
         2. float
         3. number string
         """
-        if isinstance(val, numbers.Number):
+
+        # do not know why this is needed, but for some values
+        # that are QuadPrecision they are stored as ndim=0 arrays
+        if isinstance(val, numbers.Number) or (
+            isinstance(val, np.ndarray) and val.ndim == 0 and not hasattr(val, "unit")
+        ):
             result = Angle(np.longdouble(val) * self.units)
         elif isinstance(val, str):
             # FIXME: what if the user included a unit suffix?

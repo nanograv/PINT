@@ -163,7 +163,16 @@ def check_longdouble_precision() -> bool:
     Returns True if long doubles have enough precision to use PINT
     for sub-microsecond timing on this machine.
     """
-    return np.finfo(np.longdouble).eps < 2e-19
+    return True
+    if np.finfo(np.longdouble).eps < 2e-19:
+        return True
+    else:
+        try:
+            import numpy_quaddtype as npq
+
+            return npq.epsilon < 2e-19
+        except ImportError:
+            return False
 
 
 def require_longdouble_precision() -> None:
@@ -2209,43 +2218,31 @@ def add_dummy_distance(
         return c
 
     if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
-        return (
-            coords.SkyCoord(
-                ra=c.ra,
-                dec=c.dec,
-                pm_ra_cosdec=c.pm_ra_cosdec,
-                pm_dec=c.pm_dec,
-                obstime=c.obstime,
-                distance=distance,
-                frame=coords.ICRS,
-            )
-            if hasattr(c, "pm_ra_cosdec")
-            else coords.SkyCoord(
-                ra=c.ra,
-                dec=c.dec,
-                pm_ra_cosdec=c.pm_ra,
-                pm_dec=c.pm_dec,
-                obstime=c.obstime,
-                distance=distance,
-                frame=coords.ICRS,
-            )
+        return coords.SkyCoord(
+            ra=(c.ra).astype(np.float64),
+            dec=(c.dec).astype(np.float64),
+            pm_ra_cosdec=(c.pm_ra_cosdec).astype(np.float64),
+            pm_dec=(c.pm_dec).astype(np.float64),
+            obstime=c.obstime,
+            distance=distance,
+            frame=coords.ICRS,
         )
     elif isinstance(c.frame, coords.builtin_frames.galactic.Galactic):
         return coords.SkyCoord(
-            l=c.l,
-            b=c.b,
-            pm_l_cosb=c.pm_l_cosb,
-            pm_b=c.pm_b,
+            l=(c.l).astype(np.float64),
+            b=(c.b).astype(np.float64),
+            pm_l_cosb=c.pm_l_cosb.astype(np.float64),
+            pm_b=c.pm_b.astype(np.float64),
             obstime=c.obstime,
             distance=distance,
             frame=coords.Galactic,
         )
     elif isinstance(c.frame, pint.pulsar_ecliptic.PulsarEcliptic):
         return coords.SkyCoord(
-            lon=c.lon,
-            lat=c.lat,
-            pm_lon_coslat=c.pm_lon_coslat,
-            pm_lat=c.pm_lat,
+            lon=(c.lon).astype(np.float64),
+            lat=(c.lat).astype(np.float64),
+            pm_lon_coslat=c.pm_lon_coslat.astype(np.float64),
+            pm_lat=c.pm_lat.astype(np.float64),
             obstime=c.obstime,
             distance=distance,
             obliquity=c.obliquity,

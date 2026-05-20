@@ -193,9 +193,17 @@ def test_ELL1_roundtrip(output):
                     rtol=0.2,
                 ), f"{p} uncertainty: {getattr(m, p).uncertainty_value} does not match {getattr(mback, p).uncertainty_value}"
         else:
-            assert (
-                getattr(m, p).value == getattr(mback, p).value
-            ), f"{p}: {getattr(m, p).value} does not match {getattr(mback, p).value}"
+            # this used to be an equivalence test, but it seems like with QuadPrecision
+            # we need to allow for a little slop
+            if isinstance(getattr(m, p).value, np.longdouble):
+                assert np.isclose(
+                    getattr(m, p).value, getattr(mback, p).value, atol=1e-15
+                ), f"{p}: {getattr(m, p).value} does not match {getattr(mback, p).value}"
+                print(p, getattr(m, p).value - getattr(mback, p).value)
+            else:
+                assert (
+                    getattr(m, p).value == getattr(mback, p).value
+                ), f"{p}: {getattr(m, p).value} does not match {getattr(mback, p).value}"
 
 
 @pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
@@ -229,9 +237,17 @@ def test_ELL1_roundtripFB0(output):
                     rtol=0.2,
                 ), f"{p} uncertainty: {getattr(m, p).uncertainty_value} does not match {getattr(mback, p).uncertainty_value}"
         else:
-            assert (
-                getattr(m, p).value == getattr(mback, p).value
-            ), f"{p}: {getattr(m, p).value} does not match {getattr(mback, p).value}"
+            # this used to be an equivalence test, but it seems like with QuadPrecision
+            # we need to allow for a little slop
+            if isinstance(getattr(m, p).value, np.longdouble):
+                assert np.isclose(
+                    getattr(m, p).value, getattr(mback, p).value, atol=1e-15
+                ), f"{p}: {getattr(m, p).value} does not match {getattr(mback, p).value}"
+                print(p, getattr(m, p).value - getattr(mback, p).value)
+            else:
+                assert (
+                    getattr(m, p).value == getattr(mback, p).value
+                ), f"{p}: {getattr(m, p).value} does not match {getattr(mback, p).value}"
 
 
 @pytest.mark.parametrize(

@@ -1269,10 +1269,10 @@ class WLSState(ModelState):
     def parameter_covariance_matrix(self) -> CovarianceMatrix:
         # make sure we compute the SVD
         self.step
-        # Sigma = np.dot(Vt.T / s, U.T)
+        # Sigma = np.matmul(Vt.T / s, U.T)
         # The post-fit parameter covariance matrix
         #   Sigma = V s^-2 V^T
-        Sigma = np.dot(self.Vt.T / (self.s**2), self.Vt)
+        Sigma = np.matmul(self.Vt.T / (self.s**2), self.Vt)
         return CovarianceMatrix(
             (Sigma / self.fac).T / self.fac, self.parameter_covariance_matrix_labels
         )
@@ -1589,8 +1589,8 @@ class WidebandState(ModelState):
             ).matrix
             cf = scipy.linalg.cho_factor(cov)
             cm = scipy.linalg.cho_solve(cf, self.M)
-            mtcm = np.dot(self.M.T, cm)
-            mtcy = np.dot(cm.T, residuals)
+            mtcm = np.matmul(self.M.T, cm)
+            mtcy = np.matmul(cm.T, residuals)
             mtcmplain = mtcm
         else:
             Nvec = (
@@ -1607,10 +1607,10 @@ class WidebandState(ModelState):
                 ** 2
             )
             cinv = 1 / Nvec
-            mtcm = np.dot(self.M.T, cinv[:, None] * self.M)
+            mtcm = np.matmul(self.M.T, cinv[:, None] * self.M)
             mtcmplain = mtcm
             mtcm += np.diag(self.phiinv)
-            mtcy = np.dot(self.M.T, cinv * residuals)
+            mtcy = np.matmul(self.M.T, cinv * residuals)
         return mtcm, mtcy, mtcmplain
 
     @cached_property
@@ -1629,7 +1629,7 @@ class WidebandState(ModelState):
     def U_s_Vt_xhat(self):
         U, s, Vt = scipy.linalg.svd(self.mtcm, full_matrices=False)
         s = apply_Sdiag_threshold(s, Vt, self.threshold, self.params)
-        xhat = np.dot(Vt.T, np.dot(U.T, self.mtcy) / s)
+        xhat = np.matmul(Vt.T, np.matmul(U.T, self.mtcy) / s)
         return U, s, Vt, xhat
 
     @cached_property
@@ -1661,7 +1661,7 @@ class WidebandState(ModelState):
     @cached_property
     def parameter_covariance_matrix(self) -> CovarianceMatrix:
         # make sure we compute the SVD
-        xvar = np.dot(self.Vt.T / self.s, self.Vt)
+        xvar = np.matmul(self.Vt.T / self.s, self.Vt)
         # is this the best place to do this?
         covariance_matrix_labels = {
             param: (i, i + 1, unit)
@@ -2337,16 +2337,16 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 cov = self.get_noise_covariancematrix().matrix
                 cf = scipy.linalg.cho_factor(cov)
                 cm = scipy.linalg.cho_solve(cf, M)
-                mtcm = np.dot(M.T, cm)
-                mtcy = np.dot(cm.T, residuals)
+                mtcm = np.matmul(M.T, cm)
+                mtcy = np.matmul(cm.T, residuals)
                 # mtcm, mtcy = get_gls_mtcm_mtcy_fullcov(cov, M, residuals)
             else:
                 phiinv /= norm**2
                 Nvec = self.scaled_all_sigma() ** 2
                 cinv = 1 / Nvec
-                mtcm = np.dot(M.T, cinv[:, None] * M)
+                mtcm = np.matmul(M.T, cinv[:, None] * M)
                 mtcm += np.diag(phiinv)
-                mtcy = np.dot(M.T, cinv * residuals)
+                mtcy = np.matmul(M.T, cinv * residuals)
                 # mtcm, mtcy = get_gls_mtcm_mtcy(phiinv, Nvec, M, residuals)
 
             if threshold <= 0:
@@ -2357,12 +2357,12 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             else:
                 xvar, xhat = _solve_svd(mtcm, mtcy, threshold, params)
 
-            newres = residuals - np.dot(M, xhat)
+            newres = residuals - np.matmul(M, xhat)
             # compute linearized chisq
             if full_cov:
-                chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
+                chi2 = np.matmul(newres, scipy.linalg.cho_solve(cf, newres))
             else:
-                chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+                chi2 = np.matmul(newres, cinv * newres) + np.matmul(xhat, phiinv * xhat)
 
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat / norm
@@ -2460,7 +2460,7 @@ class LMFitter(Fitter):
 
                     s = apply_Sdiag_threshold(s, Vt, threshold, current_state.params)
 
-                    dx = np.dot(Vt.T, np.dot(U.T, b) / s)
+                    dx = np.matmul(Vt.T, np.matmul(U.T, b) / s)
 
                 step = dx / current_state.norm
 
@@ -2676,6 +2676,7 @@ def fit_wls_svd(
 
     # M2 = U S V^T
     # Both U and V^T are orthogonal matrices.
+    print(np.any(np.isnan(M2)))
     U, Sdiag, VT = scipy.linalg.svd(M2, full_matrices=False)
 
     # Deal with degeneracies by replacing very small singular
@@ -2704,8 +2705,8 @@ def get_gls_mtcm_mtcy_fullcov(
     """
     cf = scipy.linalg.cho_factor(cov)
     cm = scipy.linalg.cho_solve(cf, M)
-    mtcm = np.dot(M.T, cm)
-    mtcy = np.dot(cm.T, residuals)
+    mtcm = np.matmul(M.T, cm)
+    mtcy = np.matmul(cm.T, residuals)
     return mtcm, mtcy
 
 
@@ -2720,9 +2721,9 @@ def get_gls_mtcm_mtcy(
     correlated noise basis, and residuals y (`residuals`).
     """
     cinv = 1 / Nvec
-    mtcm = np.dot(M.T, cinv[:, None] * M)
+    mtcm = np.matmul(M.T, cinv[:, None] * M)
     mtcm += np.diag(phiinv)
-    mtcy = np.dot(M.T, cinv * residuals)
+    mtcy = np.matmul(M.T, cinv * residuals)
     return mtcm, mtcy
 
 
@@ -2751,8 +2752,8 @@ def _solve_svd(
     corresponding parameters."""
     U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
     s = apply_Sdiag_threshold(s, Vt, threshold, params)
-    xvar = np.dot(Vt.T / s, Vt)
-    xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+    xvar = np.matmul(Vt.T / s, Vt)
+    xhat = np.matmul(Vt.T, np.matmul(U.T, mtcy) / s)
     return xvar, xhat
 
 

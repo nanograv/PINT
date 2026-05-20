@@ -1600,7 +1600,7 @@ class TimingModel:
         # Do NOT cycle through delay_funcs - cycle through components until cutoff
         for dc in self.DelayComponent_list[:idx]:
             for df in dc.delay_funcs_component:
-                delay += df(toas, delay)
+                delay += df(toas, delay).astype(np.float64)
         return delay
 
     def phase(self, toas: TOAs, abs_phase: Optional[bool] = None) -> Phase:
@@ -2152,7 +2152,7 @@ class TimingModel:
     ) -> u.Quantity:
         """Return the derivative of delay with respect to the parameter."""
         par = getattr(self, param)
-        result = np.longdouble(np.zeros(toas.ntoas) << (u.s / par.units))
+        result = np.longdouble(np.zeros(toas.ntoas)) << (u.s / par.units)
         delay_derivs = self.delay_deriv_funcs
         if param not in list(delay_derivs.keys()):
             raise AttributeError(
