@@ -16,11 +16,6 @@ from pint.observatory import get_observatory
 from pint.observatory.topo_obs import TopoObs
 import pint.toa
 
-use_cache = not (
-    os.environ.get("PINT_DISABLE_CACHE", None) == "1"
-    or os.environ.get("PINT_DISABLE_TROPOSPHERE_CACHE", None) == "1"
-)
-
 
 class TroposphereDelay(DelayComponent):
     """Model for accounting for the troposphere delay for topocentric TOAs.
@@ -47,9 +42,11 @@ class TroposphereDelay(DelayComponent):
 
     Notes
     -----
-    This is a slow calculation, and in general this will not change during the fitting process.
+    The calculation in :meth:`~pint.models.troposphere_delay.TroposphereDelay.troposphere_delay()` is slow,
+    and in general this will not change during the fitting process.
     Therefore the results are stored in the TOA table and only recalculated on explicit request, unless
     ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_TROPOSPHERE_CACHE=1``
+    Delays can also be explicitly recomputed using :meth:`~pint.models.troposphere_delay.TroposphereDelay.recompute_troposphere_delay()`
     """
 
     register = True
@@ -123,6 +120,10 @@ class TroposphereDelay(DelayComponent):
             )
         )
         self.delay_funcs_component += [self.troposphere_delay]
+        self.use_cache = not (
+            os.environ.get("PINT_DISABLE_CACHE", None) == "1"
+            or os.environ.get("PINT_DISABLE_TROPOSPHERE_CACHE", None) == "1"
+        )
 
         # copy over the arrays to provide constant values within 15 deg
         # of the poles and equator
@@ -167,12 +168,12 @@ class TroposphereDelay(DelayComponent):
 
         # if not correcting for troposphere, return the default zero delay
         if self.CORRECT_TROPOSPHERE.value:
-            if "tropo_delay" in toas.table.colnames and use_cache:
+            if "tropo_delay" in toas.table.colnames and self.use_cache:
                 log.debug("Using cached troposphere delays")
                 return toas.table["tropo_delay"].quantity
 
             # This should only be done once if using the cache
-            if not "alt" in toas.table.colnames or not use_cache:
+            if not "alt" in toas.table.colnames or not self.use_cache:
                 toas.compute_altitude(self)
             for key, grp in toas.get_obs_groups():
                 obsobj = get_observatory(key)
@@ -192,7 +193,7 @@ class TroposphereDelay(DelayComponent):
                 )
             if "tropo_delay" not in toas.table.colnames:
                 toas.table.add_column(Column(name="tropo_delay", data=delay * u.s))
-            elif not use_cache:
+            elif not self.use_cache:
                 toas.table["tropo_delay"] = delay * u.s
 
         return delay * u.s
