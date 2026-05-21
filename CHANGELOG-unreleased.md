@@ -12,6 +12,7 @@ the released changes.
 - Moved altitude calculation to TOAs object, to make it only happen once
 ### Added
 ### Fixed
+- Fixed bug where "include_bipm" flag was being ignored when loading Fermi TOAs with weights, now defaults to using EPHEM, CLOCK and PLANET_SHAPIRO from the timing model
 - When flags are created based off jumps uses strings instead of None
 - Make `get_prefix_timeranges` work for SWX.
 ### Removed
