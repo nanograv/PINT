@@ -16,4 +16,7 @@ the released changes.
 - `WidebandTOAFitter` raises a warning if the model has correlated errors (It used to give wrong results before).
 ### Added
 ### Fixed
+- Fixed bug where "include_bipm" flag was being ignored when loading Fermi TOAs with weights, now defaults to using EPHEM, CLOCK and PLANET_SHAPIRO from the timing model
+- When flags are created based off jumps uses strings instead of None
+- Make `get_prefix_timeranges` work for SWX.
 ### Removed
