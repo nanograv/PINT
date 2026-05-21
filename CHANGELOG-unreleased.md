@@ -11,6 +11,7 @@ the released changes.
 ### Changed
 ### Added
 ### Fixed
+- Fixed bug where "include_bipm" flag was being ignored when loading Fermi TOAs with weights, now defaults to using EPHEM, CLOCK and PLANET_SHAPIRO from the timing model
 - When flags are created based off jumps uses strings instead of None
 - Write VLBI frame rotation parameters correctly to par file. 
 - Make `get_prefix_timeranges` work for SWX.
