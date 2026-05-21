@@ -13,4 +13,5 @@ the released changes.
 ### Fixed
 - When flags are created based off jumps uses strings instead of None
 - Write VLBI frame rotation parameters correctly to par file. 
+- Make `get_prefix_timeranges` work for SWX.
 ### Removed
