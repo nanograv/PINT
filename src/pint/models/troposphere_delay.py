@@ -44,6 +44,12 @@ class TroposphereDelay(DelayComponent):
 
     .. paramtable::
         :class: pint.models.troposphere_delay.TroposphereDelay
+
+    Notes
+    -----
+    This is a slow calculation, and in general this will not change during the fitting process.
+    Therefore the results are stored in the TOA table and only recalculated on explicit request, unless
+    ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_TROPOSPHERE_CACHE=1``
     """
 
     register = True
@@ -149,6 +155,12 @@ class TroposphereDelay(DelayComponent):
 
         Pass in the TOAs and it will calculate the delay for each TOA,
         accounting for the observatory location, target coordinates, and time of observation
+
+        Notes
+        -----
+        This is a slow calculation, and in general this will not change during the fitting process.
+        Therefore the results are stored in the TOA table and only recalculated on explicit request, unless
+        ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_TROPOSPHERE_CACHE=1``
         """
         tbl = toas.table
         delay = np.zeros(len(tbl))
