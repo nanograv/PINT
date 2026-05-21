@@ -675,7 +675,7 @@ class Residuals:
             os.environ.get("PINT_DISABLE_CACHE") == "1"
             or os.environ.get("PINT_DISABLE_GLS_CACHE") == "1"
         )
-        key = id(self.toas)
+        key = self.model._noise_designmatrix_cache_key(self.toas)
         if (
             use_cache
             and _woodbury_cache.get("key") is not None
