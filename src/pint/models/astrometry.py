@@ -909,6 +909,11 @@ class AstrometryEcliptic(Astrometry):
 
     .. paramtable::
         :class: pint.models.astrometry.AstrometryEcliptic
+
+    Notes
+    -----
+    The SSB calculation can be slow, so its result is cached by default unless
+    ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_ASTROMETRY_CACHE=1``
     """
 
     register = True
