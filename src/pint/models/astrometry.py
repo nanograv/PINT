@@ -38,11 +38,6 @@ __all__ = [
     "Astrometry",
 ]
 
-use_cache = not (
-    os.environ.get("PINT_DISABLE_CACHE", None) == "1"
-    or os.environ.get("PINT_DISABLE_ASTROMETRY_CACHE", None) == "1"
-)
-
 
 def _epoch_fingerprint(epoch: Optional[time_like]) -> Tuple[Tuple, bytes]:
     """Return a view of the epoch that is suitable for use as a cache key"""
@@ -114,6 +109,10 @@ class Astrometry(DelayComponent):
 
         self.delay_funcs_component += [self.solar_system_geometric_delay]
         self.register_deriv_funcs(self.d_delay_astrometry_d_PX, "PX")
+        self.use_cache = not (
+            os.environ.get("PINT_DISABLE_CACHE", None) == "1"
+            or os.environ.get("PINT_DISABLE_ASTROMETRY_CACHE", None) == "1"
+        )
         self._ssb_cache_key_ecl = None
         self._ssb_cache_ecl = None
         self._ssb_cache_key_icrs = None
@@ -151,13 +150,13 @@ class Astrometry(DelayComponent):
         if (
             key == self._ssb_cache_key_icrs
             and self._ssb_cache_icrs is not None
-            and use_cache
+            and self.use_cache
         ):
             log.debug(f"Using cached ssb_to_psr data")
             return self._ssb_cache_icrs.copy()
 
         result = self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
-        if use_cache:
+        if self.use_cache:
             self._ssb_cache_icrs = result.copy()
             self._ssb_cache_key_icrs = key
 
@@ -186,12 +185,12 @@ class Astrometry(DelayComponent):
         if (
             key == self._ssb_cache_key_ecl
             and self._ssb_cache_ecl is not None
-            and use_cache
+            and self.use_cache
         ):
             log.debug(f"Using cached ssb_to_psr data")
             return self._ssb_cache_ecl.copy()
         result = self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
-        if use_cache:
+        if self.use_cache:
             self._ssb_cache_ecl = result.copy()
             self._ssb_cache_key_ecl = key
 
@@ -387,6 +386,11 @@ class AstrometryEquatorial(Astrometry):
 
     .. paramtable::
         :class: pint.models.astrometry.AstrometryEquatorial
+
+    Notes
+    -----
+    The SSB calculation can be slow, so its result is cached by default unless
+    ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_ASTROMETRY_CACHE=1``
     """
 
     register = True
@@ -609,8 +613,8 @@ class AstrometryEquatorial(Astrometry):
 
         Notes
         -----
-        This calculation can be slow, so it's result is cached by default unless
-        ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_ASTROMETRY_CACHE=```
+        This calculation can be slow, so its result is cached by default unless
+        ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_ASTROMETRY_CACHE=1``
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
 
@@ -621,7 +625,7 @@ class AstrometryEquatorial(Astrometry):
         if (
             key == self._ssb_cache_key_icrs
             and self._ssb_cache_icrs is not None
-            and use_cache
+            and self.use_cache
         ):
             log.debug(f"Using cached ssb_to_psr data")
             return self._ssb_cache_icrs.copy()
@@ -670,7 +674,7 @@ class AstrometryEquatorial(Astrometry):
         Omega = self.vlbi_coord_rotation()
         Khat = self.xyz_from_radec(ra, dec)
         result = Omega @ Khat if Omega is not None else Khat
-        if use_cache:
+        if self.use_cache:
             self._ssb_cache_icrs = result.copy()
             self._ssb_cache_key_icrs = key
         return result
@@ -1132,8 +1136,8 @@ class AstrometryEcliptic(Astrometry):
 
         Notes
         -----
-        This calculation can be slow, so it's result is cached by default unless
-        ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_ASTROMETRY_CACHE=```
+        This calculation can be slow, so its result is cached by default unless
+        ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_ASTROMETRY_CACHE=1``
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
 
@@ -1141,7 +1145,7 @@ class AstrometryEcliptic(Astrometry):
         if (
             key == self._ssb_cache_key_ecl
             and self._ssb_cache_ecl is not None
-            and use_cache
+            and self.use_cache
         ):
             log.debug("Using cached ssb_to_psr data")
             return self._ssb_cache_ecl.copy()
@@ -1206,7 +1210,7 @@ class AstrometryEcliptic(Astrometry):
         # Reference: Madison+ 2023, The Astrophysical Journal 777 104 (Equations 9, 10)
         Omega = self.vlbi_coord_rotation()
         result = Omega @ Khat if Omega is not None else Khat
-        if use_cache:
+        if self.use_cache:
             self._ssb_cache_ecl = result.copy()
             self._ssb_cache_key_ecl = key
         return result
