@@ -2158,7 +2158,7 @@ class maskParameter(floatParameter):
             # The flags are recomputed every time. If don't
             # recompute, flags can only be added to the toa table once and then never update,
             # making it impossible to add additional jump parameters after the par file is read in (pintk)
-            flag_col = [x.get(key, None) for x in tbl["flags"]]
+            flag_col = [x.get(key, "") for x in tbl["flags"]]
             tbl[key] = flag_col
             col = tbl[key]
         else:
