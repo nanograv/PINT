@@ -112,6 +112,8 @@ __all__ = [
     "MaxiterReached",
 ]
 
+_mtcm_cache: dict = {}
+
 
 class Fitter:
     """Base class for objects encapsulating fitting problems.
@@ -1327,7 +1329,6 @@ class GLSState(ModelState):
         super().__init__(fitter, model)
         self.threshold = threshold
         self.full_cov = full_cov
-        self._mtcm_cache = {}
         self.use_cache = not (
             os.environ.get("PINT_DISABLE_CACHE") == "1"
             or os.environ.get("PINT_DISABLE_GLS_CACHE") == "1"
@@ -1354,19 +1355,21 @@ class GLSState(ModelState):
             noise_key = self.model._noise_designmatrix_cache_key(self.fitter.toas)
             if (
                 self.use_cache
-                and self._mtcm_cache.get("key") is not None
-                and self._mtcm_cache["key"] == noise_key
+                and _mtcm_cache.get("key") is not None
+                and _mtcm_cache["key"] == noise_key
             ):
-                log.debug("Using cached mtcm value")
-                _precomputed = self._mtcm_cache["value"]
+                log.warning(f"Using cached mtcm value: {_mtcm_cache['n']}")
+                _precomputed = _mtcm_cache["value"]
+                _mtcm_cache["n"] += 1
             else:
                 cinv = 1 / Nvec
                 M_n = M[:, n_timing:]
                 nn = np.dot(M_n.T, cinv[:, None] * M_n)
                 _precomputed = {"n_timing": n_timing, "noise_cinv_noise": nn}
                 if self.use_cache:
-                    self._mtcm_cache["key"] = noise_key
-                    self._mtcm_cache["value"] = _precomputed
+                    _mtcm_cache["key"] = noise_key
+                    _mtcm_cache["value"] = _precomputed
+                    _mtcm_cache["n"] = 0
             mtcm, mtcy = get_gls_mtcm_mtcy(
                 phiinv, Nvec, M, residuals, precomputed=_precomputed
             )

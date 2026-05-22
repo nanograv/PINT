@@ -681,8 +681,9 @@ class Residuals:
             and _woodbury_cache.get("key") is not None
             and _woodbury_cache["key"] == key
         ):
-            log.debug("Using cached woodbury calculation")
+            log.warning(f"Using cached woodbury calculation: {_woodbury_cache['n']}")
             _precomputed = _woodbury_cache["value"]
+            _woodbury_cache["n"] += 1
         else:
             Sigma = np.diag(1 / Phidiag) + (U.T / Ndiag) @ U
             Sigma_cf = cho_factor(Sigma)
@@ -696,6 +697,7 @@ class Residuals:
             if use_cache:
                 _woodbury_cache["key"] = key
                 _woodbury_cache["value"] = _precomputed
+                _woodbury_cache["n"] = 0
 
         chi2, logdet_C = woodbury_dot(Ndiag, U, Phidiag, s, s, precomputed=_precomputed)
 
