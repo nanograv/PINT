@@ -9,6 +9,11 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- `WidebandDownhillFitter` now handles correlated noise correctly.
+### Added
+- Plot whitened DM residuals in pintk.
+### Fixed
+- `WidebandTOAFitter` raises a warning if the model has correlated errors (It used to give wrong results before).
 ### Added
 - `ssb_to_psb_xyz_ECL` and `ssb_to_psb_xyz_ICRS` are now cached
 ### Fixed

@@ -49,6 +49,7 @@ plotlabels = {
     ],
     "WB DM res": "Wideband DM residual (pc/cm3)",
     "white-res": "Whitened residuals",
+    "white-DM-res": "Whitened wideband DM residuals",
     "WB DM": "Wideband DM (pc/cm3)",
     "model DM": "Model DM (pc/cm3)",
     "mjd": "MJD",
@@ -610,7 +611,7 @@ class PlkXYChoiceWidget(tk.Frame):
                 self.xbuttons[ii].configure(state="disabled")
                 self.ybuttons[ii].configure(state="disabled")
             if (
-                choice in ["WB DM", "WB DM res", "WB DM err"]
+                choice in ["WB DM", "WB DM res", "WB DM err", "white-DM-res"]
                 and not self.master.psr.all_toas.is_wideband()
             ):
                 self.xbuttons[ii].configure(state="disabled")
@@ -1377,6 +1378,12 @@ class PlkWidget(tk.Frame):
                 data = self.psr.fitter.resids.calc_whitened_resids()
             else:
                 data = self.psr.prefit_resids.calc_whitened_resids()
+            error = None
+        elif label == "white-DM-res":
+            if self.psr.fitter is not None:
+                data = self.psr.fitter.resids.calc_whitened_dm_resids()
+            else:
+                data = self.psr.prefit_resids.calc_whitened_dm_resids()
             error = None
 
         return data, error
