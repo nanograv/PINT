@@ -10,8 +10,11 @@ the released changes.
 ## Unreleased
 ### Changed
 - Moved altitude calculation to TOAs object, to make it only happen once
+- `WidebandDownhillFitter` now handles correlated noise correctly.
 ### Added
+- Plot whitened DM residuals in pintk.
 ### Fixed
+- `WidebandTOAFitter` raises a warning if the model has correlated errors (It used to give wrong results before).
 - Fixed bug where "include_bipm" flag was being ignored when loading Fermi TOAs with weights, now defaults to using EPHEM, CLOCK and PLANET_SHAPIRO from the timing model
 - When flags are created based off jumps uses strings instead of None
 - Write VLBI frame rotation parameters correctly to par file. 
