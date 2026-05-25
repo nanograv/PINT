@@ -284,6 +284,15 @@ def test_NHARMS():
             assert "." not in d[-1]
 
 
+def test_tzrfrq():
+    m = get_model(os.path.join(datadir, "ecorr_fit_test.par"))
+    for l in m.as_parfile(format="tempo").split("\n"):
+        if "TZRFRQ" in l:
+            # this should be a 0
+            dmdata = int(l.split()[-1])
+            assert dmdata == 0
+
+
 sensible_pars = [
     "B1855+09_NANOGrav_9yv1.gls.par",
     "NGC6440E.par",
