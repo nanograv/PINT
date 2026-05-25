@@ -826,6 +826,20 @@ well as one might hope in practice and must be considered experimental.
 .. _Gauss-Newton_algorithm: https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm
 .. _chaotic: https://en.wikipedia.org/wiki/Newton_fractal
 
+Caching
+'''''''
+
+To speed up some of the fitting calculations, the results of expensive steps are cached for subsequent steps.  
+Currently this explicitly includes:
+
+1. Pulsar-to-SSB delay calculations through :meth:`~pint.models.astrometry.Astrometry.ssb_to_psb_xyz_ECL` and 
+:meth:`~pint.models.astrometry.Astrometry.ssb_to_psb_xyz_ICRS`.  The results are cached for a given time
+(usually a set of TOAs), and they are stored separately for ECL and ICRS coordinates.  The cache can be explicitly cleared by 
+using :meth:`~pint.models.astrometry.Astrometry.clear_ssb_cache`. This caching can be turned off by setting 
+``PINT_DISABLE_ASTROMETRY_CACHE`` to 1.
+
+All explicit caching can be turned off by setting ``PINT_DISABLE_CACHE`` to 1.
+
 Coding Style
 ------------
 
