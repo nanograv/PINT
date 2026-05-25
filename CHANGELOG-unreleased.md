@@ -17,6 +17,7 @@ the released changes.
 - `WidebandTOAFitter` raises a warning if the model has correlated errors (It used to give wrong results before).
 - Fixed bug where "include_bipm" flag was being ignored when loading Fermi TOAs with weights, now defaults to using EPHEM, CLOCK and PLANET_SHAPIRO from the timing model
 - When flags are created based off jumps uses strings instead of None
+- When writing tempo format parfiles, use 0 instead of inf for TZRFRQ
 - Write VLBI frame rotation parameters correctly to par file. 
 - Make `get_prefix_timeranges` work for SWX.
 ### Removed
