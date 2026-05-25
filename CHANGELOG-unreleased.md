@@ -9,6 +9,11 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- `WidebandDownhillFitter` now handles correlated noise correctly.
+### Added
+- Plot whitened DM residuals in pintk.
+### Fixed
+- `WidebandTOAFitter` raises a warning if the model has correlated errors (It used to give wrong results before).
 ### Added
 ### Fixed
 - Fixed bug where "include_bipm" flag was being ignored when loading Fermi TOAs with weights, now defaults to using EPHEM, CLOCK and PLANET_SHAPIRO from the timing model
