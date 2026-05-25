@@ -2507,6 +2507,12 @@ class TOAs:
         Parameters
         ----------
         model : pint.models.timing_model.TimingModel
+
+        Notes
+        -----
+        The RA,Dec coordinates used for this calculation
+        are stored in the TOA table metadata as ``meta['RA']`` and ``meta['DEC']``
+        (both decimal degrees)
         """
         altitudes = np.zeros(len(self)) * u.deg
         coord = model._parent.coords_as_ICRS()
@@ -2537,6 +2543,8 @@ class TOAs:
             self.table.add_column(table.Column(name="alt", data=altitudes))
         else:
             self.table["alt"] = altitudes
+        self.table.meta["RA"] = coord.ra.deg
+        self.table.meta["DEC"] = coord.dec.deg
 
     def update_mjd_float(self) -> None:
         """Update the ``mjd_float`` column from the ``mjd`` column"""
