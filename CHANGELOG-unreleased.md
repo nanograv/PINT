@@ -10,6 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 - `WidebandDownhillFitter` now handles correlated noise correctly.
+- `pintk` Diff/Unc calculation now uses post-fit uncertainties.
 ### Added
 - Plot whitened DM residuals in pintk.
 ### Fixed
