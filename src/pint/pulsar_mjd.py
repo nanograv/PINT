@@ -358,6 +358,8 @@ def data2longdouble(data):
         return data.astype(longdoubledtype)
     elif isinstance(data, list):
         return data2longdouble(np.array(data))
+    elif isinstance(data, astropy.time.Time):
+        return astropy.time.Time(data2longdouble(data.mjd), format="mjd")
     else:
         return np.longdouble(data)
 
@@ -459,7 +461,7 @@ def mjds_to_jds_pulsar(mjd1, mjd2):
     # then back to astropy/ERFA-convention jd1,jd2 using the
     # ERFA dtf2d() routine which handles leap seconds.
     v1, v2 = day_frac(mjd1, mjd2)
-    (y, mo, d, f) = erfa.jd2cal(erfa.DJM0 + v1, v2)
+    y, mo, d, f = erfa.jd2cal(erfa.DJM0 + v1, v2)
     # Fractional day to HMS.  Uses 86400-second day always.
     # Seems like there should be a ERFA routine for this..
     # There is: erfa.d2tf. Unfortunately it takes a "number of
@@ -536,7 +538,7 @@ def str_to_mjds(s):
 
 
 def _mjds_to_str(mjd1, mjd2):
-    (imjd, fmjd) = day_frac(mjd1, mjd2)
+    imjd, fmjd = day_frac(mjd1, mjd2)
     imjd = int(imjd)
     assert np.fabs(fmjd) < 1.0
     while fmjd < 0.0:
