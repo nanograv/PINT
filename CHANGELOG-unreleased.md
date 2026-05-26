@@ -11,6 +11,7 @@ the released changes.
 ### Changed
 - Moved altitude calculation to TOAs object, to make it only happen once
 - `WidebandDownhillFitter` now handles correlated noise correctly.
+- `pintk` Diff/Unc calculation now uses post-fit uncertainties.
 ### Added
 - Plot whitened DM residuals in pintk.
 ### Fixed
