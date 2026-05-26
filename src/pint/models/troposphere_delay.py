@@ -134,13 +134,13 @@ class TroposphereDelay(DelayComponent):
         """return the sky coordinates for the target, either from equatorial or ecliptic coordinates"""
         try:
             radec = SkyCoord(
-                self._parent.RAJ.value * self._parent.RAJ.units,
-                self._parent.DECJ.value * self._parent.DECJ.units,
+                np.float64(self._parent.RAJ.value) * self._parent.RAJ.units,
+                np.float64(self._parent.DECJ.value) * self._parent.DECJ.units,
             )  # just do this once instead of adjusting over time
         except AttributeError:
             radec = SkyCoord(
-                self._parent.ELONG.value * self._parent.ELONG.units,
-                self._parent.ELAT.value * self._parent.ELAT.units,
+                np.float64(self._parent.ELONG.value) * self._parent.ELONG.units,
+                np.float64(self._parent.ELAT.value) * self._parent.ELAT.units,
                 frame="barycentricmeanecliptic",
             )
         return radec
@@ -156,7 +156,6 @@ class TroposphereDelay(DelayComponent):
         # if not correcting for troposphere, return the default zero delay
         if self.CORRECT_TROPOSPHERE.value:
             radec = self._get_target_skycoord()
-
             # the only python for loop is to iterate through the unique observatory locations
             # all other math is computed through numpy
             for key, grp in toas.get_obs_groups():
@@ -229,7 +228,7 @@ class TroposphereDelay(DelayComponent):
 
         # modify the delay if any of the altitudes are invalid
         if not np.all(altIsValid):
-            delay *= altIsValid  # this will make the invalid delays zero
+            delay *= np.float64(altIsValid)  # this will make the invalid delays zero
         return delay
 
     def pressure_from_altitude(self, H):
