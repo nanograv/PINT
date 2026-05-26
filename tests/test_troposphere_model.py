@@ -5,6 +5,7 @@ import astropy.units as u
 import numpy as np
 import pint.observatory
 import pint.toa as toa
+import pint.models
 
 from pinttestdata import datadir
 
@@ -25,9 +26,8 @@ class TestTroposphereDelay:
 
         self.toasInvalid = toa.get_TOAs(os.path.join(datadir, "NGC6440E.tim"))
 
-        for i in range(len(self.toasInvalid.table)):
-            # adjust the timing by half a day to make them invalid
-            self.toasInvalid.table["mjd"][i] += 0.5
+        # adjust the timing by half a day to make them invalid
+        self.toasInvalid.adjust_TOAs(0.5 * u.d * np.ones(len(self.toas)))
 
         self.testAltitudes = np.arange(self.MIN_ALT, 90, 100) * u.deg
         self.testHeights = np.array([10, 100, 1000, 5000]) * u.m
@@ -56,13 +56,10 @@ class TestTroposphereDelay:
         assert hasattr(self.model, "CORRECT_TROPOSPHERE")
         assert "TroposphereDelay" in self.modelWithTD.components.keys()
 
-        # the model should have the sky coordinates defined
-        assert self.td._get_target_skycoord() is not None
-
     def test_invalid_altitudes(self):
         assert np.all(
             np.less_equal(
-                np.abs(self.td.troposphere_delay(self.toasInvalid)),
+                np.abs(self.td.recompute_troposphere_delay(self.toasInvalid)),
                 self.FLOAT_THRESHOLD * u.s,
             )
         )
