@@ -27,7 +27,7 @@ class DegeneracyWarning(UserWarning):
     pass
 
 
-class ConvergenceFailure(ValueError):
+class ConvergenceFailure(UserWarning):
     pass
 
 

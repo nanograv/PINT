@@ -5,6 +5,7 @@ import astropy.units as u
 import numpy as np
 from loguru import logger as log
 
+import pint
 from .DD_model import DDmodel
 
 
@@ -34,19 +35,21 @@ def _solve_kepler(M1, M2, n, ARTOL=1e-10):
     arr : astropy.units.Quantity
         relativstic semi-major axis
     """
+    M1 = M1.to_value(u.Msun)
+    M2 = M2.to_value(u.Msun)
     MTOT = M1 + M2
     # initial NR value
-    arr0 = (c.G * MTOT / n**2) ** (1.0 / 3)
+    arr0 = (pint.GMsun * MTOT / n**2) ** (1.0 / 3)
     arr = arr0
     arr_old = arr
     arr = arr0 * (
-        1 + (M1 * M2 / MTOT**2 - 9) * (c.G * MTOT / (2 * arr * c.c**2))
+        1 + (M1 * M2 / MTOT**2 - 9) * (pint.GMsun * MTOT / (2 * arr * c.c**2))
     ) ** (2.0 / 3)
     # iterate to get correct value
     while np.fabs((arr - arr_old) / arr) > ARTOL:
         arr_old = arr
-        ar = arr0 * (
-            1 + (M1 * M2 / MTOT**2 - 9) * (c.G * MTOT / (2 * arr * c.c**2))
+        arr = arr0 * (
+            1 + (M1 * M2 / MTOT**2 - 9) * (pint.GMsun * MTOT / (2 * arr * c.c**2))
         ) ** (2.0 / 3)
 
     return arr0.decompose(), arr.decompose()
@@ -103,6 +106,19 @@ class DDGRmodel(DDmodel):
         if input_params is not None:
             self.update_input(param_dict=input_params)
 
+    # values in units of Msun for easier calculation
+    @property
+    def mtot(self):
+        return self.MTOT.to_value(u.Msun)
+
+    @property
+    def m2(self):
+        return self.M2.to_value(u.Msun)
+
+    @property
+    def m1(self):
+        return self.MTOT.to_value(u.Msun) - self.M2.to_value(u.Msun)
+
     def _updatePK(self, ARTOL=1e-10):
         """Update measurable PK quantities from system parameters for DDGR model
 
@@ -136,18 +152,18 @@ class DDGRmodel(DDmodel):
         # use arr0 here following comments in tempo
         self._GAMMA = (
             self.ecc()
-            * c.G
-            * self.M2
-            * (self._M1 + 2 * self.M2)
-            / (self._n * c.c**2 * arr0 * self.MTOT)
+            * pint.GMsun
+            * self.m2
+            * (self.m1 + 2 * self.m2)
+            / (self._n * c.c**2 * arr0 * self.mtot)
         ).to(u.s)
         # Taylor & Weisberg (1989), Eqn. 18
         self._PBDOT = (
             (-192 * np.pi / (5 * c.c**5))
-            * (c.G * self._n) ** (5.0 / 3)
-            * self._M1
-            * self.M2
-            * self.MTOT ** (-1.0 / 3)
+            * (pint.GMsun * self._n) ** (5.0 / 3)
+            * self.m1
+            * self.m2
+            * self.mtot ** (-1.0 / 3)
             * self.fe
         ).decompose()
         # we calculate this here although we don't need it for DDGR
@@ -155,24 +171,24 @@ class DDGRmodel(DDmodel):
             3
             * (self._n) ** (5.0 / 3)
             * (1 / (1 - self.ecc() ** 2))
-            * (c.G * (self._M1 + self.M2) / c.c**3) ** (2.0 / 3)
+            * (pint.GMsun * (self.m1 + self.m2) / c.c**3) ** (2.0 / 3)
         ).to(u.deg / u.yr, equivalencies=u.dimensionless_angles())
         # Taylor & Weisberg (1989), Eqn. 16
         # use arr0 here following comments in tempo
         self._k = (
-            (3 * c.G * self.MTOT) / (c.c**2 * arr0 * (1 - self.ecc() ** 2))
+            (3 * pint.GMsun * self.mtot) / (c.c**2 * arr0 * (1 - self.ecc() ** 2))
         ).decompose()
         # Taylor & Weisberg (1989), Eqn. 24
         self._DR = (
-            (c.G / (c.c**2 * self.MTOT * self._arr))
-            * (3 * self._M1**2 + 6 * self._M1 * self.M2 + 2 * self.M2**2)
+            (pint.GMsun / (c.c**2 * self.mtot * self._arr))
+            * (3 * self.m1**2 + 6 * self.m1 * self.m2 + 2 * self.m2**2)
         ).decompose()
         # Damour & Deruelle (1986), Eqn. 36
         self._er = self.ecc() * (1 + self._DR)
         # Taylor & Weisberg (1989), Eqn. 25
         self._DTH = (
-            (c.G / (c.c**2 * self.MTOT * self._arr))
-            * (3.5 * self._M1**2 + 6 * self._M1 * self.M2 + 2 * self.M2**2)
+            (pint.GMsun / (c.c**2 * self.mtot * self._arr))
+            * (3.5 * self.m1**2 + 6 * self.m1 * self.m2 + 2 * self.m2**2)
         ).decompose()
         # Damour & Deruelle (1986), Eqn. 37
         self._eth = self.ecc() * (1 + self._DTH)
@@ -193,59 +209,59 @@ class DDGRmodel(DDmodel):
         an = 2 * np.pi / self.pb()
         return (
             -9
-            * c.G**2
+            * pint.GMsun**2
             * (
-                -2.0 / 9 * self.MTOT * self.arr * c.c**2
-                + c.G * (self.MTOT**2 - self.M2 * self.MTOT / 9 + self.M2**2 / 9)
+                -2.0 / 9 * self.mtot * self.arr * c.c**2
+                + pint.GMsun * (self.mtot**2 - self.m2 * self.mtot / 9 + self.m2**2 / 9)
             )
             * self.arr
-            * (-2 * self.M2 + self.MTOT)
+            * (-2 * self.m2 + self.mtot)
             / (
-                6 * an**2 * self.arr**5 * self.MTOT * c.c**4
+                6 * an**2 * self.arr**5 * self.mtot * c.c**4
                 - 18
-                * c.G**2
-                * self.MTOT
+                * pint.GMsun**2
+                * self.mtot
                 * c.c**2
-                * (self.MTOT**2 - self.M2 * self.MTOT / 9 + self.M2**2 / 9)
+                * (self.mtot**2 - self.m2 * self.mtot / 9 + self.m2**2 / 9)
                 * self.arr
                 + 81
-                * c.G**3
-                * (self.MTOT**2 - self.M2 * self.MTOT / 9 + self.M2**2 / 9) ** 2
+                * pint.GMsun**3
+                * (self.mtot**2 - self.m2 * self.mtot / 9 + self.m2**2 / 9) ** 2
             )
-        )
+        ) / (1 * u.Msun)
 
     def d_arr_d_MTOT(self):
         an = 2 * np.pi / self.pb()
         return (
-            c.G
+            pint.GMsun
             * self.arr
             * (
-                -2 * self.MTOT * self.arr * c.c**2
-                + 9 * c.G * self.MTOT**2
-                - c.G * self.MTOT * self.M2
-                + c.G * self.M2**2
+                -2 * self.mtot * self.arr * c.c**2
+                + 9 * pint.GMsun * self.mtot**2
+                - pint.GMsun * self.mtot * self.m2
+                + pint.GMsun * self.m2**2
             )
             * (
-                -2 * self.MTOT * self.arr * c.c**2
-                + 27 * c.G * self.MTOT**2
-                - c.G * self.MTOT * self.M2
-                - c.G * self.M2**2
+                -2 * self.mtot * self.arr * c.c**2
+                + 27 * pint.GMsun * self.mtot**2
+                - pint.GMsun * self.mtot * self.m2
+                - pint.GMsun * self.m2**2
             )
-            / self.MTOT
+            / self.mtot
             / (
-                2.0 / 27 * an**2 * self.arr**5 * self.MTOT * c.c**4
+                2.0 / 27 * an**2 * self.arr**5 * self.mtot * c.c**4
                 - 2.0
                 / 9
-                * c.G**2
-                * self.MTOT
+                * pint.GMsun**2
+                * self.mtot
                 * c.c**2
-                * (self.MTOT**2 - self.M2 * self.MTOT / 9 + self.M2**2 / 9)
+                * (self.mtot**2 - self.m2 * self.mtot / 9 + self.m2**2 / 9)
                 * self.arr
-                + c.G**3
-                * (self.MTOT**2 - self.M2 * self.MTOT / 9 + self.M2**2 / 9) ** 2
+                + pint.GMsun**3
+                * (self.mtot**2 - self.m2 * self.mtot / 9 + self.m2**2 / 9) ** 2
             )
             / 162
-        )
+        ) / (1 * u.Msun)
 
     def d_arr_d_PB(self):
         return (
@@ -253,20 +269,20 @@ class DDGRmodel(DDmodel):
             / 81
             * np.pi**2
             * self.arr**6
-            * self.MTOT
+            * self.mtot
             * c.c**4
             / (
-                0.8e1 / 0.27e2 * self.MTOT * np.pi**2 * c.c**4 * self.arr**5
+                0.8e1 / 0.27e2 * self.mtot * np.pi**2 * c.c**4 * self.arr**5
                 - 2.0
                 / 9
-                * c.G**2
-                * (self.MTOT**2 - self.M2 * self.MTOT / 9 + self.M2**2 / 9)
-                * self.MTOT
+                * pint.GMsun**2
+                * (self.mtot**2 - self.m2 * self.mtot / 9 + self.m2**2 / 9)
+                * self.mtot
                 * self.pb() ** 2
                 * c.c**2
                 * self.arr
-                + c.G**3
-                * (self.MTOT**2 - self.M2 * self.MTOT / 9 + self.M2**2 / 9) ** 2
+                + pint.GMsun**3
+                * (self.mtot**2 - self.m2 * self.mtot / 9 + self.m2**2 / 9) ** 2
                 * self.pb() ** 2
             )
             / self.pb()
@@ -290,7 +306,7 @@ class DDGRmodel(DDmodel):
     def d_k_d_ECC(self):
         return (
             6
-            * (c.G * self.MTOT * self._n) ** (2.0 / 3)
+            * (pint.GMsun * self.mtot * self._n) ** (2.0 / 3)
             * self.ecc()
             / (c.c**2 * (1 - self.ecc() ** 2) ** 2)
         )
@@ -399,7 +415,7 @@ class DDGRmodel(DDmodel):
         return -(self.SINI / self.arr) * self.d_arr_d_PB()
 
     def d_SINI_d_A1(self):
-        return (self.MTOT**2 * self._n**2 / c.G) ** (1.0 / 3) / self.M2
+        return (self.mtot**2 * self._n**2 / pint.GMsun) ** (1.0 / 3) / self.m2
 
     def d_SINI_d_par(self, par):
         par_obj = getattr(self, par)
@@ -418,7 +434,7 @@ class DDGRmodel(DDmodel):
         return self.GAMMA / self.ecc()
 
     def d_GAMMA_d_MTOT(self):
-        return (c.G / c.c**2) * (
+        return (pint.GMsun / c.c**2) * (
             (
                 (1 / (self.arr * self.MTOT))
                 - (self.MTOT + self.M2) / (self.arr * self.MTOT**2)
@@ -427,14 +443,14 @@ class DDGRmodel(DDmodel):
                 / (self.arr**2 * self.MTOT)
             )
             * self.ecc()
-            * self.M2
+            * self.m2
             / self._n
         )
 
     def d_GAMMA_d_M2(self):
         # Note that this equation in Tempo2 may have the wrong sign
         return -(
-            c.G
+            pint.GMsun
             / c.c**2
             * (
                 (
@@ -444,6 +460,7 @@ class DDGRmodel(DDmodel):
                 * self.ecc()
                 / self._n
                 / self.MTOT
+                / (1 * u.Msun)
             ).decompose()
         )
 
@@ -474,9 +491,9 @@ class DDGRmodel(DDmodel):
         return (
             -(222 * np.pi / 5 / c.c**5)
             * self.ecc()
-            * (c.G**5 * self._n**5 / self.MTOT) ** (1.0 / 3)
-            * self.M2
-            * (self.MTOT - self.M2)
+            * (pint.GMsun**5 * self._n**5 / self.mtot) ** (1.0 / 3)
+            * self.m2
+            * (self.mtot - self.m2)
             * (self.ecc() ** 4 + (536.0 / 37) * self.ecc() ** 2 + 1256.0 / 111)
             / (1 - self.ecc() ** 2) ** (9.0 / 2)
         )
@@ -485,8 +502,8 @@ class DDGRmodel(DDmodel):
         return (
             128
             * self.fe
-            * (4 * c.G**5 * np.pi**8 / self.PB**8 / self.MTOT) ** (1.0 / 3)
-            * (self.MTOT - self.M2)
+            * (4 * pint.GMsun**5 * np.pi**8 / self.PB**8 / self.mtot) ** (1.0 / 3)
+            * (self.mtot - self.m2)
             / c.c**5
         )
 
@@ -534,13 +551,13 @@ class DDGRmodel(DDmodel):
         return (
             -self.DR / self.MTOT
             - self.DR * self.d_arr_d_MTOT() / self.arr
-            + 6 * (c.G / c.c**2) / self.arr
+            + 6 * (pint.GMsun / c.c**2) / self.arr / (1 * u.Msun)
         )
 
     def d_DR_d_M2(self):
         return -self.DR * self.d_arr_d_M2() / self.arr - 2 * (
-            c.G / c.c**2
-        ) * self.M2 / (self.arr * self.MTOT)
+            pint.GMsun / c.c**2
+        ) * self.m2 / (self.arr * self.MTOT)
 
     def d_DR_d_PB(self):
         return -(self.DR / self.arr) * self.d_arr_d_PB()
@@ -562,12 +579,12 @@ class DDGRmodel(DDmodel):
         return (
             -self.DTH / self.MTOT
             - self.DTH * self.d_arr_d_MTOT() / self.arr
-            + (c.G / c.c**2) * (7 * self.MTOT - self.M2) / (self.arr * self.MTOT)
+            + (pint.GMsun / c.c**2) * (7 * self.mtot - self.m2) / (self.arr * self.MTOT)
         )
 
     def d_DTH_d_M2(self):
-        return -self.DTH * self.d_arr_d_M2() / self.arr - (c.G / c.c**2) * (
-            self.MTOT + self.M2
+        return -self.DTH * self.d_arr_d_M2() / self.arr - (pint.GMsun / c.c**2) * (
+            self.mtot + self.m2
         ) / (self.arr * self.MTOT)
 
     def d_DTH_d_PB(self):

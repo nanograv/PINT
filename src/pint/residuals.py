@@ -29,6 +29,7 @@ from pint.utils import (
     taylor_horner_deriv,
     weighted_mean,
     woodbury_dot,
+    anderson_darling,
 )
 
 __all__ = [
@@ -499,6 +500,17 @@ class Residuals:
         """
         return self._calc_mean(weighted, "time", calctype=calctype)
 
+    def zero_TZR(self, use_weighted_mean: Optional[bool] = True) -> None:
+        """
+        Remove any net offset from the TOAs by subtracting the mean residual from TZRMJD
+
+        Parameters
+        ----------
+        use_weighted_mean : bool or None, optional
+            Whether to use weighted mean for mean subtraction.
+        """
+        self.model.TZRMJD.quantity += self.calc_time_mean(weighted=use_weighted_mean)
+
     def calc_time_resids(
         self,
         calctype: Literal["taylor", "modelF0", "numerical"] = "taylor",
@@ -589,11 +601,47 @@ class Residuals:
             return r / errs
 
     def whitened_resids_kstest(self) -> Tuple[float, float]:
-        """Checks if the whitened residuals are unit-normal distributed. A small p-value indicates a
-        significant departure from unit-Gaussianity."""
+        """Checks if the whitened residuals are unit-normal distributed using a KS test. A small p-value indicates a
+        significant departure from unit-Gaussianity.
+
+        Returns
+        -------
+        float :
+            A-D statistic
+        float :
+            p-value
+
+        See also
+        --------
+        :meth:`~pint.residuals.Residuals.whitened_resids_adtest`
+        """
         rw = self.calc_whitened_resids().astype(float)
         ks = kstest(rw, "norm", args=(0, 1))
         return ks.statistic, ks.pvalue
+
+    def whitened_resids_adtest(self) -> Tuple[float, float]:
+        """Checks if the whitened residuals are unit-normal distributed using an Anderson-Darling test. A small p-value indicates a
+        significant departure from unit-Gaussianity.
+
+        The Anderson-Darling test has more discriminatory power than the K-S test.
+
+        Returns
+        -------
+        float :
+            A-D statistic
+        float :
+            p-value
+
+        See also
+        --------
+        :meth:`~pint.residuals.Residuals.whitened_resids_kstest`
+
+        Notes
+        -----
+        Calculation done in :func:`pint.utils.anderson_darling`.
+        """
+        rw = self.calc_whitened_resids().astype(float)
+        return anderson_darling(rw)
 
     def _calc_gls_chi2(self, lognorm: bool = False) -> float:
         """Compute the chi2 when correlated noise is present in the timing model.
@@ -1350,11 +1398,47 @@ class WidebandTOAResiduals(CombinedResiduals):
             return r / errs
 
     def whitened_resids_kstest(self) -> Tuple[float, float]:
-        """Checks if the whitened residuals are unit-normal distributed. A small p-value indicates a
-        significant departure from unit-Gaussianity."""
+        """Checks if the whitened residuals are unit-normal distributed using a KS test. A small p-value indicates a
+        significant departure from unit-Gaussianity.
+
+        Returns
+        -------
+        float :
+            A-D statistic
+        float :
+            p-value
+
+        See also
+        --------
+        :meth:`~pint.residuals.WidebandTOAResiduals.whitened_resids_adtest`
+        """
         rw = self.calc_wideband_whitened_resids().astype(float)
         ks = kstest(rw, "norm", args=(0, 1))
         return ks.statistic, ks.pvalue
+
+    def whitened_resids_adtest(self) -> Tuple[float, float]:
+        """Checks if the whitened residuals are unit-normal distributed using an Anderson-Darling test. A small p-value indicates a
+        significant departure from unit-Gaussianity.
+
+        The Anderson-Darling test has more discriminatory power than the K-S test.
+
+        Returns
+        -------
+        float :
+            A-D statistic
+        float :
+            p-value
+
+        See also
+        --------
+        :meth:`~pint.residuals.WidebandTOAResiduals.whitened_resids_kstest`
+
+        Notes
+        -----
+        Calculation done in :func:`pint.utils.anderson_darling`.
+        """
+        rw = self.calc_wideband_whitened_resids().astype(float)
+        return anderson_darling(rw)
 
 
 def whiten_residuals(

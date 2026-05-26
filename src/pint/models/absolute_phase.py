@@ -137,5 +137,8 @@ class AbsPhase(PhaseComponent):
         later = [i for i in toas.get_mjds() if i > PEPOCH * u.d]
         earlier = [i for i in toas.get_mjds() if i <= PEPOCH * u.d]
         TZRMJD = min(later) if later else max(earlier)
+        log.warning(
+            f"TZRMJD is not set.  Setting TZRMJD to first TOA after PEPOCH or last TOA before PEPOCH.  This may leave your residuals with an offset."
+        )
         self.TZRMJD.quantity = TZRMJD.value
         self.setup()

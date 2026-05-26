@@ -254,7 +254,7 @@ def make_fake_toas_uniform(
         not to include any wideband DM information. If True, the DM associated
         with each TOA will be computed using the model, and the `-ppdm` and
         `-ppdme` flags will be set.
-    dm_error : astropy.units.Quantity
+    wideband_dm_error : astropy.units.Quantity
         uncertainty to attach to each DM measurement
     name : str, optional
         Name for the TOAs (goes into the flags)

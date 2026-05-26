@@ -65,6 +65,36 @@ class Astrometry(DelayComponent):
             )
         )
 
+        self.add_param(
+            floatParameter(
+                name="VLBIAX",
+                units="mas",
+                value=None,
+                description="X component of the offset between VLBI and pulsar timing coordinate systems",
+                tcb2tdb_scale_factor=1,
+            )
+        )
+
+        self.add_param(
+            floatParameter(
+                name="VLBIAY",
+                units="mas",
+                value=None,
+                description="Y component of the offset between VLBI and pulsar timing coordinate systems",
+                tcb2tdb_scale_factor=1,
+            )
+        )
+
+        self.add_param(
+            floatParameter(
+                name="VLBIAZ",
+                units="mas",
+                value=None,
+                description="Z component of the offset between VLBI and pulsar timing coordinate systems",
+                tcb2tdb_scale_factor=1,
+            )
+        )
+
         self.delay_funcs_component += [self.solar_system_geometric_delay]
         self.register_deriv_funcs(self.d_delay_astrometry_d_PX, "PX")
 
@@ -268,6 +298,31 @@ class Astrometry(DelayComponent):
     def as_ICRS(self, epoch=None, ecl="IERS2010"):
         raise NotImplementedError
 
+    def vlbi_coord_rotation(self) -> Optional[np.ndarray]:
+        """Returns the coordinate rotation matrix between VLBI and pulsar
+        timing coordinate systems if the rotation parameters are given.
+
+        Reference:
+            Madison+ 2013, The Astrophysical Journal 777 104 (Equation 9)
+        """
+        if (
+            self.VLBIAX.quantity is not None
+            and self.VLBIAY.quantity is not None
+            and self.VLBIAZ.quantity is not None
+        ):
+            Ax = self.VLBIAX.quantity.to_value(u.rad)
+            Ay = self.VLBIAY.quantity.to_value(u.rad)
+            Az = self.VLBIAZ.quantity.to_value(u.rad)
+            return np.array(
+                [
+                    [1, Az, -Ay],
+                    [-Az, 1, Ax],
+                    [Ay, -Ax, 1],
+                ]
+            )
+        else:
+            return None
+
 
 class AstrometryEquatorial(Astrometry):
     """Astrometry in equatorial coordinates.
@@ -349,7 +404,17 @@ class AstrometryEquatorial(Astrometry):
 
     def print_par(self, format: str = "pint") -> str:
         result = ""
-        print_order = ["RAJ", "DECJ", "PMRA", "PMDEC", "PX", "POSEPOCH"]
+        print_order = [
+            "RAJ",
+            "DECJ",
+            "PMRA",
+            "PMDEC",
+            "PX",
+            "POSEPOCH",
+            "VLBIAX",
+            "VLBIAY",
+            "VLBIAZ",
+        ]
         for p in print_order:
             par = getattr(self, p)
             if par.quantity is not None:
@@ -527,7 +592,11 @@ class AstrometryEquatorial(Astrometry):
             )
         # ra,dec now in radians
         ra, dec = starpmout[0], starpmout[1]
-        return self.xyz_from_radec(ra, dec)
+
+        # Reference: Madison+ 2023, The Astrophysical Journal 777 104 (Equations 9, 10)
+        Omega = self.vlbi_coord_rotation()
+        Khat = self.xyz_from_radec(ra, dec)
+        return Omega @ Khat if Omega is not None else Khat
 
     def xyz_from_radec(self, ra, dec):
         x = np.cos(ra) * np.cos(dec)
@@ -1025,7 +1094,11 @@ class AstrometryEcliptic(Astrometry):
             )
         # lon,lat now in radians
         lon, lat = starpmout[0], starpmout[1]
-        return self.xyz_from_latlong(lon, lat)
+        Khat = self.xyz_from_latlong(lon, lat)
+
+        # Reference: Madison+ 2023, The Astrophysical Journal 777 104 (Equations 9, 10)
+        Omega = self.vlbi_coord_rotation()
+        return Omega @ Khat if Omega is not None else Khat
 
     def xyz_from_latlong(self, lon, lat):
         x = np.cos(lon) * np.cos(lat)
@@ -1173,7 +1246,18 @@ class AstrometryEcliptic(Astrometry):
 
     def print_par(self, format: str = "pint") -> str:
         result = ""
-        print_order = ["ELONG", "ELAT", "PMELONG", "PMELAT", "PX", "ECL", "POSEPOCH"]
+        print_order = [
+            "ELONG",
+            "ELAT",
+            "PMELONG",
+            "PMELAT",
+            "PX",
+            "ECL",
+            "POSEPOCH",
+            "VLBIAX",
+            "VLBIAY",
+            "VLBIAZ",
+        ]
         for p in print_order:
             par = getattr(self, p)
             if par.quantity is not None:

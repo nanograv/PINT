@@ -32,6 +32,7 @@ plot_labels = [
     "post-fit",
     "WB DM res",
     "white-res",
+    "white-DM-res",
     "WB DM",
     "model DM",
     "mjd",
@@ -185,7 +186,7 @@ class Pulsar:
         self.reset_TOAs()
 
     def _delete_TOAs(self, toa_table):
-        del_inds = np.in1d(toa_table["index"], np.array(list(self.deleted)))
+        del_inds = np.isin(toa_table["index"], np.array(list(self.deleted)))
         return toa_table[~del_inds] if del_inds.sum() < len(toa_table) else None
 
     def delete_TOAs(self, indices, selected):
@@ -367,8 +368,8 @@ class Pulsar:
                         line += "%18s" % ""
                     diff = post.value - pre.value
                     line += "%16.8g  " % diff
-                    if pre.uncertainty is not None and pre.uncertainty.value != 0.0:
-                        line += "%16.8g" % (diff / pre.uncertainty.value)
+                    if post.uncertainty is not None and post.uncertainty.value != 0.0:
+                        line += "%16.8g" % (diff / post.uncertainty.value)
                 print(line)
         else:
             log.warning("Pulsar has not been fitted yet!")
