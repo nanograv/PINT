@@ -9,21 +9,20 @@ the released changes.
 
 ## Unreleased
 ### Changed
-- Change `StepProblem` and `MaxIterReached` into warnings
-- Removed numpy < 2.4 restriction
-- Derived quantities use `pint.GMsun` and `pint.Tsun` rather than `astropy.constants.G`
-- Cache `TimingModel.noise_model_designmatrix()` (`U`) based on TOAs identity and noise-parameter state to avoid redundant basis recomputation in repeated calls
-- Improve basis-space covariance handling to support non-diagonal `Phi` blocks throughout noise-model paths, and use Cholesky-based inversion/solves where applicable for stability and performance
+- `WidebandDownhillFitter` now handles correlated noise correctly.
+- `pintk` Diff/Unc calculation now uses post-fit uncertainties.
 ### Added
-- Anderson-Darling test for normal data with fixed mean/variance
-- KS test to check if the whitened residuals are unit-normal distributed
-- Warning about setting of TZRMJD from TOAs
-- Method to zero out mean residual based on TZRMJD
-- `gridutils.tuple_chisq` and `gridutils.tuple_chisq_derived` now return DOF and can handle unfrozen parameters 
-- Easy method to add new parameters
-- Use VLBI astrometric measurements along with coordinate offset in the timing model
+- Plot whitened DM residuals in pintk.
 - Time-domain solar wind GP noise components: ridge, squared-exponential, Matérn, and quasi-periodic kernels
 - Regression tests for noise design-matrix caching, including multi-basis coverage (red, DMGP, SWGP, and chromatic GP)
 ### Fixed
-- Fix docstring of `make_fake_toas_uniform`
+- `WidebandTOAFitter` raises a warning if the model has correlated errors (It used to give wrong results before).
+### Added
+### Fixed
+- Fixed bug where "include_bipm" flag was being ignored when loading Fermi TOAs with weights, now defaults to using EPHEM, CLOCK and PLANET_SHAPIRO from the timing model
+- When flags are created based off jumps uses strings instead of None
+- When writing tempo format parfiles, use 0 instead of inf for TZRFRQ
+- Write VLBI frame rotation parameters correctly to par file. 
+- Make `get_prefix_timeranges` work for SWX.
+- Fixed bug in changing epoch for ELL1k model
 ### Removed

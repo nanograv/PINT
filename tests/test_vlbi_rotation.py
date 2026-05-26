@@ -9,6 +9,7 @@ import numpy as np
 
 pars = [
     """
+        PSR         VLBITEST1
         RAJ         05:00:00    1
         DECJ        15:00:00    1
         POSEPOCH    55000
@@ -25,6 +26,7 @@ pars = [
         EPHEM       DE440
         """,
     """
+        PSR         VLBITEST2
         ELAT        30.0        1
         ELONG       75.0        1
         POSEPOCH    55000
@@ -75,3 +77,11 @@ def test_vlbi_rotation(par):
     assert np.allclose(
         ftr1.model.solar_system_geometric_delay(t), m0.solar_system_geometric_delay(t)
     )
+
+
+@pytest.mark.parametrize("par", pars)
+def test_vlbi_rotation_readwrite(par):
+    m0 = get_model(io.StringIO(par))
+    m0.write_parfile(f"__{m0.PSR.value}.par")
+    m1 = get_model(f"__{m0.PSR.value}.par")
+    assert np.all(p in m1 for p in ["VLBIAX", "VLBIAY", "VLBIAZ"])
