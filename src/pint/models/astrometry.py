@@ -122,6 +122,7 @@ class Astrometry(DelayComponent):
         raise NotImplementedError
 
     def clear_ssb_cache(self):
+        """Clear SSB caches"""
         self._ssb_cache_ecl = None
         self._ssb_cache_key_ecl = None
         self._ssb_cache_icrs = None
@@ -479,7 +480,17 @@ class AstrometryEquatorial(Astrometry):
 
     def print_par(self, format: str = "pint") -> str:
         result = ""
-        print_order = ["RAJ", "DECJ", "PMRA", "PMDEC", "PX", "POSEPOCH"]
+        print_order = [
+            "RAJ",
+            "DECJ",
+            "PMRA",
+            "PMDEC",
+            "PX",
+            "POSEPOCH",
+            "VLBIAX",
+            "VLBIAY",
+            "VLBIAZ",
+        ]
         for p in print_order:
             par = getattr(self, p)
             if par.quantity is not None:
@@ -1366,7 +1377,18 @@ class AstrometryEcliptic(Astrometry):
 
     def print_par(self, format: str = "pint") -> str:
         result = ""
-        print_order = ["ELONG", "ELAT", "PMELONG", "PMELAT", "PX", "ECL", "POSEPOCH"]
+        print_order = [
+            "ELONG",
+            "ELAT",
+            "PMELONG",
+            "PMELAT",
+            "PX",
+            "ECL",
+            "POSEPOCH",
+            "VLBIAX",
+            "VLBIAY",
+            "VLBIAZ",
+        ]
         for p in print_order:
             par = getattr(self, p)
             if par.quantity is not None:

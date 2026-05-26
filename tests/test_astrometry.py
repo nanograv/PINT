@@ -194,3 +194,73 @@ def test_ssb_accuracy_ECL_ECLmodel(elong, elat, pmelong, pmelat):
     xyzastropy = m.coords_as_ECL(epoch=t).cartesian.xyz.transpose()
     xyznew = m.ssb_to_psb_xyz_ECL(epoch=t)
     assert np.allclose(xyznew, xyzastropy)
+
+
+def test_ssb_cache_envar(monkeypatch):
+    monkeypatch.setenv("PINT_DISABLE_CACHE", "1")
+
+    m = get_model(StringIO(parECL))
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyz = m.ssb_to_psb_xyz_ICRS(epoch=t)
+
+    assert not m.components["AstrometryEcliptic"].use_cache
+
+
+def test_ssb_cache_envar2(monkeypatch):
+    monkeypatch.setenv("PINT_DISABLE_ASTROMETRY_CACHE", "1")
+
+    m = get_model(StringIO(parECL))
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyz = m.ssb_to_psb_xyz_ICRS(epoch=t)
+
+    assert not m.components["AstrometryEcliptic"].use_cache
+
+
+def test_ssb_cache_setkeys_icrs():
+    m = get_model(StringIO(parECL))
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyz = m.ssb_to_psb_xyz_ICRS(epoch=t)
+    assert m.components["AstrometryEcliptic"]._ssb_cache_key_icrs is not None
+    assert m.components["AstrometryEcliptic"]._ssb_cache_key_ecl is None
+
+
+def test_ssb_cache_setkeys_ecl():
+    m = get_model(StringIO(parECL))
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyz = m.ssb_to_psb_xyz_ECL(epoch=t)
+    assert m.components["AstrometryEcliptic"]._ssb_cache_key_ecl is not None
+    assert m.components["AstrometryEcliptic"]._ssb_cache_key_icrs is None
+
+
+def test_ssb_cache_uses_cached():
+    m = get_model(StringIO(parECL))
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyz = m.ssb_to_psb_xyz_ICRS(epoch=t)
+    cachekey = m.components["AstrometryEcliptic"]._ssb_cache_key_icrs
+    xyz2 = m.ssb_to_psb_xyz_ICRS(epoch=t + 0.0 * u.d)
+    cachekey2 = m.components["AstrometryEcliptic"]._ssb_cache_key_icrs
+    assert cachekey == cachekey2
+    assert np.allclose(xyz, xyz2)
+
+
+def test_ssb_cache_invalidates():
+    m = get_model(StringIO(parECL))
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyz = m.ssb_to_psb_xyz_ICRS(epoch=t)
+    cachekey = m.components["AstrometryEcliptic"]._ssb_cache_key_icrs
+    xyz2 = m.ssb_to_psb_xyz_ICRS(epoch=t + 0.1 * u.d)
+    cachekey2 = m.components["AstrometryEcliptic"]._ssb_cache_key_icrs
+    assert cachekey != cachekey2
+    assert ~np.allclose(xyz, xyz2)

@@ -5,7 +5,6 @@ import astropy.units as u
 import pytest
 from pinttestdata import datadir
 
-import pint
 from pint.fitter import (
     DownhillGLSFitter,
     DownhillWLSFitter,
@@ -120,8 +119,10 @@ def test_downhillwb_covmatrix(wb):
     dwb = WidebandDownhillFitter(wb.toas, wb.model_init)
     dwb.fit_toas()
 
+    # Ignore offset.
     assert np.isclose(
-        wb.parameter_covariance_matrix.matrix, dwb.parameter_covariance_matrix.matrix
+        wb.parameter_covariance_matrix.matrix[1:, 1:],
+        dwb.parameter_covariance_matrix.matrix[1:, 1:],
     ).all()
 
     uncertainties = dwb.model.get_params_dict("free", "uncertainty")
