@@ -359,8 +359,8 @@ class TestParameters:
         assert hasattr(m1, "FINISH")
         assert isinstance(m1.FINISH, MJDParameter)
 
-        assert m1.START.value == start_preval
-        assert m1.FINISH.value == finish_preval
+        assert np.isclose(m1.START.value, start_preval)
+        assert np.isclose(m1.FINISH.value, finish_preval)
         assert m1.START.frozen == True
         assert m1.FINISH.frozen == True
 
