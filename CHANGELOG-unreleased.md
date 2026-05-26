@@ -22,4 +22,5 @@ the released changes.
 - When writing tempo format parfiles, use 0 instead of inf for TZRFRQ
 - Write VLBI frame rotation parameters correctly to par file. 
 - Make `get_prefix_timeranges` work for SWX.
+- Fixed bug in changing epoch for ELL1k model
 ### Removed
