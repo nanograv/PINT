@@ -1,16 +1,20 @@
 """Delay due to Earth's troposphere"""
 
+import os
 import astropy.constants as const
 import astropy.units as u
 import numpy as np
 import scipy.interpolate
-from astropy.coordinates import AltAz, SkyCoord
+from astropy.coordinates import AltAz, SkyCoord, EarthLocation
+from astropy.time import Time
+from astropy.table import Column
 from loguru import logger as log
 
 from pint.models.parameter import boolParameter
 from pint.models.timing_model import DelayComponent
 from pint.observatory import get_observatory
 from pint.observatory.topo_obs import TopoObs
+import pint.toa
 
 
 class TroposphereDelay(DelayComponent):
@@ -35,6 +39,14 @@ class TroposphereDelay(DelayComponent):
 
     .. paramtable::
         :class: pint.models.troposphere_delay.TroposphereDelay
+
+    Notes
+    -----
+    The calculation in :meth:`~pint.models.troposphere_delay.TroposphereDelay.troposphere_delay()` is slow,
+    and in general this will not change during the fitting process.
+    Therefore the results are stored in the TOA table and only recalculated on explicit request, unless
+    ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_TROPOSPHERE_CACHE=1``
+    Delays can also be explicitly recomputed using :meth:`~pint.models.troposphere_delay.TroposphereDelay.recompute_troposphere_delay()`
     """
 
     register = True
@@ -84,7 +96,9 @@ class TroposphereDelay(DelayComponent):
     EARTH_R = 6356766 * u.m  # earth radius at 45 degree latitude
 
     @staticmethod
-    def _herring_map(alt, a, b, c):
+    def _herring_map(
+        alt: u.Quantity, a: np.ndarray, b: np.ndarray, c: np.ndarray
+    ) -> np.ndarray:
         """equation 4 from the Niell mapping function.
         It is a modification to the plane-parallel atmosphere model (1 / sin(alt))
         The coefficients a b and c provide the correction for the correct map
@@ -105,8 +119,11 @@ class TroposphereDelay(DelayComponent):
                 description="Enable Troposphere Delay Model",
             )
         )
-
         self.delay_funcs_component += [self.troposphere_delay]
+        self.use_cache = not (
+            os.environ.get("PINT_DISABLE_CACHE", None) == "1"
+            or os.environ.get("PINT_DISABLE_TROPOSPHERE_CACHE", None) == "1"
+        )
 
         # copy over the arrays to provide constant values within 15 deg
         # of the poles and equator
@@ -124,41 +141,40 @@ class TroposphereDelay(DelayComponent):
             array[0] = array[1]
             array[-1] = array[-2]
 
-    def _get_target_altitude(self, obs, grp, radec):
-        """convert the sky coordinates of the target to the angular altitude at each TOA"""
-        transformAltaz = AltAz(location=obs, obstime=grp["mjd"])
-        alt = radec.transform_to(transformAltaz).alt  # * u.deg
-        return alt
+    def recompute_troposphere_delay(
+        self, toas: pint.toa.TOAs, acc_delay=None
+    ) -> u.Quantity:
+        """Recompute tropospheric delay if the TOAs have changed"""
+        if "alt" in toas.table.colnames:
+            toas.table.remove_column("alt")
+        if "tropo_delay" in toas.table.colnames:
+            toas.table.remove_column("tropo_delay")
+        return self.troposphere_delay(toas)
 
-    def _get_target_skycoord(self):
-        """return the sky coordinates for the target, either from equatorial or ecliptic coordinates"""
-        try:
-            radec = SkyCoord(
-                self._parent.RAJ.value * self._parent.RAJ.units,
-                self._parent.DECJ.value * self._parent.DECJ.units,
-            )  # just do this once instead of adjusting over time
-        except AttributeError:
-            radec = SkyCoord(
-                self._parent.ELONG.value * self._parent.ELONG.units,
-                self._parent.ELAT.value * self._parent.ELAT.units,
-                frame="barycentricmeanecliptic",
-            )
-        return radec
+    def troposphere_delay(self, toas: pint.toa.TOAs, acc_delay=None) -> u.Quantity:
+        """Compute tropospheric delay
 
-    def troposphere_delay(self, toas, acc_delay=None):
-        """This is the main function for the troposphere delay.
         Pass in the TOAs and it will calculate the delay for each TOA,
         accounting for the observatory location, target coordinates, and time of observation
+
+        Notes
+        -----
+        This is a slow calculation, and in general this will not change during the fitting process.
+        Therefore the results are stored in the TOA table and only recalculated on explicit request, unless
+        ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_TROPOSPHERE_CACHE=1``
         """
         tbl = toas.table
         delay = np.zeros(len(tbl))
 
         # if not correcting for troposphere, return the default zero delay
         if self.CORRECT_TROPOSPHERE.value:
-            radec = self._get_target_skycoord()
+            if "tropo_delay" in toas.table.colnames and self.use_cache:
+                log.debug("Using cached troposphere delays")
+                return toas.table["tropo_delay"].quantity
 
-            # the only python for loop is to iterate through the unique observatory locations
-            # all other math is computed through numpy
+            # This should only be done once if using the cache
+            if not "alt" in toas.table.colnames or not self.use_cache:
+                toas.compute_altitude(self)
             for key, grp in toas.get_obs_groups():
                 obsobj = get_observatory(key)
 
@@ -171,16 +187,18 @@ class TroposphereDelay(DelayComponent):
 
                 obs = obsobj.earth_location_itrf()
 
-                alt = self._get_target_altitude(obs, tbl[grp], radec)
-
                 # now actually calculate the atmospheric delay based on the models
-
                 delay[grp] = self.delay_model(
-                    alt, obs.lat, obs.height, tbl[grp]["tdbld"]
+                    toas[grp]["alt"].quantity, obs.lat, obs.height, tbl[grp]["tdbld"]
                 )
+            if "tropo_delay" not in toas.table.colnames:
+                toas.table.add_column(Column(name="tropo_delay", data=delay * u.s))
+            elif not self.use_cache:
+                toas.table["tropo_delay"] = delay * u.s
+
         return delay * u.s
 
-    def _validate_altitudes(self, alt, obs=""):
+    def _validate_altitudes(self, alt: u.Quantity, obs: str = "") -> np.ndarray:
         """This method checks if any of the TOAs occur at invalid altitudes
         for example, if the pulsar position is incorrect, it would likely
         result in negative altitudes.
@@ -218,7 +236,9 @@ class TroposphereDelay(DelayComponent):
             # this will prevent unexpected behavior from occurring for negative altitudes
         return isValid
 
-    def delay_model(self, alt, lat, H, mjd):
+    def delay_model(
+        self, alt: u.Quantity, lat: u.Quantity, H: u.Quantity, mjd: Time
+    ) -> u.Quantity:
         """validate the observed altitudes, then combine dry and wet delays"""
         # make sure the altitudes are reasonable values, warn if not
         altIsValid = self._validate_altitudes(alt)
@@ -232,7 +252,7 @@ class TroposphereDelay(DelayComponent):
             delay *= altIsValid  # this will make the invalid delays zero
         return delay
 
-    def pressure_from_altitude(self, H):
+    def pressure_from_altitude(self, H: u.Quantity) -> u.Quantity:
         """From CRC Handbook Chapter 14 page 19 US Standard Atmosphere"""
         gph = self.EARTH_R * H / (self.EARTH_R + H)  # geopotential height
         if gph > 11 * u.km:
@@ -240,7 +260,7 @@ class TroposphereDelay(DelayComponent):
         T = 288.15 - 0.0065 * H.to(u.m).value  # temperature lapse
         return 101.325 * (288.15 / T) ** -5.25575 * u.kPa
 
-    def zenith_delay(self, lat, H):
+    def zenith_delay(self, lat: u.Quantity, H: u.Quantity) -> u.Quantity:
         """Calculate the hydrostatic zenith delay"""
         p = self.pressure_from_altitude(H)
         return (p / (43.921 * u.kPa)) / (
@@ -258,7 +278,7 @@ class TroposphereDelay(DelayComponent):
         """from the Niell mapping function with annual variations"""
         return average + amplitudes * np.cos(2 * np.pi * yearFraction)
 
-    def _find_latitude_index(self, lat):
+    def _find_latitude_index(self, lat: u.Quantity) -> np.ndarray:
         """find the index corresponding to the upper bound on latitude
         for nearest neighbor interpolation in the mapping function
         """
@@ -269,7 +289,9 @@ class TroposphereDelay(DelayComponent):
         # else this is an invalid latitude... huh?
         raise ValueError(f"Invaid latitude: {lat} must be between -90 and 90 degrees")
 
-    def mapping_function(self, alt, lat, H, mjd):
+    def mapping_function(
+        self, alt: u.Quantity, lat: u.Quantity, H: u.Quantity, mjd: Time
+    ) -> np.ndarray:
         """this implements the Niell mapping function for hydrostatic delays"""
 
         yearFraction = self._get_year_fraction_fast(mjd, lat)
@@ -317,7 +339,7 @@ class TroposphereDelay(DelayComponent):
 
         return baseMap + (1 / np.sin(alt) - fcorrection) * H.to(u.km).value
 
-    def wet_map(self, alt, lat):
+    def wet_map(self, alt: u.Quantity, lat: u.Quantity) -> np.ndarray:
         """This is very similar to the normal mapping function except it uses different
         coefficients.  In addition, there is no height correction.  From Niell (1996):
 
