@@ -1,5 +1,4 @@
-"""Functions related to simulating TOAs and models
-"""
+"""Functions related to simulating TOAs and models"""
 
 from collections import OrderedDict
 from copy import deepcopy
@@ -587,7 +586,7 @@ def calculate_random_models(
     Nmjd = len(toas)
     phases_i = np.zeros((Nmodels, Nmjd))
     phases_f = np.zeros((Nmodels, Nmjd))
-    freqs = np.zeros((Nmodels, Nmjd), dtype=np.float128) * u.Hz
+    freqs = np.zeros((Nmodels, Nmjd), dtype=np.longdouble) * u.Hz
 
     cov_matrix = fitter.parameter_covariance_matrix
     # this is a list of the parameter names in the order they appear in the covariance matrix
