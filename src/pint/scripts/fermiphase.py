@@ -17,6 +17,7 @@ from pint.eventstats import h2sig, hmw
 from pint.fermi_toas import get_Fermi_TOAs
 from pint.fits_utils import read_fits_event_mjds_tuples
 from pint.observatory.satellite_obs import get_satellite_observatory
+from pint.observatory import bipm_default
 from pint.plot_utils import phaseogram
 
 __all__ = ["main"]
@@ -58,11 +59,34 @@ def main(argv=None):
     )
     parser.add_argument(
         "--planets",
-        help="Use planetary Shapiro delay in calculations",
-        default=False,
+        help="Use planetary Shapiro delay in calculations (default is to use PLANET_SHAPIRO from parfile, or False if unspecified)",
+        default=None,
         action="store_true",
     )
-    parser.add_argument("--ephem", help="Planetary ephemeris to use", default="DE421")
+    parser.add_argument(
+        "--ephem",
+        type=str,
+        help="Planetary ephemeris to use (default is to use ephem from parfile, or DE421 if unspecified)",
+        default=None,
+    )
+    parser.add_argument(
+        "--include_bipm",
+        action="store_true",
+        help="Apply the BIPM clock correction (overrides CLOCK from parfile)",
+        default=None,
+    )
+    parser.add_argument(
+        "--no_include_bipm",
+        action="store_true",
+        help="Don't the BIPM clock correction (overrides CLOCK from parfile)",
+        default=None,
+    )
+    parser.add_argument(
+        "--bipm_version",
+        help=f"Which version of the BIPM tables to use for the clock correction (overrides CLOCK from parfile if --include_bipm is used, defaults to {bipm_default})",
+        type=str,
+        default=None,
+    )
     parser.add_argument(
         "--log-level",
         type=str,
@@ -118,14 +142,31 @@ def main(argv=None):
     # Read event file and return list of TOA objects
     maxmjd = np.inf if (args.maxMJD is None) else float(args.maxMJD)
     minmjd = 0.0 if (args.minMJD is None) else float(args.minMJD)
+
+    if args.include_bipm is None and args.no_include_bipm is None:
+        include_bipm = None
+        bipm_version = None
+    elif args.include_bipm:
+        if args.no_include_bipm:
+            raise ValueError(
+                "--include_bipm and --no_include_bipm are mutually exclusive!"
+            )
+        include_bipm = True
+        bipm_version = args.bipm_version
+    elif args.no_include_bipm:
+        include_bipm = False
+        bipm_version = None
+
     # Now convert to TOAs object and compute TDBs and posvels
-    # For Fermi, we are not including GPS or TT(BIPM) corrections
     ts = get_Fermi_TOAs(
         args.eventfile,
         maxmjd=maxmjd,
         minmjd=minmjd,
         weightcolumn=args.weightcol,
         targetcoord=tc,
+        model=modelin,
+        include_bipm=include_bipm,
+        bipm_version=bipm_version,
         planets=args.planets,
         ephem=args.ephem,
     )
