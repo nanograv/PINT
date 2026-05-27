@@ -1276,6 +1276,16 @@ class TimeDomainSWNoise(NoiseComponent):
 
     All variants share the interpolation parameters ``TDSWDT``,
     ``TDSWINTERP_KIND``, and ``TDSWNODE_*``.
+
+    References
+    ----------
+    Stochastic solar wind modeling is introduced in PTA literature by Hazboun et al. 2022.
+    Time-domain Gaussian processes are introduced to the PTA literature in Hazboun et al. 2026.
+    - Hazboun et al. 2022 [1]_
+    - Hazboun et al. 2026 [2]_
+
+    .. [1] https://iopscience.iop.org/article/10.3847/1538-4357/ac5829
+    .. [2] https://iopscience.iop.org/article/10.3847/1538-4357/ae4ee0
     """
 
     register = False
@@ -1529,10 +1539,10 @@ class TimeDomainSWNoise(NoiseComponent):
         interp_kind = self.TDSWINTERP_KIND.value
         if self._has_nodes():
             nodes_in = self._get_nodes(toas)
-            Umat, nodes = linear_interpolation_basis(t, nodes=nodes_in, kind=interp_kind)
+            Umat, nodes = make_interpolation_basis(t, nodes=nodes_in, kind=interp_kind)
         else:
             dt = 30.0 if self.TDSWDT.value is None else self.TDSWDT.value
-            Umat, nodes = linear_interpolation_basis(t, dt=dt * 86400, kind=interp_kind)
+            Umat, nodes = make_interpolation_basis(t, dt=dt, kind=interp_kind)
         return Umat, nodes
 
     # ------------------------------------------------------------------
@@ -1550,7 +1560,7 @@ class TimeDomainSWNoise(NoiseComponent):
         return Umat * dt_DM[:, None]
 
     def get_noise_weights(self, toas: TOAs) -> np.ndarray:
-        """Return GP prior weights (diagonal in basis space) for the selected kernel.
+        """Return GP prior weights for the selected kernel.
 
         The kernel is controlled by ``TDSWKERNEL``:
 
@@ -1738,12 +1748,30 @@ def get_rednoise_freqs(
     return np.asarray(freqs, dtype=np.float64)
 
 
-def linear_interpolation_basis(
+def make_interpolation_basis(
     toas,
     nodes=None,
     dt=None,
     kind="linear",
 ):
+    """
+    Construct an interpolation basis for the given TOAs and interpolation parameters using
+    scipy.interpolate.interp1d.
+
+    :param toas: array-like
+        Vector of time series (TOAs) in seconds.
+    :param nodes: array-like, optional
+        Vector of interpolation nodes in MJD. If None, nodes are generated from dt.
+    :param dt: float, optional
+        Time step in days for generating interpolation nodes if `nodes` is None.
+    :param kind: str, optional
+        Interpolation kind passed to scipy.interpolate.interp1d. Default is "linear".
+        See scipy.interpolate.interp1d documentation for allowed values.
+    
+    :return:
+        M : the achromatic interpolation design matrix of shape (len(toas), n_nodes).
+        nodes : the interpolation nodes in MJD corresponding to the columns of M.
+    """
     if nodes is None:
         if dt is None:
             raise ValueError(
@@ -1752,7 +1780,7 @@ def linear_interpolation_basis(
         t_min, t_max = np.min(toas) / 86400, np.max(toas) / 86400
         nodes = np.arange(
             t_min, t_max + dt, dt
-        )  # FIXME : this may need to get improved.
+        )
     nodes = nodes * 86400  # MJD to seconds
     basis = np.identity(len(nodes))
     interp = interpolate.interp1d(
@@ -1826,7 +1854,7 @@ def powerlaw(
 
 
 def periodic_kernel(nodes, log10_sigma=-7, log10_ell=2, log10_gam_p=0, log10_p=0):
-    """Quasi-periodic kernel for DM"""
+    """Quasi-periodic kernel"""
     nodes = np.asarray(nodes, dtype=np.float64)
     r = np.abs(nodes[None, :] - nodes[:, None])
 
@@ -1841,7 +1869,10 @@ def periodic_kernel(nodes, log10_sigma=-7, log10_ell=2, log10_gam_p=0, log10_p=0
 
 
 def se_kernel(nodes, log10_sigma=-7, log10_ell=2):
-    """Squared-exponential kernel"""
+    """
+    Squared-exponential kernel
+    50000 is a regularization term to prevent numerical instabilities.
+    """
     nodes = np.asarray(nodes, dtype=np.float64)
     r = np.abs(nodes[None, :] - nodes[:, None])
 
@@ -1857,6 +1888,8 @@ def matern_kernel(nodes, log10_sigma=-7, log10_ell=2, nu=1.5):
     """Matern kernel.
 
     Supports nu values in {0.5, 1.5, 2.5}.
+    50000 is a regularization term to prevent numerical instabilities.
+
     """
     if nu not in (0.5, 1.5, 2.5):
         raise ValueError("matern_kernel currently supports nu in {0.5, 1.5, 2.5}.")
@@ -1882,7 +1915,7 @@ def matern_kernel(nodes, log10_sigma=-7, log10_ell=2, nu=1.5):
 
 
 def ridge_kernel(nodes, log10_sigma=-7):
-    """Ridge kernel for SW"""
+    """Ridge kernel"""
     nodes = np.asarray(nodes, dtype=np.float64)
     r = np.abs(nodes[None, :] - nodes[:, None])
 
