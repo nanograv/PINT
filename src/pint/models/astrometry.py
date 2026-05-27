@@ -955,7 +955,9 @@ class AstrometryEcliptic(Astrometry):
             )
             # Compute for each time because there is proper motion
         newepoch = (
-            epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
+            epoch
+            if isinstance(epoch, Time)
+            else Time(epoch.astype(np.float64), scale="tdb", format="mjd")
         )
         position_now = add_dummy_distance(self.get_psr_coords())
         with warnings.catch_warnings():

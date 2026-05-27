@@ -532,15 +532,15 @@ def _str_to_mjds(s):
         num, expon = ss.split("e")
         expon = int(expon)
         if expon < 0:
-            imjd, fmjd = 0, (ss).astype(np.longdouble)
+            imjd, fmjd = 0, np.longdouble(ss)
         else:
             mjd_s = num.split(".")
             # If input was given as an integer, add floating "0"
             if len(mjd_s) == 1:
                 mjd_s.append("0")
             imjd_s, fmjd_s = mjd_s
-            imjd = (int(imjd_s)).astype(np.longdouble)
-            fmjd = (f"0.{fmjd_s}").astype(np.longdouble)
+            imjd = int(imjd_s)
+            fmjd = np.longdouble(f"0.{fmjd_s}")
             if ss.startswith("-"):
                 fmjd = -fmjd
             imjd *= 10**expon
