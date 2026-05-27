@@ -66,7 +66,7 @@ def zero_residuals(
         maxresid = np.abs(resids).max()
         if abs(resids).max() < tolerance:
             break
-        ts.adjust_TOAs(-time.TimeDelta(resids))
+        ts.adjust_TOAs(-time.TimeDelta(np.float64(resids)))
     else:
         raise ValueError(
             f"Unable to make fake residuals - left over errors are {abs(resids).max()}"
@@ -314,7 +314,7 @@ def make_fake_toas_uniform(
 
     clk_version = get_fake_toa_clock_versions(model, include_bipm=include_bipm)
     ts = pint.toa.get_TOAs_array(
-        times,
+        np.float64(times),
         obs=obs,
         scale=get_observatory(obs).timescale,
         freqs=freq_array,
