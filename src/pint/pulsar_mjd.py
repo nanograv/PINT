@@ -35,6 +35,7 @@ import erfa
 import numpy as np
 from astropy.time import Time
 from astropy.time.formats import TimeFormat
+import astropy.time.core
 import pint
 
 try:
@@ -103,8 +104,46 @@ if use_npq:
     np._core.sctypeDict[str(QuadPrecDType())] = QuadPrecDType()
 
     np.longdouble = QuadPrecision
-    longdoubledtype = QuadPrecDType
+    longdoubledtype = QuadPrecDType(backend="sleef")
     eps = npq.epsilon
+
+    def _make_array(val, copy=None):
+        """
+        Take ``val`` and convert/reshape to an array.  If ``copy`` is `True`
+        then copy input values.
+
+        Returns
+        -------
+        val : ndarray
+            Array version of ``val``.
+        """
+        if isinstance(val, (tuple, list)) and len(val) > 0 and isinstance(val[0], Time):
+            dtype = object
+        else:
+            dtype = None
+
+        val = np.array(val, copy=copy, subok=True, dtype=dtype)
+
+        # Allow only float64, string or object arrays as input
+        # (object is for datetime, maybe add more specific test later?)
+        # This also ensures the right byteorder for float64 (closes #2942).
+        # also allow for QuadPrecision now
+        if (
+            val.dtype.kind == "f"
+            and val.dtype.itemsize >= np.dtype(np.float64).itemsize
+        ):
+            pass
+        elif val.dtype.kind in "OSUMaV":
+            pass
+        elif val.dtype == longdoubledtype:
+            pass
+        else:
+            val = np.asanyarray(val, dtype=np.float64)
+
+        return val
+
+    # monkeypatch this into astropy
+    astropy.time.core._make_array = _make_array
 
 
 class PulsarMJD(TimeFormat):
