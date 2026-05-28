@@ -1263,19 +1263,152 @@ class PLRedNoise(CorrelatedNoiseComponent):
 class TimeDomainSWNoise(NoiseComponent):
     """Time-domain solar wind noise model with a selectable GP kernel.
 
-    The kernel is chosen via the ``TDSWKERNEL`` parameter:
+    Solar wind electron number density fluctuations produce dispersive delays
+    that vary in time.  This component models those fluctuations as a Gaussian
+    Process (GP) in the time domain, using a linear interpolation basis
+    (controlled by ``TDSWDT`` or explicit ``TDSWNODE_*`` parameters) and a
+    kernel covariance function selected via ``TDSWKERNEL``.
 
-    * ``"ridge"``          - white-noise / ridge kernel
-      (requires: TDSWLOGSIG)
-    * ``"sqexp"``          - squared-exponential kernel
-      (requires: TDSWLOGSIG, TDSWLOGELL)
-    * ``"matern"``         - Matern kernel
-      (requires: TDSWLOGSIG, TDSWLOGELL; optional: TDSWNU; default nu=1.5)
-    * ``"quasi_periodic"`` - quasi-periodic (SE * periodic) kernel
-      (requires: TDSWLOGSIG, TDSWLOGELL, TDSWLOGGAMP, TDSWLOGP)
+    The basis matrix projects the GP onto each TOA using a solar-wind geometry
+    factor so that the effective delay at frequency :math:`f` is
 
-    All variants share the interpolation parameters ``TDSWDT``,
-    ``TDSWINTERP_KIND``, and ``TDSWNODE_*``.
+    .. math::
+
+        \\delta t(f) = \\frac{\\mathrm{DM}_{\\odot}(t)}{f^2} \\cdot K_{\\mathrm{DM}}
+
+    where :math:`\\mathrm{DM}_{\\odot}(t)` is the line-of-sight integral of the
+    solar wind electron density evaluated at each epoch by the parent
+    ``SolarWindDispersion`` component.
+
+    Kernel definitions
+    ------------------
+    Let :math:`\\tau = |t_i - t_j|` (in days at the interpolation nodes) and
+    :math:`\\sigma = 10^{\\mathtt{TDSWLOGSIG}}`,
+    :math:`\\ell = 10^{\\mathtt{TDSWLOGELL}}` (days).
+
+    **ridge** (white-noise / diagonal)
+
+    .. math::
+
+        K(t_i, t_j) = \\sigma^2 \\,\\delta_{ij}
+
+    Only ``TDSWLOGSIG`` is required.
+
+    **sqexp** (squared-exponential / RBF)
+
+    .. math::
+
+        K(\\tau) = \\sigma^2 \\exp\\!\\left(-\\frac{\\tau^2}{2\\ell^2}\\right)
+
+    Requires ``TDSWLOGSIG``, ``TDSWLOGELL``.
+
+    **matern** (Matérn with half-integer smoothness :math:`\\nu`)
+
+    For :math:`\\nu = 1/2`:
+
+    .. math::
+
+        K(\\tau) = \\sigma^2 \\exp\\!\\left(-\\frac{\\tau}{\\ell}\\right)
+
+    For :math:`\\nu = 3/2`:
+
+    .. math::
+
+        K(\\tau) = \\sigma^2 \\left(1 + \\frac{\\sqrt{3}\\,\\tau}{\\ell}\\right)
+                   \\exp\\!\\left(-\\frac{\\sqrt{3}\\,\\tau}{\\ell}\\right)
+
+    For :math:`\\nu = 5/2`:
+
+    .. math::
+
+        K(\\tau) = \\sigma^2 \\left(1 + \\frac{\\sqrt{5}\\,\\tau}{\\ell}
+                   + \\frac{5\\tau^2}{3\\ell^2}\\right)
+                   \\exp\\!\\left(-\\frac{\\sqrt{5}\\,\\tau}{\\ell}\\right)
+
+    Requires ``TDSWLOGSIG``, ``TDSWLOGELL``.  ``TDSWNU`` (default 1.5) selects
+    :math:`\\nu \\in \\{0.5, 1.5, 2.5\\}`.
+
+    **quasi_periodic** (squared-exponential × periodic envelope)
+
+    Let :math:`\\Gamma_p = 10^{\\mathtt{TDSWLOGGAMP}}` and
+    :math:`P = 10^{\\mathtt{TDSWLOGP}}` (years):
+
+    .. math::
+
+        K(\\tau) = \\sigma^2
+                   \\exp\\!\\left(-\\frac{\\tau^2}{2\\ell^2}\\right)
+                   \\exp\\!\\left(-\\Gamma_p \\sin^2\\!\\frac{\\pi\\tau}{P}\\right)
+
+    Requires ``TDSWLOGSIG``, ``TDSWLOGELL``, ``TDSWLOGGAMP``, ``TDSWLOGP``.
+
+    The kernel is evaluated at the interpolation nodes and the resulting weight
+    matrix is projected back onto the TOA residuals via the linear interpolation
+    basis, yielding the full :math:`N_{\\mathrm{TOA}} \\times N_{\\mathrm{TOA}}`
+    covariance contribution.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.noise_model.TimeDomainSWNoise
+
+    Notes
+    -----
+    * ``TimeDomainSWNoise`` requires a ``SolarWindDispersion`` component in the
+      timing model so that the solar wind geometry factor is available.
+    * The interpolation basis is built from either a uniform grid with spacing
+      ``TDSWDT`` (days) or an explicit set of ``TDSWNODE_NNNN`` parameters
+      (MJD).  The two modes are mutually exclusive.
+    * ``register = False`` — attach this component explicitly via
+      :meth:`~pint.models.timing_model.TimingModel.add_component`.
+
+    Examples
+    --------
+    Add a time-domain solar wind GP with a Matérn-3/2 kernel to an existing
+    timing model, using a 14-day interpolation grid:
+
+    >>> from pint.models.timing_model import Component
+    >>> from pint.models.noise_model import TimeDomainSWNoise
+    >>> all_components = Component.component_types
+    >>> if "SolarWindDispersion" not in model.components:
+    ...     sw_det = all_components["SolarWindDispersion"]()
+    ...     model.add_component(sw_det, validate=False)
+    ...     model["NE_SW"].quantity = 4.0
+    ...     model["SWM"] = 1
+    ...     model["SWP"] = 2.0
+    >>> sw_comp = TimeDomainSWNoise()
+    >>> model.add_component(sw_comp, validate=False)
+    >>> model["TDSWKERNEL"].value = "matern"
+    >>> model["TDSWLOGSIG"].value = -8.0
+    >>> model["TDSWLOGELL"].value = 1.5
+    >>> model["TDSWNU"].value = 1.5
+    >>> model["TDSWDT"].value = 14.0
+    >>> model["TDSWINTERP_KIND"].value = "linear"
+    >>> model.validate()
+
+    Notes
+    -----
+    The above example will appear in the par file as::
+
+        TDSWKERNEL        matern
+        TDSWDT            14.0
+        TDSWLOGSIG        -8.0
+        TDSWLOGELL        1.5
+        TDSWNU            1.5
+        TDSWINTERP_KIND   linear
+
+    To use explicit interpolation nodes instead of a uniform grid, set
+    ``TDSWNODE_NNNN`` parameters (MJD) via :meth:`add_tdsw_node_component`.
+    Kernel-specific parameters must be configured **before** adding nodes because
+    :meth:`add_tdsw_node_component` calls ``validate()`` internally once two or
+    more nodes are present::
+
+    >>> sw_comp = TimeDomainSWNoise()
+    >>> model.add_component(sw_comp, validate=False)
+    >>> model["TDSWKERNEL"].value = "ridge"
+    >>> model["TDSWLOGSIG"].value = -7.0
+    >>> for i, mjd in enumerate(node_mjd_array, start=1):
+    ...     sw_comp.add_tdsw_node_component(mjd, index=i)
+    >>> model.validate()
 
     References
     ----------
@@ -1448,9 +1581,7 @@ class TimeDomainSWNoise(NoiseComponent):
             )
 
         if kernel == "matern" and self.TDSWNU.value not in (0.5, 1.5, 2.5):
-            raise ValueError(
-                "TimeDomainSWNoise TDSWNU must be one of {0.5, 1.5, 2.5}."
-            )
+            raise ValueError("TimeDomainSWNoise TDSWNU must be one of {0.5, 1.5, 2.5}.")
 
         allowed_kinds = {
             "linear",
@@ -1494,19 +1625,14 @@ class TimeDomainSWNoise(NoiseComponent):
         if len(node_values) >= 2:
             nodes = np.asarray(node_values, dtype=float)
             if not np.all(np.isfinite(nodes)):
-                raise ValueError(
-                    "TimeDomainSWNoise TDSWNODE_ values must be finite."
-                )
+                raise ValueError("TimeDomainSWNoise TDSWNODE_ values must be finite.")
             if len(np.unique(nodes)) != len(nodes):
-                raise ValueError(
-                    "TimeDomainSWNoise TDSWNODE_ values must be unique."
-                )
+                raise ValueError("TimeDomainSWNoise TDSWNODE_ values must be unique.")
         else:
             if dt_val is not None and dt_val <= 0:
                 raise ValueError(
                     "TimeDomainSWNoise TDSWDT must be set to a positive value."
                 )
-
 
     def _has_nodes(self) -> bool:
         """Return True if any TDSWNODE_ parameter is set."""
@@ -1582,7 +1708,9 @@ class TimeDomainSWNoise(NoiseComponent):
         elif kernel == "sqexp":
             return se_kernel(nodes, log10_sigma, self.TDSWLOGELL.value)
         elif kernel == "matern":
-            return matern_kernel(nodes, log10_sigma, self.TDSWLOGELL.value, self.TDSWNU.value)
+            return matern_kernel(
+                nodes, log10_sigma, self.TDSWLOGELL.value, self.TDSWNU.value
+            )
         elif kernel == "quasi_periodic":
             return periodic_kernel(
                 nodes,
@@ -1602,7 +1730,6 @@ class TimeDomainSWNoise(NoiseComponent):
         """Return the covariance matrix for the time-domain SW noise GP."""
         Umat, phi = self.sw_basis_weight_pair(toas)
         return project_basis_covariance(Umat, phi)
-
 
 
 def get_ecorr_epochs(toas_table: np.ndarray, dt: float = 1, nmin: int = 2) -> List[int]:
@@ -1767,7 +1894,7 @@ def make_interpolation_basis(
     :param kind: str, optional
         Interpolation kind passed to scipy.interpolate.interp1d. Default is "linear".
         See scipy.interpolate.interp1d documentation for allowed values.
-    
+
     :return:
         M : the achromatic interpolation design matrix of shape (len(toas), n_nodes).
         nodes : the interpolation nodes in MJD corresponding to the columns of M.
@@ -1778,9 +1905,7 @@ def make_interpolation_basis(
                 "Must provide either nodes or dt for linear interpolation basis."
             )
         t_min, t_max = np.min(toas) / 86400, np.max(toas) / 86400
-        nodes = np.arange(
-            t_min, t_max + dt, dt
-        )
+        nodes = np.arange(t_min, t_max + dt, dt)
     nodes = nodes * 86400  # MJD to seconds
     basis = np.identity(len(nodes))
     interp = interpolate.interp1d(
