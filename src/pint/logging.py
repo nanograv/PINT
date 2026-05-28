@@ -191,6 +191,8 @@ class LogFilter:
             r"DDK model uses KIN as inclination angle. SINI will not be used. This happens every time a DDK model is constructed.": False,
             r"Glitch phase for glitch (\S+):": False,
             r"ECL not specified; using \S": False,
+            r"Loading BIPM clock version \S+": False,
+            r"Using global clock file for \S+ with bogus_last_correction=\S+": False,
         }
         # add in any more defined on init
         if onlyonce is not None:
