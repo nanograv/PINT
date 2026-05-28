@@ -19,6 +19,7 @@ from astropy import units as u
 from astropy.utils.console import ProgressBar
 
 from pint import fitter
+from pint.observatory import clock_file
 
 __all__ = ["doonefit", "grid_chisq", "grid_chisq_derived"]
 
@@ -263,8 +264,8 @@ def grid_chisq(
     >>> # just plot the values offset from the best-fit values
     >>> twod = ax.contour(F0 - f.model.F0.quantity,F1 - f.model.F1.quantity,chi2grid - bestfit,levels=contour_levels,colors="b")
     >>> ax.errorbar(0, 0, xerr=f.model.F0.uncertainty.value, yerr=f.model.F1.uncertainty.value, fmt="ro")
-    >>> ax.set_xlabel("$\Delta F_0$ (Hz)", fontsize=24)
-    >>> ax.set_ylabel("$\Delta F_1$ (Hz/s)", fontsize=24)
+    >>> ax.set_xlabel("$\\Delta F_0$ (Hz)", fontsize=24)
+    >>> ax.set_ylabel("$\\Delta F_1$ (Hz/s)", fontsize=24)
     >>> plt.show()
 
     Notes
@@ -506,7 +507,9 @@ def grid_chisq_derived(
         # make the default type of Executor
         if ncpu is None:
             ncpu = multiprocessing.cpu_count()
-        executor = concurrent.futures.ProcessPoolExecutor(max_workers=ncpu)
+        executor = concurrent.futures.ProcessPoolExecutor(
+            max_workers=ncpu, initializer=set_log, initargs=(log,)
+        )
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
     savemod = ftr.model
@@ -699,7 +702,9 @@ def tuple_chisq(
         # make the default type of Executor
         if ncpu is None:
             ncpu = multiprocessing.cpu_count()
-        executor = concurrent.futures.ProcessPoolExecutor(max_workers=ncpu)
+        executor = concurrent.futures.ProcessPoolExecutor(
+            max_workers=ncpu, initializer=set_log, initargs=(log,)
+        )
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
     savemod = ftr.model
@@ -894,7 +899,9 @@ def tuple_chisq_derived(
         # make the default type of Executor
         if ncpu is None:
             ncpu = multiprocessing.cpu_count()
-        executor = concurrent.futures.ProcessPoolExecutor(max_workers=ncpu)
+        executor = concurrent.futures.ProcessPoolExecutor(
+            max_workers=ncpu, initializer=set_log, initargs=(log,)
+        )
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
     savemod = ftr.model
