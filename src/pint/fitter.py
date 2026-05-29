@@ -1330,7 +1330,7 @@ class GLSState(ModelState):
         super().__init__(fitter, model)
         self.threshold = threshold
         self.full_cov = full_cov
-        self.use_cache = not (
+        self.use_gls_cache = not (
             os.environ.get("PINT_DISABLE_CACHE") == "1"
             or os.environ.get("PINT_DISABLE_GLS_CACHE") == "1"
         )
@@ -1355,7 +1355,7 @@ class GLSState(ModelState):
             n_timing = len(params)
             noise_key = self.model._noise_designmatrix_cache_key(self.fitter.toas)
             if (
-                self.use_cache
+                self.use_gls_cachee
                 and _mtcm_cache.get("key") is not None
                 and _mtcm_cache["key"] == noise_key
             ):
@@ -1367,7 +1367,7 @@ class GLSState(ModelState):
                 M_n = M[:, n_timing:]
                 nn = np.dot(M_n.T, cinv[:, None] * M_n)
                 _precomputed = {"n_timing": n_timing, "noise_cinv_noise": nn}
-                if self.use_cache:
+                if self.use_gls_cachee:
                     _mtcm_cache["key"] = noise_key
                     _mtcm_cache["value"] = _precomputed
                     _mtcm_cache["n"] = 0
@@ -2659,6 +2659,7 @@ def get_gls_mtcm_mtcy(
     M: np.ndarray,
     residuals: np.ndarray,
     precomputed: Optional[Tuple] = None,
+    return_mtcmplain=False,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """A utility function used by the GLS fitters.
 
@@ -2683,15 +2684,15 @@ def get_gls_mtcm_mtcy(
         tn = np.dot(M_t.T, cinv_M_n)
         # noise-noise
         nn = precomputed["noise_cinv_noise"]
-        mtcm = np.empty((M.shape[1], M.shape[1]))
-        mtcm[:n_t, :n_t] = tt
-        mtcm[:n_t, n_t:] = tn
-        mtcm[n_t:, :n_t] = tn.T
-        mtcm[n_t:, n_t:] = nn
+        mtcmplain = np.empty((M.shape[1], M.shape[1]))
+        mtcmplain[:n_t, :n_t] = tt
+        mtcmplain[:n_t, n_t:] = tn
+        mtcmplain[n_t:, :n_t] = tn.T
+        mtcmplain[n_t:, n_t:] = nn
     else:
         # compute from scratch
-        mtcm = np.dot(M.T, cinv[:, None] * M)
-    mtcm += np.diag(phiinv)
+        mtcmplain = np.dot(M.T, cinv[:, None] * M)
+    mtcm = mtcmplain + np.diag(phiinv)
     mtcy = np.dot(M.T, cinv * residuals)
     return (mtcm, mtcy) if not return_mtcmplain else (mtcm, mtcy, mtcmplain)
 
