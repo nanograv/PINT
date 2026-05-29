@@ -500,7 +500,7 @@ class BinaryELL1k(BinaryELL1):
         # Update EPS1, EPS2
         if self.OMDOT.quantity is not None and self.LNEDOT.quantity is not None:
             eps10 = self.EPS1.quantity
-            eps20 = self.EPS1.quantity
+            eps20 = self.EPS2.quantity
             omdot = self.OMDOT.quantity
             lnedot = self.LNEDOT.quantity
 

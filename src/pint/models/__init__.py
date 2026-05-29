@@ -34,7 +34,7 @@ from pint.models.dispersion_model import (
     FDJumpDM,
 )
 from pint.models.dmwavex import DMWaveX
-from pint.models.expdip import SimpleExponentialDip
+from pint.models.transient_events import SimpleExponentialDip, ChromaticGaussianEvent
 from pint.models.fdjump import FDJump
 from pint.models.frequency_dependent import FD
 from pint.models.glitch import Glitch
@@ -49,10 +49,7 @@ from pint.models.noise_model import (
     PLRedNoise,
     ScaleToaError,
     ScaleDmError,
-    TimeDomainMaternSWNoise,
-    TimeDomainSqExpSWNoise,
-    TimeDomainQuasiPeriodicSWNoise,
-    TimeDomainRidgeSWNoise,
+    TimeDomainSWNoise,
 )
 from pint.models.phase_offset import PhaseOffset
 from pint.models.piecewise import PiecewiseSpindown
