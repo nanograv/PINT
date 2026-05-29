@@ -2652,9 +2652,9 @@ def get_gls_mtcm_mtcy(
     cinv = 1 / Nvec
     mtcmplain = np.dot(M.T, cinv[:, None] * M)
     if np.ndim(phiinv) == 1:
-        mtcm = mtmcplain + np.diag(phiinv)
+        mtcm = mtcmplain + np.diag(phiinv)
     else:
-        mtcm = mtmcplain + phiinv
+        mtcm = mtcmplain + phiinv
     mtcy = np.dot(M.T, cinv * residuals)
     return (mtcm, mtcy) if not return_mtcmplain else (mtcm, mtcy, mtcmplain)
 
