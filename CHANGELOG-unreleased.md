@@ -14,6 +14,7 @@ the released changes.
 - `pintk` Diff/Unc calculation now uses post-fit uncertainties.
 ### Added
 - Plot whitened DM residuals in pintk.
+- `ssb_to_psb_xyz_ECL` and `ssb_to_psb_xyz_ICRS` are now cached
 ### Fixed
 - `WidebandTOAFitter` raises a warning if the model has correlated errors (It used to give wrong results before).
 - Fixed bug where "include_bipm" flag was being ignored when loading Fermi TOAs with weights, now defaults to using EPHEM, CLOCK and PLANET_SHAPIRO from the timing model
