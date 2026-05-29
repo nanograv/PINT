@@ -23,7 +23,6 @@ from pint.toa import TOAs
 
 
 class NoiseComponent(Component):
-
     introduces_dm_errors = False
 
     def __init__(
@@ -71,7 +70,9 @@ class CorrelatedNoiseComponent(NoiseComponent):
         toa_noise_basis = self.get_noise_basis(toas)
         if self.introduces_dm_errors:
             freqs = self._parent.barycentric_radio_freq(toas)
-            return (toa_noise_basis * (freqs**2 / DMconst)[:, None]).to_value(dmu / u.s)
+            return (toa_noise_basis * (freqs**2 / DMconst)[:, None]).to_value(
+                dmu / u.s
+            )
         else:
             return np.zeros_like(toa_noise_basis)
 
@@ -1564,7 +1565,6 @@ class TimeDomainSWNoise(NoiseComponent):
         """
         return _add_tdsw_node_component(self, node=node, index=index)
 
-
     def validate(self):
         super().validate()
 
@@ -1674,7 +1674,6 @@ class TimeDomainSWNoise(NoiseComponent):
             dt = 30.0 if self.TDSWDT.value is None else self.TDSWDT.value
             Umat, nodes = make_interpolation_basis(t, dt=dt, kind=interp_kind)
         return Umat, nodes
-
 
     def get_noise_basis(self, toas: TOAs) -> np.ndarray:
         """Return chromatic linear interpolation matrix for time-domain SW noise."""
@@ -2025,11 +2024,14 @@ def periodic_kernel(
     r = np.abs(nodes[None, :] - nodes[:, None])
 
     sigma = 10**log10_sigma
-    l = 10**log10_ell * 86400   # days -> seconds
+    l = 10**log10_ell * 86400  # days -> seconds
     p = 10**log10_p * 365.25 * 86400  # years -> seconds
     gam_p = 10**log10_gam_p
     d = np.eye(r.shape[0]) * (sigma / 50000) ** 2
-    K = sigma**2 * np.exp(-(r**2) / 2 / l**2 - gam_p * np.sin(np.pi * r / p) ** 2) + d
+    K = (
+        sigma**2 * np.exp(-(r**2) / 2 / l**2 - gam_p * np.sin(np.pi * r / p) ** 2)
+        + d
+    )
     return K
 
 
@@ -2068,7 +2070,7 @@ def se_kernel(
     nodes = np.asarray(nodes, dtype=np.float64)
     r = np.abs(nodes[None, :] - nodes[:, None])
 
-    l = 10**log10_ell * 86400   # days -> seconds
+    l = 10**log10_ell * 86400  # days -> seconds
     sigma = 10**log10_sigma
     d = np.eye(r.shape[0]) * (sigma / 50000) ** 2
     K = sigma**2 * np.exp(-(r**2) / 2 / l**2) + d
@@ -2117,7 +2119,7 @@ def matern_kernel(
     nodes = np.asarray(nodes, dtype=np.float64)
     r = np.abs(nodes[None, :] - nodes[:, None])
 
-    l = 10**log10_ell * 86400   # days -> seconds
+    l = 10**log10_ell * 86400  # days -> seconds
     sigma = 10**log10_sigma
 
     rr = r / l
