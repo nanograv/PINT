@@ -525,7 +525,8 @@ class EcorrNoise(CorrelatedNoiseComponent):
         """
         ecorrs = self.get_ecorrs()
         if nweights is None:
-            ts = get_tdb_seconds(toas.table)
+            tbl = toas.table
+            ts = get_tdb_seconds(tbl)
             nweights = [
                 get_ecorr_nweights(ts[ec.select_toa_mask(toas)]) for ec in ecorrs
             ]
@@ -1282,9 +1283,15 @@ class TimeDomainSWNoise(NoiseComponent):
 
     Kernel definitions
     ------------------
-    Let :math:`\\tau = |t_i - t_j|` (in days at the interpolation nodes) and
+    Let :math:`\\tau = |t_i - t_j|` (in seconds at the interpolation nodes),
     :math:`\\sigma = 10^{\\mathtt{TDSWLOGSIG}}`,
-    :math:`\\ell = 10^{\\mathtt{TDSWLOGELL}}` (days).
+    :math:`\\ell = 10^{\\mathtt{TDSWLOGELL}}` days,
+    :math:`p = 10^{\\mathtt{TDSWLOGP}}` years.
+
+    .. note::
+        ``TDSWLOGELL`` is in **log10(days)** and ``TDSWLOGP`` is in **log10(years)**
+        in both PINT and discovery, matching the enterprise convention for the
+        quasi-periodic kernel.  The kernel functions internally convert to seconds.
 
     **ridge** (white-noise / diagonal)
 
@@ -1331,13 +1338,13 @@ class TimeDomainSWNoise(NoiseComponent):
     **quasi_periodic** (squared-exponential × periodic envelope)
 
     Let :math:`\\Gamma_p = 10^{\\mathtt{TDSWLOGGAMP}}` and
-    :math:`P = 10^{\\mathtt{TDSWLOGP}}` (years):
+    :math:`P = 10^{\\mathtt{TDSWLOGP}}` years:
 
     .. math::
 
         K(\\tau) = \\sigma^2
                    \\exp\\!\\left(-\\frac{\\tau^2}{2\\ell^2}\\right)
-                   \\exp\\!\\left(-\\Gamma_p \\sin^2\\!\\frac{\\pi\\tau}{P}\\right)
+                   \\exp\\!\\left(-\\frac{2\\sin^2\\!\\frac{\\pi\\tau}{P}}{\\Gamma_p^2}\\right)
 
     Requires ``TDSWLOGSIG``, ``TDSWLOGELL``, ``TDSWLOGGAMP``, ``TDSWLOGP``.
 
@@ -1557,9 +1564,6 @@ class TimeDomainSWNoise(NoiseComponent):
         """
         return _add_tdsw_node_component(self, node=node, index=index)
 
-    # ------------------------------------------------------------------
-    # Validation
-    # ------------------------------------------------------------------
 
     def validate(self):
         super().validate()
@@ -1661,7 +1665,7 @@ class TimeDomainSWNoise(NoiseComponent):
     def _get_basis_and_nodes(self, toas: TOAs):
         """Return ``(Umat, nodes)`` from the linear interpolation basis."""
         tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        t = get_tdb_seconds(tbl)
         interp_kind = self.TDSWINTERP_KIND.value
         if self._has_nodes():
             nodes_in = self._get_nodes(toas)
@@ -1671,9 +1675,6 @@ class TimeDomainSWNoise(NoiseComponent):
             Umat, nodes = make_interpolation_basis(t, dt=dt, kind=interp_kind)
         return Umat, nodes
 
-    # ------------------------------------------------------------------
-    # Public noise interface
-    # ------------------------------------------------------------------
 
     def get_noise_basis(self, toas: TOAs) -> np.ndarray:
         """Return chromatic linear interpolation matrix for time-domain SW noise."""
@@ -1697,7 +1698,7 @@ class TimeDomainSWNoise(NoiseComponent):
         * **matern**
           Matern kernel with smoothness :math:`\\nu \\in \\{0.5, 1.5, 2.5\\}`
         * **quasi_periodic**
-          :math:`K_{SE}(t_i,t_j) \\cdot \\exp\\!\\left(-\\Gamma_p \\sin^2\\!\\frac{\\pi(t_i-t_j)}{p}\\right)`
+          :math:`K_{SE}(t_i,t_j) \\cdot \\exp\\!\\left(-\\frac{2\\sin^2\\!\\frac{\\pi(t_i-t_j)}{p}}{\\Gamma_p^2}\\right)`
         """
         _, nodes = self._get_basis_and_nodes(toas)
         kernel = self.TDSWKERNEL.value
@@ -1978,43 +1979,137 @@ def powerlaw(
     return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma) * above_fl
 
 
-def periodic_kernel(nodes, log10_sigma=-7, log10_ell=2, log10_gam_p=0, log10_p=0):
-    """Quasi-periodic kernel"""
+def periodic_kernel(
+    nodes: np.ndarray,
+    log10_sigma: float = -7,
+    log10_ell: float = 2,
+    log10_gam_p: float = 0,
+    log10_p: float = 0,
+) -> np.ndarray:
+    """Quasi-periodic (SE × periodic) covariance matrix.
+
+    Matches the ``periodic_kernel`` convention in enterprise_extensions.
+
+    Parameters
+    ----------
+    nodes : np.ndarray
+        1-D array of evaluation points in seconds (e.g. average TOA at each epoch).
+    log10_sigma : float
+        Log10 of the amplitude in the same units as the residuals.
+    log10_ell : float
+        Log10 of the squared-exponential length scale in **days**.
+    log10_gam_p : float
+        Log10 of the periodic damping amplitude (larger -> stronger periodic decay).
+    log10_p : float
+        Log10 of the periodicity in **years**.
+
+    Returns
+    -------
+    np.ndarray
+        Covariance matrix of shape ``(len(nodes), len(nodes))``.
+
+    Notes
+    -----
+    The kernel is
+
+    .. math::
+
+        K(\\tau) = \\sigma^2 \\exp\\!\\left(
+            -\\frac{\\tau^2}{2\\ell^2}
+            - \\gamma_p \\sin^2\\!\\left(\\frac{\\pi\\tau}{p}\\right)
+        \\right) + d\\,\\delta_{ij}
+
+    where :math:`d = (\\sigma / 50000)^2` is a small diagonal regulariser.
+    """
     nodes = np.asarray(nodes, dtype=np.float64)
     r = np.abs(nodes[None, :] - nodes[:, None])
 
-    # convert units to seconds
     sigma = 10**log10_sigma
-    l = 10**log10_ell * 86400
-    p = 10**log10_p * 3.16e7
+    l = 10**log10_ell * 86400   # days -> seconds
+    p = 10**log10_p * 365.25 * 86400  # years -> seconds
     gam_p = 10**log10_gam_p
     d = np.eye(r.shape[0]) * (sigma / 50000) ** 2
     K = sigma**2 * np.exp(-(r**2) / 2 / l**2 - gam_p * np.sin(np.pi * r / p) ** 2) + d
     return K
 
 
-def se_kernel(nodes, log10_sigma=-7, log10_ell=2):
-    """
-    Squared-exponential kernel
-    50000 is a regularization term to prevent numerical instabilities.
+def se_kernel(
+    nodes: np.ndarray,
+    log10_sigma: float = -7,
+    log10_ell: float = 2,
+) -> np.ndarray:
+    """Squared-exponential (RBF) covariance matrix.
+
+    Parameters
+    ----------
+    nodes : np.ndarray
+        1-D array of evaluation points in seconds.
+    log10_sigma : float
+        Log10 of the amplitude.
+    log10_ell : float
+        Log10 of the length scale in **days**.
+
+    Returns
+    -------
+    np.ndarray
+        Covariance matrix of shape ``(len(nodes), len(nodes))``.
+
+    Notes
+    -----
+    The kernel is
+
+    .. math::
+
+        K(\\tau) = \\sigma^2 \\exp\\!\\left(-\\frac{\\tau^2}{2\\ell^2}\\right)
+            + d\\,\\delta_{ij}
+
+    where :math:`d = (\\sigma / 50000)^2` is a small diagonal regulariser.
     """
     nodes = np.asarray(nodes, dtype=np.float64)
     r = np.abs(nodes[None, :] - nodes[:, None])
 
-    # Convert everything into seconds
-    l = 10**log10_ell * 86400
+    l = 10**log10_ell * 86400   # days -> seconds
     sigma = 10**log10_sigma
     d = np.eye(r.shape[0]) * (sigma / 50000) ** 2
     K = sigma**2 * np.exp(-(r**2) / 2 / l**2) + d
     return K
 
 
-def matern_kernel(nodes, log10_sigma=-7, log10_ell=2, nu=1.5):
-    """Matern kernel.
+def matern_kernel(
+    nodes: np.ndarray,
+    log10_sigma: float = -7,
+    log10_ell: float = 2,
+    nu: float = 1.5,
+) -> np.ndarray:
+    """Matérn covariance matrix.
 
-    Supports nu values in {0.5, 1.5, 2.5}.
-    50000 is a regularization term to prevent numerical instabilities.
+    Parameters
+    ----------
+    nodes : np.ndarray
+        1-D array of evaluation points in seconds.
+    log10_sigma : float
+        Log10 of the amplitude.
+    log10_ell : float
+        Log10 of the length scale in **days**.
+    nu : float
+        Smoothness parameter; must be one of ``{0.5, 1.5, 2.5}``.
 
+    Returns
+    -------
+    np.ndarray
+        Covariance matrix of shape ``(len(nodes), len(nodes))``.
+
+    Raises
+    ------
+    ValueError
+        If *nu* is not in ``{0.5, 1.5, 2.5}``.
+
+    Notes
+    -----
+    The Matérn-1/2 (``nu=0.5``), Matérn-3/2 (``nu=1.5``), and Matérn-5/2
+    (``nu=2.5``) closed-form kernels are supported.  A small diagonal
+    regulariser :math:`d = (\\sigma / 50000)^2` is added for numerical
+    stability.
     """
     if nu not in (0.5, 1.5, 2.5):
         raise ValueError("matern_kernel currently supports nu in {0.5, 1.5, 2.5}.")
@@ -2022,7 +2117,7 @@ def matern_kernel(nodes, log10_sigma=-7, log10_ell=2, nu=1.5):
     nodes = np.asarray(nodes, dtype=np.float64)
     r = np.abs(nodes[None, :] - nodes[:, None])
 
-    l = 10**log10_ell * 86400
+    l = 10**log10_ell * 86400   # days -> seconds
     sigma = 10**log10_sigma
 
     rr = r / l
@@ -2039,8 +2134,26 @@ def matern_kernel(nodes, log10_sigma=-7, log10_ell=2, nu=1.5):
     return sigma**2 * k + d
 
 
-def ridge_kernel(nodes, log10_sigma=-7):
-    """Ridge kernel"""
+def ridge_kernel(
+    nodes: np.ndarray,
+    log10_sigma: float = -7,
+) -> np.ndarray:
+    """Ridge (diagonal) covariance matrix.
+
+    Parameters
+    ----------
+    nodes : np.ndarray
+        1-D array of evaluation points in seconds.  Only ``len(nodes)`` is
+        used; the values themselves are ignored.
+    log10_sigma : float
+        Log10 of the amplitude; the diagonal entries are
+        :math:`\\sigma^2 = 10^{2\\,\\texttt{log10\_sigma}}`.
+
+    Returns
+    -------
+    np.ndarray
+        Diagonal covariance matrix of shape ``(len(nodes), len(nodes))``.
+    """
     nodes = np.asarray(nodes, dtype=np.float64)
     r = np.abs(nodes[None, :] - nodes[:, None])
 
