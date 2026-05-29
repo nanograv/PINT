@@ -843,7 +843,7 @@ where the results are stored in the TOA table (columns ``alt`` and ``tropo_delay
 :meth:`~pint.models.troposphere_delay.TroposphereDelay.recompute_troposphere_delay`. This caching can be turned off by setting 
 ``$PINT_DISABLE_TROPOSPHERE_CACHE`` to 1.  
 
-All explicit caching can be turned off by setting ``PINT_DISABLE_CACHE`` to 1.
+All explicit caching can be turned off by setting ``$PINT_DISABLE_CACHE`` to 1.
 
 Coding Style
 ------------
