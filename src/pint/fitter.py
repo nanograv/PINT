@@ -1355,7 +1355,7 @@ class GLSState(ModelState):
             n_timing = len(params)
             noise_key = self.model._noise_designmatrix_cache_key(self.fitter.toas)
             if (
-                self.use_gls_cachee
+                self.use_gls_cache
                 and _mtcm_cache.get("key") is not None
                 and _mtcm_cache["key"] == noise_key
             ):
@@ -1367,7 +1367,7 @@ class GLSState(ModelState):
                 M_n = M[:, n_timing:]
                 nn = np.dot(M_n.T, cinv[:, None] * M_n)
                 _precomputed = {"n_timing": n_timing, "noise_cinv_noise": nn}
-                if self.use_gls_cachee:
+                if self.use_gls_cache:
                     _mtcm_cache["key"] = noise_key
                     _mtcm_cache["value"] = _precomputed
                     _mtcm_cache["n"] = 0
