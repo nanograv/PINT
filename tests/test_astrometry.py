@@ -10,6 +10,7 @@ import pytest
 from astropy.coordinates import Latitude, Longitude
 from hypothesis import example, given
 from pint.models import get_model
+import pint.simulation
 from pinttestdata import datadir
 
 
@@ -194,3 +195,111 @@ def test_ssb_accuracy_ECL_ECLmodel(elong, elat, pmelong, pmelat):
     xyzastropy = m.coords_as_ECL(epoch=t).cartesian.xyz.transpose()
     xyznew = m.ssb_to_psb_xyz_ECL(epoch=t)
     assert np.allclose(xyznew, xyzastropy)
+
+
+def test_ssb_cache_envar(monkeypatch):
+    monkeypatch.setenv("PINT_DISABLE_CACHE", "1")
+
+    m = get_model(StringIO(parECL))
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyz = m.ssb_to_psb_xyz_ICRS(epoch=t)
+
+    assert not m.components["AstrometryEcliptic"].use_ssb_cache
+
+
+def test_ssb_cache_envar2(monkeypatch):
+    monkeypatch.setenv("PINT_DISABLE_ASTROMETRY_CACHE", "1")
+
+    m = get_model(StringIO(parECL))
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyz = m.ssb_to_psb_xyz_ICRS(epoch=t)
+
+    assert not m.components["AstrometryEcliptic"].use_ssb_cache
+
+
+def test_ssb_cache_setkeys_icrs():
+    m = get_model(StringIO(parECL))
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyz = m.ssb_to_psb_xyz_ICRS(epoch=t)
+    assert m.components["AstrometryEcliptic"]._ssb_cache_key_icrs is not None
+    assert m.components["AstrometryEcliptic"]._ssb_cache_key_ecl is None
+
+
+def test_ssb_cache_setkeys_ecl():
+    m = get_model(StringIO(parECL))
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyz = m.ssb_to_psb_xyz_ECL(epoch=t)
+    assert m.components["AstrometryEcliptic"]._ssb_cache_key_ecl is not None
+    assert m.components["AstrometryEcliptic"]._ssb_cache_key_icrs is None
+
+
+def test_ssb_cache_uses_cached():
+    m = get_model(StringIO(parECL))
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyz = m.ssb_to_psb_xyz_ICRS(epoch=t)
+    cachekey = m.components["AstrometryEcliptic"]._ssb_cache_key_icrs
+    xyz2 = m.ssb_to_psb_xyz_ICRS(epoch=t + 0.0 * u.d)
+    cachekey2 = m.components["AstrometryEcliptic"]._ssb_cache_key_icrs
+    assert cachekey == cachekey2
+    assert np.allclose(xyz, xyz2)
+
+
+def test_ssb_cache_invalidates():
+    m = get_model(StringIO(parECL))
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyz = m.ssb_to_psb_xyz_ICRS(epoch=t)
+    cachekey = m.components["AstrometryEcliptic"]._ssb_cache_key_icrs
+    xyz2 = m.ssb_to_psb_xyz_ICRS(epoch=t + 0.1 * u.d)
+    cachekey2 = m.components["AstrometryEcliptic"]._ssb_cache_key_icrs
+    assert cachekey != cachekey2
+    assert ~np.allclose(xyz, xyz2)
+
+
+def test_ssb_cache_merge():
+    m = get_model(StringIO(parECL))
+    t1 = pint.simulation.make_fake_toas_uniform(50000, 51000, ntoas=10, model=m)
+    t2 = pint.simulation.make_fake_toas_uniform(51000, 52000, ntoas=10, model=m)
+
+    xyz1 = m.ssb_to_psb_xyz_ICRS(epoch=t1["tdbld"])
+    xyz2 = m.ssb_to_psb_xyz_ICRS(epoch=t2["tdbld"])
+    assert np.all(xyz1 != xyz2)
+    t1.merge(t2)
+    xyz = m.ssb_to_psb_xyz_ICRS(epoch=t1["tdbld"])
+    assert xyz.shape[0] == xyz1.shape[0] + xyz2.shape[0]
+    assert np.all(xyz[: xyz1.shape[0]] == xyz1)
+    assert np.all(xyz[xyz1.shape[0] :] == xyz2)
+
+
+def test_ssb_cache_adjust():
+    m = get_model(StringIO(parECL))
+    t1 = pint.simulation.make_fake_toas_uniform(50000, 51000, ntoas=10, model=m)
+    xyz = m.ssb_to_psb_xyz_ICRS(epoch=t1["tdbld"])
+    t1.adjust_TOAs(-0.5 * u.s)
+    xyz_adjust = m.ssb_to_psb_xyz_ICRS(epoch=t1["tdbld"])
+    assert np.all(xyz != xyz_adjust)
+
+
+def test_ssb_cache_clkcorr():
+    m = get_model(StringIO(parECL))
+    t1 = pint.simulation.make_fake_toas_uniform(50000, 51000, ntoas=10, model=m)
+    xyz = m.ssb_to_psb_xyz_ICRS(epoch=t1["tdbld"])
+    # set the clkcorr flag to "" to make it redo the correction
+    t1["clkcorr"] = ""
+    # but also have to change the correction with a -to flag
+    t1["to"] = 0.1
+    t1.apply_clock_corrections()
+    t1.compute_TDBs()
+    xyz_newcorr = m.ssb_to_psb_xyz_ICRS(epoch=t1["tdbld"])
+    assert np.all(xyz_newcorr != xyz)
