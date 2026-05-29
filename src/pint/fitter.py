@@ -1359,7 +1359,7 @@ class GLSState(ModelState):
                 and _mtcm_cache.get("key") is not None
                 and _mtcm_cache["key"] == noise_key
             ):
-                log.warning(f"Using cached mtcm value: {_mtcm_cache['n']}")
+                log.debug(f"Using cached mtcm value: {_mtcm_cache['n']}")
                 _precomputed = _mtcm_cache["value"]
                 _mtcm_cache["n"] += 1
             else:
