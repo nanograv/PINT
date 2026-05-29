@@ -47,7 +47,10 @@ def _epoch_fingerprint(epoch: Optional[time_like]) -> Tuple[Tuple, bytes]:
         return (epoch.value.shape, epoch.value.tobytes())
     elif isinstance(epoch, np.ndarray):
         return (epoch.shape, epoch.tobytes())
-    return None
+    elif epoch is None:
+        return None
+    else:
+        raise ValueError(f"Do not know how to compute epoch fingerprint for '{epoch}'")
 
 
 class Astrometry(DelayComponent):
@@ -109,7 +112,7 @@ class Astrometry(DelayComponent):
 
         self.delay_funcs_component += [self.solar_system_geometric_delay]
         self.register_deriv_funcs(self.d_delay_astrometry_d_PX, "PX")
-        self.use_cache = not (
+        self.use_ssb_cache = not (
             os.environ.get("PINT_DISABLE_CACHE", None) == "1"
             or os.environ.get("PINT_DISABLE_ASTROMETRY_CACHE", None) == "1"
         )
@@ -120,6 +123,25 @@ class Astrometry(DelayComponent):
 
     def _astrometric_params_tuple(self):
         raise NotImplementedError
+
+    def get_cache_key(self, epoch: Optional[time_like] = None) -> Tuple:
+        """Return a key for use in caching astrometric parameters
+
+        Parameters
+        ----------
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed
+
+        Returns
+        -------
+        tuple :
+            (:func:`~pint.models.astrometry._epoch_fingerprint`(epoch), :meth:`~pint.models.astrometry.Astrometry._astrometric_params_tuple()`)
+
+        """
+        if self.use_ssb_cache:
+            return (_epoch_fingerprint(epoch), self._astrometric_params_tuple())
+        else:
+            return None
 
     def clear_ssb_cache(self):
         """Clear SSB caches"""
@@ -147,17 +169,17 @@ class Astrometry(DelayComponent):
 
         # this is somewhat slow, since it repeatedly created different SkyCoord Objects
         # but for consistency only change the method in the subclasses below
-        key = (_epoch_fingerprint(epoch), self._astrometric_params_tuple())
+        key = self.get_cache_key(epoch)
         if (
-            key == self._ssb_cache_key_icrs
-            and self._ssb_cache_icrs is not None
-            and self.use_cache
+            self._ssb_cache_icrs is not None
+            and self.use_ssb_cache
+            and key == self._ssb_cache_key_icrs
         ):
             log.debug(f"Using cached ssb_to_psr data")
             return self._ssb_cache_icrs.copy()
 
         result = self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
-        if self.use_cache:
+        if self.use_ssb_cache:
             self._ssb_cache_icrs = result.copy()
             self._ssb_cache_key_icrs = key
 
@@ -182,16 +204,17 @@ class Astrometry(DelayComponent):
         np.ndarray :
             (len(epoch), 3) array of unit vectors
         """
-        key = (_epoch_fingerprint(epoch), self._astrometric_params_tuple())
+        key = self.get_cache_key(epoch)
         if (
-            key == self._ssb_cache_key_ecl
-            and self._ssb_cache_ecl is not None
-            and self.use_cache
+            self._ssb_cache_ecl is not None
+            and self.use_ssb_cache
+            and key == self._ssb_cache_key_ecl
         ):
             log.debug(f"Using cached ssb_to_psr data")
             return self._ssb_cache_ecl.copy()
+
         result = self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
-        if self.use_cache:
+        if self.use_ssb_cache:
             self._ssb_cache_ecl = result.copy()
             self._ssb_cache_key_ecl = key
 
@@ -456,6 +479,9 @@ class AstrometryEquatorial(Astrometry):
                 if isinstance(self.POSEPOCH, u.Quantity)
                 else None
             ),
+            float(self.VLBIAX.value) if isinstance(self.VLBIAX, u.Quantity) else None,
+            float(self.VLBIAY.value) if isinstance(self.VLBIAY, u.Quantity) else None,
+            float(self.VLBIAZ.value) if isinstance(self.VLBIAZ, u.Quantity) else None,
         )
 
     def validate(self):
@@ -632,11 +658,11 @@ class AstrometryEquatorial(Astrometry):
         # this was somewhat slow, since it repeatedly created different SkyCoord Objects
         # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
-        key = (_epoch_fingerprint(epoch), self._astrometric_params_tuple())
+        key = self.get_cache_key(epoch)
         if (
             key == self._ssb_cache_key_icrs
             and self._ssb_cache_icrs is not None
-            and self.use_cache
+            and self.use_ssb_cache
         ):
             log.debug(f"Using cached ssb_to_psr data")
             return self._ssb_cache_icrs.copy()
@@ -685,7 +711,7 @@ class AstrometryEquatorial(Astrometry):
         Omega = self.vlbi_coord_rotation()
         Khat = self.xyz_from_radec(ra, dec)
         result = Omega @ Khat if Omega is not None else Khat
-        if self.use_cache:
+        if self.use_ssb_cache:
             self._ssb_cache_icrs = result.copy()
             self._ssb_cache_key_icrs = key
         return result
@@ -1001,6 +1027,9 @@ class AstrometryEcliptic(Astrometry):
                 else None
             ),
             str(self.ECL.value),
+            float(self.VLBIAX.value) if isinstance(self.VLBIAX, u.Quantity) else None,
+            float(self.VLBIAY.value) if isinstance(self.VLBIAY, u.Quantity) else None,
+            float(self.VLBIAZ.value) if isinstance(self.VLBIAZ, u.Quantity) else None,
         )
 
     def validate(self):
@@ -1157,11 +1186,11 @@ class AstrometryEcliptic(Astrometry):
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
 
-        key = (_epoch_fingerprint(epoch), self._astrometric_params_tuple())
+        key = self.get_cache_key(epoch)
         if (
             key == self._ssb_cache_key_ecl
             and self._ssb_cache_ecl is not None
-            and self.use_cache
+            and self.use_ssb_cache
         ):
             log.debug("Using cached ssb_to_psr data")
             return self._ssb_cache_ecl.copy()
@@ -1226,7 +1255,7 @@ class AstrometryEcliptic(Astrometry):
         # Reference: Madison+ 2023, The Astrophysical Journal 777 104 (Equations 9, 10)
         Omega = self.vlbi_coord_rotation()
         result = Omega @ Khat if Omega is not None else Khat
-        if self.use_cache:
+        if self.use_ssb_cache:
             self._ssb_cache_ecl = result.copy()
             self._ssb_cache_key_ecl = key
         return result
