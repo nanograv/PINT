@@ -394,7 +394,10 @@ class LCPrimitive:
         return np.asarray([self.p[-1], self.errors[-1]]) if error else self.p[-1]
 
     def set_location(self, loc):
-        self.p[-1] = loc
+        if np.isscalar(loc):
+            self.p[-1] = loc
+        else:
+            self.p[-1] = loc[0]
 
     def get_norm(self, error=False):
         # if error: return np.asarray([self.p[0],self.errors[0]])

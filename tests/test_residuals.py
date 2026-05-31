@@ -1,5 +1,4 @@
-""" Test for residual class
-"""
+"""Test for residual class"""
 
 import os
 from io import StringIO
@@ -239,6 +238,7 @@ def test_residuals_wideband_chi2(wideband_fake):
     assert np.all(np.isfinite(list(r._combined_data_error)))
 
     assert r.whitened_resids_kstest()[1] > 0.05
+    assert r.whitened_resids_adtest()[1] > 0.05
 
 
 def test_residuals_badpn(wideband_fake):
@@ -493,6 +493,7 @@ def test_whitened_res(par):
 
     assert np.isclose(ftr.resids.calc_whitened_resids().std(), 1, atol=0.75)
     assert ftr.resids.whitened_resids_kstest()[1] > 0.1
+    assert ftr.resids.whitened_resids_adtest()[1] > 0.1
 
 
 def test_ecorr_chi2():

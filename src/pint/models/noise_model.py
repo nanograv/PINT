@@ -1309,17 +1309,21 @@ def get_rednoise_freqs(
         # Combine log + linear
         return np.concatenate((f_log, f_lin))
 
-    have_logmode = logmode is not None and logmode >= 0
+    have_logmode = logmode is not None and logmode > 0
     have_nlog = nlog is not None and nlog > 0
     have_fmin = f_min is not None and f_min > 0
 
     use_log = all([have_logmode, have_nlog, have_fmin])
 
-    if not use_log and np.any([have_logmode, have_nlog, have_fmin]):
+    if not use_log and (have_logmode or have_nlog):
         log.warning(
-            "Log-spaced parameters are ignored because "
-            "logmode, nlog, and f_min ALL neeed to be set"
-            "Use: logmode > 0 and nlog > 0 and f_min > 0."
+            "Log-linear frequency spacing appears to be "
+            "incorrectly specified. Got logmode={logmode}, "
+            "nlog={nlog}, f_min={f_min}. Proceeding with "
+            "linearly-spaced frequencies.",
+            logmode=logmode,
+            nlog=nlog,
+            f_min=f_min,
         )
 
     if not use_log:

@@ -177,15 +177,15 @@ def test_wls_two_step(model_eccentric_toas):
 
     f = pint.fitter.DownhillWLSFitter(toas, model_wrong)
     f.model.free_params = ["ECC"]
-    with pytest.raises(pint.fitter.MaxiterReached):
+    with pytest.warns(pint.fitter.MaxiterReached):
         f.fit_toas(maxiter=2)
     assert not f.converged
 
     f2 = pint.fitter.DownhillWLSFitter(toas, model_wrong)
     f2.model.free_params = ["ECC"]
-    with pytest.raises(pint.fitter.MaxiterReached):
+    with pytest.warns(pint.fitter.MaxiterReached):
         f2.fit_toas(maxiter=1)
-    with pytest.raises(pint.fitter.MaxiterReached):
+    with pytest.warns(pint.fitter.MaxiterReached):
         f2.fit_toas(maxiter=1)
     assert np.abs(f.model.ECC.value - f2.model.ECC.value) < 1e-12
 
@@ -198,14 +198,14 @@ def test_gls_two_step(model_eccentric_toas_ecorr, full_cov):
 
     f = pint.fitter.DownhillGLSFitter(toas, model_wrong)
     f.model.free_params = ["ECC"]
-    with pytest.raises(pint.fitter.MaxiterReached):
+    with pytest.warns(pint.fitter.MaxiterReached):
         f.fit_toas(maxiter=2, full_cov=full_cov)
     assert not f.converged
     f2 = pint.fitter.DownhillGLSFitter(toas, model_wrong)
     f2.model.free_params = ["ECC"]
-    with pytest.raises(pint.fitter.MaxiterReached):
+    with pytest.warns(pint.fitter.MaxiterReached):
         f2.fit_toas(maxiter=1, full_cov=full_cov)
-    with pytest.raises(pint.fitter.MaxiterReached):
+    with pytest.warns(pint.fitter.MaxiterReached):
         f2.fit_toas(maxiter=1, full_cov=full_cov)
     assert np.abs(f.model.ECC.value - f2.model.ECC.value) < 1e-12
 
@@ -218,14 +218,14 @@ def test_wb_two_step(model_eccentric_toas_wb, full_cov):
 
     f = pint.fitter.WidebandDownhillFitter(toas, model_wrong)
     f.model.free_params = ["ECC"]
-    with pytest.raises(pint.fitter.MaxiterReached):
+    with pytest.warns(pint.fitter.MaxiterReached):
         f.fit_toas(maxiter=2, full_cov=full_cov)
     assert not f.converged
     f2 = pint.fitter.WidebandDownhillFitter(toas, model_wrong)
     f2.model.free_params = ["ECC"]
-    with pytest.raises(pint.fitter.MaxiterReached):
+    with pytest.warns(pint.fitter.MaxiterReached):
         f2.fit_toas(maxiter=1, full_cov=full_cov)
-    with pytest.raises(pint.fitter.MaxiterReached):
+    with pytest.warns(pint.fitter.MaxiterReached):
         f2.fit_toas(maxiter=1, full_cov=full_cov)
     # FIXME: The full_cov version differs at the 1e-10 level for some reason, is it a failure really?
     assert np.abs(f.model.ECC.value - f2.model.ECC.value) < 1e-9

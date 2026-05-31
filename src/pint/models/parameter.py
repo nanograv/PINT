@@ -34,7 +34,6 @@ from loguru import logger as log
 from uncertainties import ufloat
 
 from pint import pint_units
-from pint.exceptions import InvalidModelParameters
 from pint.models import priors
 from pint.observatory import get_observatory
 from pint.pulsar_mjd import (
@@ -512,6 +511,10 @@ class Parameter:
             )
         elif self.name == "DMDATA" and format.lower() != "pint":
             line = "%-15s %d" % (self.name, int(self.value))
+        elif (
+            self.name == "TZRFRQ" and format.lower() == "tempo" and np.isinf(self.value)
+        ):
+            line = "%-15s %d" % (self.name, 0)
 
         if self.uncertainty is not None:
             line += " %d %s" % (
@@ -2174,7 +2177,7 @@ class maskParameter(floatParameter):
             # The flags are recomputed every time. If don't
             # recompute, flags can only be added to the toa table once and then never update,
             # making it impossible to add additional jump parameters after the par file is read in (pintk)
-            flag_col = [x.get(key, None) for x in tbl["flags"]]
+            flag_col = [x.get(key, "") for x in tbl["flags"]]
             tbl[key] = flag_col
             col = tbl[key]
         else:

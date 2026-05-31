@@ -31,6 +31,7 @@ Active developers are indicated by (*). Authors of the PINT paper are indicated 
 * Julia Deneva 
 * Justin Ellis 
 * William Fiore (*)
+* Dotan Gazith
 * Rutger van Haasteren (#*)
 * Fabian Jankowski 
 * Frederick Jenet (#)
