@@ -32,6 +32,7 @@ plot_labels = [
     "post-fit",
     "WB DM res",
     "white-res",
+    "white-DM-res",
     "WB DM",
     "model DM",
     "mjd",
@@ -367,8 +368,8 @@ class Pulsar:
                         line += "%18s" % ""
                     diff = post.value - pre.value
                     line += "%16.8g  " % diff
-                    if pre.uncertainty is not None and pre.uncertainty.value != 0.0:
-                        line += "%16.8g" % (diff / pre.uncertainty.value)
+                    if post.uncertainty is not None and post.uncertainty.value != 0.0:
+                        line += "%16.8g" % (diff / post.uncertainty.value)
                 print(line)
         else:
             log.warning("Pulsar has not been fitted yet!")

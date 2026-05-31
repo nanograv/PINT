@@ -12,13 +12,13 @@ If you want to emit messages later in your code, set things up with::
 
 This can happen before or after the :func:`~pint.logging.setup`.
 
-You can optionally pass the desired logging level to the :func:`~pint.logging.setup` function, formats, custom filters, colors, etc.  
+You can optionally pass the desired logging level to the :func:`~pint.logging.setup` function, formats, custom filters, colors, etc.
 See documentation for :func:`pint.logging.setup`.
 
 `level` can be any of the existing ``loguru`` levels: ``TRACE``, ``DEBUG``, ``INFO``, ``WARNING``, ``ERROR``, or you can define new ones.
 
 The format can be something new, or you can use :py:data:`pint.logging.format`.  A full format that might be useful as a reference is::
-    
+
     format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
 
 while the default for this module is::
@@ -190,6 +190,9 @@ class LogFilter:
             r"Special observatory location. No clock corrections applied.": False,
             r"DDK model uses KIN as inclination angle. SINI will not be used. This happens every time a DDK model is constructed.": False,
             r"Glitch phase for glitch (\S+):": False,
+            r"ECL not specified; using \S": False,
+            r"Loading BIPM clock version \S+": False,
+            r"Using global clock file for \S+ with bogus_last_correction=\S+": False,
         }
         # add in any more defined on init
         if onlyonce is not None:
