@@ -24,4 +24,5 @@ the released changes.
 - Make `get_prefix_timeranges` work for SWX.
 - Some of the `gridutils` functions had improper logging behavior
 - Fixed bug in changing epoch for ELL1k model
+- Fixed bug in `GaussianRV_gen`, where the probability distribution function was not normalized correctly. Changed to use `scipy.stats.truncnorm` instead of the custom `GaussianRV_gen`.
 ### Removed
