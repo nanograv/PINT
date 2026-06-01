@@ -72,15 +72,17 @@ class TestPriors:
     def test_gaussian_bounded(self):
         print("test_gaussian_bounded")
         self.m.M2.prior = Prior(
-            GaussianBoundedRV(loc=0.26, scale=0.10, lower_bound=0.0, upper_bound=0.6)
+            GaussianBoundedRV(loc=0.26, scale=0.20, lower_bound=0.06, upper_bound=0.46)
         )
         assert self.m.M2.prior_pdf(-0.1) == 0.0
         assert self.m.M2.prior_pdf(0.7) == 0.0
         assert self.m.M2.prior_pdf(-0.1, logpdf=True) == -np.inf
         assert self.m.M2.prior_pdf(0.7, logpdf=True) == -np.inf
         assert np.isclose(
-            self.m.M2.prior_pdf(0.26 + 0.1) / self.m.M2.prior_pdf(0.26),
+            self.m.M2.prior_pdf(0.26 + 0.2) / self.m.M2.prior_pdf(0.26),
             0.60653065971263342,
         )
         # Test that integral is 1.0, not safe since using _rv private var
         assert np.isclose(self.m.M2.prior._rv.cdf(0.6), 1.0)
+        # Test that integral is 0.5 at the mean, not safe since using _rv private var
+        assert np.isclose(self.m.M2.prior._rv.cdf(0.26), 0.5)
