@@ -24,4 +24,5 @@ the released changes.
 - Make `get_prefix_timeranges` work for SWX.
 - Some of the `gridutils` functions had improper logging behavior
 - Fixed bug in changing epoch for ELL1k model
+- Fixed `gridutils` behavior for 1 CPU
 ### Removed

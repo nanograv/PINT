@@ -769,7 +769,11 @@ def tuple_chisq(
 
         for i in indices:
             for parnum, parname in enumerate(parnames):
-                getattr(ftr.model, parname).quantity = parvalues[i[0]][parnum]
+                if parvalues[i[0]][parnum] is not None:
+                    getattr(ftr.model, parname).quantity = parvalues[i[0]][parnum]
+                    getattr(ftr.model, parname).frozen = True
+                else:
+                    getattr(ftr.model, parname).frozen = False
             ftr.fit_toas(**fitargs)
             chi2[i[0]] = ftr.resids.chi2
             dof[i[0]] = ftr.resids.dof
