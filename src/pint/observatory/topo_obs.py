@@ -233,7 +233,7 @@ class TopoObs(Observatory):
             if self.fullname != self.name
             else self.origin
         )
-        return f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.location.x}, {self.location.y} {self.location.z}]:\n{origin})"
+        return f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.location.x}, {self.location.y} {self.location.z}]:\n({origin})"
 
     @property
     def timescale(self):
