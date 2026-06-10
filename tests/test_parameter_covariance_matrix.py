@@ -132,3 +132,8 @@ def test_downhillwb_covmatrix(wb):
             dwb.parameter_covariance_matrix.get_label_matrix([param]).matrix[0, 0]
         )
         assert np.isclose(uncertainties[param], matrix_uncertainty)
+
+
+def test_wls_covmatrix_print(wls):
+    m = wls.parameter_covariance_matrix.get_label_matrix(["F0", "F1"])
+    s = str(m)
