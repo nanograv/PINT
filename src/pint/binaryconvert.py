@@ -1204,7 +1204,9 @@ def convert_binary(
                         outmodel.SINI.frozen = model.KIN.frozen
                 else:
                     tempmodel = convert_binary(model, "DD")
-                    outmodel = convert_binary(tempmodel, output)
+                    outmodel = convert_binary(
+                        tempmodel, output, NHARMS=NHARMS, useSTIGMA=useSTIGMA
+                    )
             if output == "ELL1H":
                 if binary_component.binary_model_name in ["DDGR", "DDH", "DDK"]:
                     model = convert_binary(model, "DD")
@@ -1228,7 +1230,6 @@ def convert_binary(
                         outmodel.H4.frozen = outmodel.H3.frozen
                     else:
                         outmodel.H4._quantity = None
-
     if (
         output == "DDS"
         and binary_component.binary_model_name != "DDGR"
