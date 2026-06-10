@@ -25,4 +25,5 @@ the released changes.
 - Some of the `gridutils` functions had improper logging behavior
 - Fixed bug in changing epoch for ELL1k model
 - Fixed bug in `GaussianRV_gen`, where the probability distribution function was not normalized correctly. Changed to use `scipy.stats.truncnorm` instead of the custom `GaussianRV_gen`.
+- Fixed `convert_binary()` for ELL1H models to run `setup()` and not use H4 when not desired
 ### Removed

@@ -349,3 +349,17 @@ def test_DDFB0_roundtrip(output):
                 )
         else:
             assert getattr(m, p).value == getattr(mback, p).value
+
+
+def test_ELL1_ELL1H():
+    m = get_model(io.StringIO(parELL1))
+    mout = pint.binaryconvert.convert_binary(m, "ELL1H", useSTIGMA=True)
+    assert "STIGMA" in mout.components["BinaryELL1H"].binary_instance.fit_params
+
+    mout = pint.binaryconvert.convert_binary(m, "ELL1H", useSTIGMA=False)
+    assert "H4" in mout.components["BinaryELL1H"].binary_instance.fit_params
+    assert mout.NHARMS.value == 7
+
+    mout = pint.binaryconvert.convert_binary(m, "ELL1H", useSTIGMA=False, NHARMS=3)
+    assert "H4" not in mout.components["BinaryELL1H"].binary_instance.fit_params
+    assert mout.NHARMS.value == 3

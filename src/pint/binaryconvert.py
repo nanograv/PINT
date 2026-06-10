@@ -553,7 +553,7 @@ def _transfer_params(
 def convert_binary(
     model: pint.models.TimingModel,
     output: str,
-    NHARMS: int = 3,
+    NHARMS: int = 7,
     useSTIGMA: bool = False,
     KOM: u.Quantity = 0 * u.deg,
 ) -> pint.models.TimingModel:
@@ -645,10 +645,13 @@ def convert_binary(
                 outmodel.STIGMA.uncertainty = stigma_unc
                 outmodel.STIGMA.frozen = outmodel.H3.frozen
             else:
-                # use H4 and H3
-                outmodel.H4.quantity = h4
-                outmodel.H4.uncertainty = h4_unc
-                outmodel.H4.frozen = outmodel.H3.frozen
+                # use H4?
+                if NHARMS > 3:
+                    outmodel.H4.quantity = h4
+                    outmodel.H4.uncertainty = h4_unc
+                    outmodel.H4.frozen = outmodel.H3.frozen
+                else:
+                    outmodel.H4._quantity = None
         elif output in ["ELL1"]:
             if model.BINARY.value == "ELL1H":
                 # ELL1H -> ELL1
@@ -1218,10 +1221,13 @@ def convert_binary(
                     outmodel.STIGMA.uncertainty = stigma_unc
                     outmodel.STIGMA.frozen = outmodel.H3.frozen
                 else:
-                    # use H4 and H3
-                    outmodel.H4.quantity = h4
-                    outmodel.H4.uncertainty = h4_unc
-                    outmodel.H4.frozen = outmodel.H3.frozen
+                    # use H4?
+                    if NHARMS > 3:
+                        outmodel.H4.quantity = h4
+                        outmodel.H4.uncertainty = h4_unc
+                        outmodel.H4.frozen = outmodel.H3.frozen
+                    else:
+                        outmodel.H4._quantity = None
 
     if (
         output == "DDS"
@@ -1265,5 +1271,6 @@ def convert_binary(
                 )
                 outmodel.KIN.frozen = model.SINI.frozen
     outmodel.validate()
+    outmodel.setup()
 
     return outmodel
