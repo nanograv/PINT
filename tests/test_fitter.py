@@ -9,7 +9,6 @@ import pint.models as tm
 from pint import fitter, toa, simulation
 from pinttestdata import datadir
 import pint.models.parameter as param
-from pint import ls
 from pint.models import get_model, get_model_and_toas
 
 
@@ -148,7 +147,7 @@ def test_ftest_wb():
         parameter_type="float",
         name="A1DOT",
         value=0.0,
-        units=ls / u.second,
+        units=u.lsec / u.second,
         frozen=False,
         tcb2tdb_scale_factor=u.Quantity(1),
     )
@@ -206,9 +205,7 @@ def test_fitselector():
 
 
 def test_unitless_ell1h_bug_1316():
-    m = get_model(
-        StringIO(
-            """
+    m = get_model(StringIO("""
     PSR J1234+5678
     ELAT 0
     ELONG 0
@@ -220,9 +217,7 @@ def test_unitless_ell1h_bug_1316():
     TASC 57000 1
     EPS1 0 1
     EPS2 0 1
-    """
-        )
-    )
+    """))
     t = simulation.make_fake_toas_uniform(56000, 59000, 16, m)
     f = fitter.Fitter.auto(t, m)
     f.get_derived_params()

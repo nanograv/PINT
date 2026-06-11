@@ -485,7 +485,7 @@ class BinaryBTPiecewise(PulsarBinary):
             param_unit = u.d
         elif param_name[:2] == "A1":
             paramX_mapping = self.get_prefix_mapping_component("A1X_")
-            param_unit = ls
+            param_unit = u.lsec
         else:
             raise AttributeError(
                 f"param '{param_name}' not found. Please choose another. Currently implemented: 'T0' or 'A1' "
