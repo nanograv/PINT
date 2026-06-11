@@ -12,6 +12,7 @@ the released changes.
 - Moved altitude calculation to TOAs object, to make it only happen once
 - `WidebandDownhillFitter` now handles correlated noise correctly.
 - `pintk` Diff/Unc calculation now uses post-fit uncertainties.
+- Updated GMRT coordinates.
 ### Added
 - Plot whitened DM residuals in pintk.
 - `ssb_to_psb_xyz_ECL` and `ssb_to_psb_xyz_ICRS` are now cached
