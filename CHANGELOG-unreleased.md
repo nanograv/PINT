@@ -26,4 +26,5 @@ the released changes.
 - Fixed bug in changing epoch for ELL1k model
 - Fixed `gridutils` behavior for 1 CPU
 - Fixed bug in `GaussianRV_gen`, where the probability distribution function was not normalized correctly. Changed to use `scipy.stats.truncnorm` instead of the custom `GaussianRV_gen`.
+- Fixed bug in printing of parameter correlation/covariance matrices
 ### Removed
