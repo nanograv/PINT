@@ -229,11 +229,11 @@ class TopoObs(Observatory):
     def __repr__(self):
         aliases = [f"'{x}'" for x in self.aliases]
         origin = (
-            f"{self.fullname}\n{self.origin}"
+            f"{self.fullname}\n\t{self.origin}"
             if self.fullname != self.name
             else self.origin
         )
-        return f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.location.x}, {self.location.y} {self.location.z}]:\n({origin})"
+        return f"TopoObs(\n\t'{self.name}' ({','.join(aliases)}) at [{self.location.x}, {self.location.y} {self.location.z}]:\n\t{origin})"
 
     @property
     def timescale(self):
