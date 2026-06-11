@@ -27,4 +27,5 @@ the released changes.
 - Fixed `gridutils` behavior for 1 CPU
 - Fixed bug in `GaussianRV_gen`, where the probability distribution function was not normalized correctly. Changed to use `scipy.stats.truncnorm` instead of the custom `GaussianRV_gen`.
 - Fixed `convert_binary()` for ELL1H models to run `setup()` and not use H4 when not desired
+- Fixed bug in printing of parameter correlation/covariance matrices
 ### Removed
