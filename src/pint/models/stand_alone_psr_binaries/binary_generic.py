@@ -6,7 +6,7 @@ import numpy as np
 from erfa import DAYSEC as SECS_PER_DAY
 from loguru import logger as log
 
-from pint import Tsun, ls
+from pint import Tsun
 from pint.models.stand_alone_psr_binaries.binary_orbits import OrbitPB
 
 SECS_PER_JUL_YEAR = SECS_PER_DAY * 365.25
