@@ -28,4 +28,5 @@ the released changes.
 - Fixed `gridutils` behavior for 1 CPU
 - Fixed bug in `GaussianRV_gen`, where the probability distribution function was not normalized correctly. Changed to use `scipy.stats.truncnorm` instead of the custom `GaussianRV_gen`.
 - Fixed bug in printing of parameter correlation/covariance matrices
+- `make_fake_toas_fromMJDs` now does not assume `PLANET_SHAPIRO` is in the model - it checks.
 ### Removed
