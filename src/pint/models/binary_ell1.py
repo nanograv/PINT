@@ -409,8 +409,10 @@ class BinaryELL1H(BinaryELL1):
                     f"Requested NHARMS={self.NHARMS.value} will be ignored, since will use exact parameterization with STIGMA specified"
                 )
             self.binary_instance.ds_func = self.binary_instance.delayS_H3_STIGMA_exact
-            if self.STIGMA.quantity <= 0 and not self.H3.value == 0:
-                raise ValueError("STIGMA must be greater than zero.")
+            if self.STIGMA.quantity <= 0 
+                if not self.H3.value == 0:
+                    raise ValueError("STIGMA must be greater than zero.")
+                log.warning(f"ELL1H model has STIGMA=0 and H3=0: this may require adjusting STIGMA to be >0 before fitting")
         self.update_binary_object(None)
 
     def validate(self):
