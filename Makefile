@@ -69,6 +69,7 @@ docs-clean:
 	mkdir -p docs/api
 	rm -f docs/api/*
 	rm -f docs/modules.rst
+	rm -f docs/_autosummary/*
 	$(MAKE) -C docs clean
 
 docs-build: docs-clean ## generate Sphinx HTML documentation, including API docs

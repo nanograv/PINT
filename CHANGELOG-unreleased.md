@@ -9,13 +9,25 @@ the released changes.
 
 ## Unreleased
 ### Changed
-- Change `StepProblem` and `MaxIterReached` into warnings
-- Removed numpy < 2.4 restriction
+- Moved altitude calculation to TOAs object, to make it only happen once
+- `WidebandDownhillFitter` now handles correlated noise correctly.
+- `pintk` Diff/Unc calculation now uses post-fit uncertainties.
+- Updated GMRT coordinates.
 ### Added
-- Anderson-Darling test for normal data with fixed mean/variance
-- KS test to check if the whitened residuals are unit-normal distributed
-- Warning about setting of TZRMJD from TOAs
-- Method to zero out mean residual based on TZRMJD
-- Use VLBI astrometric measurements along with coordinate offset in the timing model
+- Plot whitened DM residuals in pintk.
+- `ssb_to_psb_xyz_ECL` and `ssb_to_psb_xyz_ICRS` are now cached
 ### Fixed
+- `WidebandTOAFitter` raises a warning if the model has correlated errors (It used to give wrong results before).
+- Fixed bug where "include_bipm" flag was being ignored when loading Fermi TOAs with weights, now defaults to using EPHEM, CLOCK and PLANET_SHAPIRO from the timing model
+- When flags are created based off jumps uses strings instead of None
+- When writing tempo format parfiles, use 0 instead of inf for TZRFRQ
+- Write VLBI frame rotation parameters correctly to par file. 
+- Make `get_prefix_timeranges` work for SWX.
+- Some of the `gridutils` functions had improper logging behavior
+- Fixed bug in changing epoch for ELL1k model
+- Fixed `gridutils` behavior for 1 CPU
+- Fixed bug in `GaussianRV_gen`, where the probability distribution function was not normalized correctly. Changed to use `scipy.stats.truncnorm` instead of the custom `GaussianRV_gen`.
+- Fixed bug in `model.compare()` where it failed for `PosixPath` objects
+- Fixed bug in printing of parameter correlation/covariance matrices
+- `make_fake_toas_fromMJDs` now does not assume `PLANET_SHAPIRO` is in the model - it checks.
 ### Removed

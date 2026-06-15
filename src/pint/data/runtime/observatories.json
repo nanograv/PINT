@@ -275,12 +275,12 @@
         "clock_fmt": "tempo2",
         "clock_file": "",
         "itrf_xyz": [
-            1656342.3,
-            5797947.77,
-            2073243.16
+            1657059.36,
+            5797913.14,
+            2073026.71
         ],
         "fullname": "The Giant Metre-wave Radio Telescope (GMRT)",
-        "origin": "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\nGMRT does not need clock files as the data is recorded against UTC(gps)."
+        "origin": "Data provided by the InPTA team on 5 Jun 2026."
     },
     "ort": {
         "aliases": [
