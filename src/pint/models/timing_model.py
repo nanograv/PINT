@@ -2605,9 +2605,9 @@ class TimingModel:
         assert format.lower() in ["text", "markdown"]
         format = format.lower()
 
-        model_name = self.name.split("/")[-1] if self.name != "" else "Model 1"
+        model_name = str(self.name).split("/")[-1] if self.name != "" else "Model 1"
         if othermodel.name != "":
-            other_model_name = othermodel.name.split("/")[-1]
+            other_model_name = str(othermodel.name).split("/")[-1]
         else:
             other_model_name = "Model 2"
 
