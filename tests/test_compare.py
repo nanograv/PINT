@@ -7,6 +7,7 @@ import os
 import io
 from copy import deepcopy as cp
 from pinttestdata import datadir
+import pathlib
 
 
 class TestCompare:
@@ -158,3 +159,11 @@ class TestCompare:
             model_2.compare(model_1)
             model_1 = mod.get_model(io.StringIO(par_base1))
             model_2 = mod.get_model(io.StringIO(par_base2))
+
+    def test_posix(self):
+
+        model = mod.get_model(
+            pathlib.Path(os.path.join(datadir, "J0613-0200_NANOGrav_9yv1.gls.par"))
+        )
+        modelcp = cp(model)
+        model.compare(modelcp)
