@@ -1,5 +1,4 @@
-"""Functions related to simulating TOAs and models
-"""
+"""Functions related to simulating TOAs and models"""
 
 from collections import OrderedDict
 from copy import deepcopy
@@ -454,7 +453,7 @@ def make_fake_toas_fromMJDs(
         ephem=model["EPHEM"].value,
         include_bipm=clk_version["include_bipm"],
         bipm_version=clk_version["bipm_version"],
-        planets=model["PLANET_SHAPIRO"].value if "PLANET_SHAPIRO" in model else False,,
+        planets=model["PLANET_SHAPIRO"].value if "PLANET_SHAPIRO" in model else False,
         flags=flags,
     )
 
