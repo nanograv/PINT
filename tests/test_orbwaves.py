@@ -8,7 +8,6 @@ import pint.models as tm
 from pint import fitter, toa, simulation
 from pinttestdata import datadir
 import pint.models.parameter as param
-from pint import ls
 from pint.models import get_model, get_model_and_toas
 
 
