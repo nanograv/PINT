@@ -953,6 +953,26 @@ class TimingModel:
 
         return any(isinstance(x, PulsarBinary) for x in self.components.values())
 
+    def _get_primary_binary_component(self):
+        """Return the binary component tagged by ``BINARY`` when present.
+
+        For hierarchical triples we want orbital utility methods to operate on
+        the inner orbit (the component selected by the ``BINARY`` line), not the
+        outer ``BINARY2`` component.
+        """
+        from pint.models.pulsar_binary import PulsarBinary
+
+        binaries = [c for c in self.components.values() if isinstance(c, PulsarBinary)]
+        if not binaries:
+            return None
+
+        for b in binaries:
+            if getattr(b, "binary_param_tag", "BINARY") == "BINARY":
+                return b
+
+        # Fallback for legacy/single-binary behavior.
+        return binaries[0]
+
     def orbital_phase(
         self,
         barytimes: Union[time.Time, TOAs, np.ndarray, float, MJDParameter],
@@ -991,10 +1011,7 @@ class TimingModel:
         """
         if not self.is_binary:  # punt if not a binary
             return None
-        # Find the binary model
-        b = self.components[
-            [x for x in self.components.keys() if x.startswith("Binary")][0]
-        ]
+        b = self._get_primary_binary_component()
         # Make sure that the binary instance has the binary params
         b.update_binary_object(None)
         # Handle input times and update them in stand-alone binary models
@@ -1062,9 +1079,7 @@ class TimingModel:
         """
         # this should also update the binary instance
         nu = self.orbital_phase(barytimes, anom="true")
-        b = self.components[
-            [x for x in self.components.keys() if x.startswith("Binary")][0]
-        ]
+        b = self._get_primary_binary_component()
         bbi = b.binary_instance  # shorthand
         psi = nu + bbi.omega()
         return (
@@ -1136,10 +1151,7 @@ class TimingModel:
         """
         if not self.is_binary:  # punt if not a binary
             return None
-        # Find the binary model
-        b = self.components[
-            [x for x in self.components.keys() if x.startswith("Binary")][0]
-        ]
+        b = self._get_primary_binary_component()
         bbi = b.binary_instance  # shorthand
         # Superior conjunction occurs when true anomaly + omega == 90 deg
         # We will need to solve for this using a root finder (brentq)
@@ -1161,7 +1173,7 @@ class TimingModel:
         scs = []
         for bt in bts:
             # Make 11 times over one orbit after bt
-            pb = self.pb()[0].to_value("day")
+            pb = b.pb()[0].to_value("day")
             ts = np.linspace(bt, bt + pb, 11)
             # Compute the true anomalies and omegas for those times
             nus = self.orbital_phase(ts, anom="true")
