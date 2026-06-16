@@ -2,7 +2,6 @@ import astropy.constants as c
 import astropy.units as u
 import numpy as np
 
-from pint import ls
 from pint.models.stand_alone_psr_binaries.BT_model import BTmodel
 
 
@@ -212,7 +211,7 @@ class BTpiecewise(BTmodel):
             A1X_per_toa = self.A1.value
 
         T0X_per_toa = T0X_per_toa * u.d
-        A1X_per_toa = A1X_per_toa * ls
+        A1X_per_toa = A1X_per_toa * u.lsec
 
         return [T0X_per_toa, A1X_per_toa]
 

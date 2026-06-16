@@ -9,7 +9,6 @@ import pint.models as tm
 from pint import fitter, toa, simulation
 from pinttestdata import datadir
 import pint.models.parameter as param
-from pint import ls
 from pint.models import get_model, get_model_and_toas
 
 
@@ -148,7 +147,7 @@ def test_ftest_wb():
         parameter_type="float",
         name="A1DOT",
         value=0.0,
-        units=ls / u.second,
+        units=u.lsec / u.second,
         frozen=False,
         tcb2tdb_scale_factor=u.Quantity(1),
     )
