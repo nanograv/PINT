@@ -115,21 +115,59 @@ class BinaryDD(PulsarBinary):
         self.check_required_params(["T0", "A1"])
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
-            if hasattr(self, p) and getattr(self, p).value is None:
-                getattr(self, p).value = 0.0
-                getattr(self, p).frozen = True
+            if self._hasbp(p) and self._bp(p).value is None:
+                self._bp(p).value = 0.0
+                self._bp(p).frozen = True
 
-        if hasattr(self, "GAMMA") and self.GAMMA.value is None:
-            self.GAMMA.value = 0.0
-            self.GAMMA.frozen = True
+        if self._hasbp("GAMMA") and self._bp("GAMMA").value is None:
+            self._bp("GAMMA").value = 0.0
+            self._bp("GAMMA").frozen = True
 
         # If eccentricity is zero, freeze some parameters to 0
         # OM = 0 -> T0 = TASC
-        if self.ECC.value == 0 or self.ECC.value is None:
+        if self._bp("ECC").value == 0 or self._bp("ECC").value is None:
             for p in ("ECC", "OM", "OMDOT", "EDOT"):
-                if hasattr(self, p):
-                    getattr(self, p).value = 0.0
-                    getattr(self, p).frozen = True
+                if self._hasbp(p):
+                    self._bp(p).value = 0.0
+                    self._bp(p).frozen = True
+
+
+class BinaryDD2(BinaryDD):
+    """Outer-orbit Damour and Deruelle model for a hierarchical triple system.
+
+    This is identical to :class:`pint.models.binary_dd.BinaryDD` except that all
+    of its parameters carry a ``_2`` suffix (``PB_2``, ``A1_2``, ``T0_2``, ...)
+    and it is selected with the ``BINARY2`` parfile parameter instead of
+    ``BINARY``. It is intended to model the *outer* orbit of a hierarchical
+    triple, alongside a normal inner binary component.
+
+    Because this component belongs to the ``pulsar_system_outer`` category,
+    which is ordered before ``pulsar_system`` in
+    :data:`pint.models.timing_model.DEFAULT_ORDER`, its delay is accumulated
+    before the inner binary's delay. PINT evaluates each binary at
+    ``barycentric time - accumulated delay``, so the outer orbit's light-travel
+    delay automatically shifts the epoch at which the inner orbit is evaluated.
+    This reproduces the physical coupling of a hierarchical triple (the wide
+    outer orbit Doppler-shifting the inner orbit), rather than naively adding two
+    independent binary delays.
+
+    Orbital-frequency (``FBn``) and ``ORBWAVE`` parameterizations are not
+    supported for the outer orbit.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_dd.BinaryDD2
+    """
+
+    register = True
+    category = "pulsar_system_outer"
+    param_suffix = "_2"
+    binary_param_tag = "BINARY2"
+
+    def __init__(self):
+        super().__init__()
+        self._apply_param_suffix()
 
 
 class BinaryDDS(BinaryDD):

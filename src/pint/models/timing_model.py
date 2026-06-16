@@ -125,6 +125,7 @@ DEFAULT_ORDER = [
     "dispersion_constant",
     "dispersion_dmx",
     "dispersion_jump",
+    "pulsar_system_outer",
     "pulsar_system",
     "frequency_dependent",
     "absolute_phase",
@@ -323,6 +324,14 @@ class TimingModel:
             "",
         )
         self.add_param_from_top(
+            strParameter(
+                name="BINARY2",
+                description="Outer-orbit binary model for a hierarchical triple system",
+                value=None,
+            ),
+            "",
+        )
+        self.add_param_from_top(
             boolParameter(
                 name="DILATEFREQ",
                 value=False,
@@ -489,14 +498,33 @@ class TimingModel:
 
         from pint.models.pulsar_binary import PulsarBinary
 
+        def num_binaries_with_tag(tag):
+            return len(
+                list(
+                    filter(
+                        lambda c: isinstance(c, PulsarBinary)
+                        and getattr(c, "binary_param_tag", "BINARY") == tag,
+                        self.components.values(),
+                    )
+                )
+            )
+
         has_binary_attr = hasattr(self, "BINARY") and self.BINARY.value
         if has_binary_attr:
             assert (
-                num_components_of_type(PulsarBinary) == 1
-            ), "BINARY attribute is set but no PulsarBinary component found."
+                num_binaries_with_tag("BINARY") == 1
+            ), "BINARY attribute is set but no (inner) PulsarBinary component found."
+        has_binary2_attr = hasattr(self, "BINARY2") and self.BINARY2.value
+        if has_binary2_attr:
+            assert (
+                num_binaries_with_tag("BINARY2") == 1
+            ), "BINARY2 attribute is set but no outer PulsarBinary component found."
         assert (
-            num_components_of_type(PulsarBinary) <= 1
-        ), "Model can have at most one PulsarBinary component."
+            num_binaries_with_tag("BINARY") <= 1
+        ), "Model can have at most one inner PulsarBinary component."
+        assert (
+            num_binaries_with_tag("BINARY2") <= 1
+        ), "Model can have at most one outer PulsarBinary component."
 
         from pint.models.solar_wind_dispersion import (
             SolarWindDispersion,
@@ -3133,7 +3161,8 @@ class TimingModel:
         if format.lower() == "tempo2":
             result_begin += "MODE 1\n"
         for p in self.top_level_params:
-            if p == "BINARY":  # Will print the Binary model name in the binary section
+            # Will print the binary model name in the (outer) binary section
+            if p in ("BINARY", "BINARY2"):
                 continue
             result_begin += getattr(self, p).as_parfile_line(format=format)
         for cat in start_order:
@@ -4223,13 +4252,20 @@ class AllComponents:
                 component_special_params[cps[0]].append(param)
         return component_special_params
 
-    def search_binary_components(self, system_name: str) -> "Component":
+    def search_binary_components(
+        self, system_name: str, category: str = "pulsar_system"
+    ) -> "Component":
         """Search the pulsar binary component based on given name.
 
         Parameters
         ----------
         system_name : str
             Searching name for the pulsar binary/system
+        category : str, optional
+            The component category to search within. Defaults to
+            ``"pulsar_system"`` (the inner binary). Use
+            ``"pulsar_system_outer"`` to find the outer-orbit component of a
+            hierarchical triple.
 
         Return
         ------
@@ -4241,7 +4277,7 @@ class AllComponents:
             If the input binary model name does not match any PINT defined binary
             model.
         """
-        all_systems = self.category_component_map["pulsar_system"]
+        all_systems = self.category_component_map[category]
         if system_name in all_systems:
             return self.components[system_name]
         for cp_name in all_systems:

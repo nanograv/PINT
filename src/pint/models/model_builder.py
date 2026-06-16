@@ -271,8 +271,8 @@ class ModelBuilder:
                     f" class, please set register to 'False' in the class"
                     f" of component {k}."
                 )
-                if v.category == "pulsar_system":
-                    # The pulsar system will be selected by parameter BINARY
+                if v.category in ("pulsar_system", "pulsar_system_outer"):
+                    # The pulsar system is selected by parameter BINARY/BINARY2
                     continue
                 else:
                     raise ComponentConflict(m)
@@ -488,6 +488,12 @@ class ModelBuilder:
                 self.choose_binary_model(param_inpar, force_binary_model, allow_T2)
             )
 
+        # Outer-orbit binary for hierarchical triple systems.
+        binary2 = param_inpar.get("BINARY2", None)
+        if binary2:
+            binary2 = binary2[0]
+            selected_components.add(self.choose_outer_binary_model(param_inpar))
+
         # 2. Get the component list from the parameters in the parfile.
         # 2.1 Check the aliases of input parameters.
         # This does not include the repeating parameters, but it should not
@@ -528,6 +534,17 @@ class ModelBuilder:
                         f" Please indicate the binary model "
                         f" before using parameter {k}, which is"
                         f" a binary model parameter."
+                    )
+                else:
+                    continue
+            # Outer-orbit binary component, controlled by the BINARY2 tag.
+            if self.all_components.components[cps[0]].category == "pulsar_system_outer":
+                if binary2 is None:
+                    raise MissingBinaryError(
+                        f"The outer-orbit binary model is decided by the"
+                        f" parameter 'BINARY2'. Please indicate the outer"
+                        f" binary model before using parameter {k}, which"
+                        f" is an outer binary model parameter."
                     )
                 else:
                     continue
@@ -643,6 +660,32 @@ class ModelBuilder:
                 ) from None
             raise
 
+        return binary_cp.__class__.__name__
+
+    def choose_outer_binary_model(self, param_inpar):
+        """Choose the outer-orbit BINARY2 model for a hierarchical triple.
+
+        Parameters
+        ----------
+        param_inpar: dict
+            Dictionary of the unique parameters in .par file with the key being
+            the parfile line. :func:`parse_parfile` returns this dictionary.
+
+        Returns
+        -------
+        str
+            Name of the outer binary component class.
+
+        Note
+        ----
+        The outer model is taken verbatim from the ``BINARY2`` parameter (no T2
+        guessing is performed) and must correspond to a registered component in
+        the ``pulsar_system_outer`` category (e.g. ``DD`` -> ``BinaryDD2``).
+        """
+        binary2 = param_inpar["BINARY2"][0]
+        binary_cp = self.all_components.search_binary_components(
+            binary2, category="pulsar_system_outer"
+        )
         return binary_cp.__class__.__name__
 
     def _setup_model(
