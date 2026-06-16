@@ -241,7 +241,7 @@ class OrbitFBX(Orbit):
 
 
 class OrbitWaves(Orbit):
-    """Orbit with orbital phase variations described by a Fourier series"""
+    """Orbit with orbital phase variations described by a Fourier series."""
 
     def __init__(
         self,
