@@ -3530,7 +3530,7 @@ class TimingModel:
                 s += f"T0  = {t0:SP}\n"
                 outdict["T0"] = t0
 
-                a1 = self.A1.quantity if self.A1.quantity is not None else 0 * pint.ls
+                a1 = self.A1.quantity if self.A1.quantity is not None else 0 * u.lsec
                 if rms is not None and ntoas is not None:
                     s += pint.utils.ELL1_check(
                         a1,
@@ -3542,7 +3542,7 @@ class TimingModel:
                 s += "\n"
             # Masses and inclination
             if not self.A1.frozen:
-                a1 = self.A1.as_ufloat(pint.ls)
+                a1 = self.A1.as_ufloat(u.lsec)
                 # This is the mass function, done explicitly so that we get
                 # uncertainty propagation automatically.
                 # TODO: derived quantities funcs should take uncertainties

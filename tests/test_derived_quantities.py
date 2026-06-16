@@ -35,7 +35,7 @@ def test_mass_function():
     # this should be 4* pi**2 * x**3 / (G * Pb**2)
     # in appropriate units
     assert np.isclose(
-        mass_funct(1.0 * u.d, 2.0 * pint.ls), 0.008589595519643776 * u.solMass
+        mass_funct(1.0 * u.d, 2.0 * u.lsec), 0.008589595519643776 * u.solMass
     )
 
 
@@ -100,7 +100,7 @@ def test_companion_mass(Mpsr, Mc, Pb, incl):
     # pulsar semi-major axis
     apsr = (Mc / Mtot) * a
     # projected
-    x = (apsr * np.sin(incl)).to(pint.ls)
+    x = (apsr * np.sin(incl)).to(u.lsec)
     # computed companion mass
     assert np.isclose(companion_mass(Pb, x, mp=Mpsr, i=incl), Mc)
 
@@ -126,7 +126,7 @@ def test_companion_mass_array(Mpsr, Mc, Pb, incl):
     # pulsar semi-major axis
     apsr = (Mc / Mtot) * a
     # projected
-    x = (apsr * np.sin(incl)).to(pint.ls)
+    x = (apsr * np.sin(incl)).to(u.lsec)
     # computed companion mass
     assert np.allclose(companion_mass(Pb, x, mp=Mpsr, i=incl), Mc)
 
@@ -152,7 +152,7 @@ def test_pulsar_mass(Mpsr, Mc, Pb, incl):
     # pulsar semi-major axis
     apsr = (Mc / Mtot) * a
     # projected
-    x = (apsr * np.sin(incl)).to(pint.ls)
+    x = (apsr * np.sin(incl)).to(u.lsec)
     # computed pulsar mass
     assert np.isclose(pulsar_mass(Pb, x, Mc, i=incl), Mpsr)
 
@@ -178,7 +178,7 @@ def test_pulsar_mass_array(Mpsr, Mc, Pb, incl):
     # pulsar semi-major axis
     apsr = (Mc / Mtot) * a
     # projected
-    x = (apsr * np.sin(incl)).to(pint.ls)
+    x = (apsr * np.sin(incl)).to(u.lsec)
     # computed pulsar mass
     assert np.allclose(pulsar_mass(Pb, x, Mc, i=incl), Mpsr)
 
