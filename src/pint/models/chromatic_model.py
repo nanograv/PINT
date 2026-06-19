@@ -10,6 +10,7 @@ from pint import DMconst
 from pint.exceptions import MissingParameter
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.timing_model import DelayComponent, MissingParameter, MissingTOAs
+from pint.toa import TOAs
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
@@ -649,7 +650,7 @@ class ChromaticCMX(Chromatic):
         if bad_parameters:
             raise MissingTOAs(bad_parameters)
 
-    def cmx_cm(self, toas):
+    def get_select_idxs(self, toas: TOAs):
         condition = {}
         tbl = toas.table
         if not hasattr(self, "cmx_toas_selector"):
@@ -661,14 +662,24 @@ class ChromaticCMX(Chromatic):
             r1 = getattr(self, CMXR1_mapping[epoch_ind]).quantity
             r2 = getattr(self, CMXR2_mapping[epoch_ind]).quantity
             condition[CMX_mapping[epoch_ind]] = (r1.mjd, r2.mjd)
-        select_idx = self.cmx_toas_selector.get_select_index(
-            condition, tbl["mjd_float"]
-        )
+        return self.cmx_toas_selector.get_select_index(condition, tbl["mjd_float"])
+
+    def cmx_cm(self, toas: TOAs):
+        if (
+            self._parent is not None
+            and self._parent.toas_for_cache is toas
+            and self._parent.piecewise_cache is not None
+            and "ChromaticCMX" in self._parent.piecewise_cache
+        ):
+            select_idx = self._parent.piecewise_cache["ChromaticCMX"]
+        else:
+            select_idx = self.get_select_idxs(toas)
+
         # Get CMX delays
-        cm = np.zeros(len(tbl)) * self._parent.CM.units
+        cm = np.zeros(len(toas))
         for k, v in select_idx.items():
-            cm[v] += getattr(self, k).quantity
-        return cm
+            cm[v] += getattr(self, k).value
+        return cm << self._parent.CM.units
 
     def CMX_chromatic_delay(self, toas, acc_delay=None):
         """This is a wrapper function for interacting with the TimingModel class"""
