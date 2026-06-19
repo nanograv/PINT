@@ -170,9 +170,9 @@ class Spindown(SpindownBase):
             first pulsar frame toa.
         """
         if isinstance(new_epoch, Time):
-            new_epoch = Time(new_epoch, scale="tdb", precision=9)
+            new_epoch = Time(new_epoch, scale="tdb")
         else:
-            new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
+            new_epoch = Time(new_epoch, scale="tdb", format="mjd")
 
         if self.PEPOCH.value is None:
             if toas is None or delay is None:

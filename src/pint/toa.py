@@ -1981,7 +1981,7 @@ class TOAs:
         self.table["delta_pulse_number"] += dphs
 
         # Then, add pulse_number as a table column if possible
-        pns = np.array(self.get_flag_value("pn", np.nan, float)[0])
+        pns = np.array(self.get_flag_value("pn", np.nan, float)[0]).astype(np.float64)
         if np.all(np.isnan(pns)):
             raise ValueError("No pulse numbers found")
         self.table["pulse_number"] = pns
@@ -2008,7 +2008,7 @@ class TOAs:
         # paulr: I think pulse numbers should be computed with abs_phase=True!
         delta_pulse_numbers = Phase(self.table["delta_pulse_number"])
         phases = model.phase(self, abs_phase=True) + delta_pulse_numbers
-        self.table["pulse_number"] = phases.int
+        self.table["pulse_number"] = phases.int.astype(np.float64)
         self.table["pulse_number"].unit = u.dimensionless_unscaled
 
     def remove_pulse_numbers(self):

@@ -228,7 +228,7 @@ class DispersionDM(Dispersion):
             dt_value = np.zeros(len(toas), dtype=np.longdouble)
         dm_terms_value = [d.value for d in dm_terms]
         dm = taylor_horner(dt_value, dm_terms_value)
-        return dm * self.DM.units
+        return dm.astype(np.float64) * self.DM.units
 
     def constant_dispersion_delay(self, toas, acc_delay=None):
         """This is a wrapper function for interacting with the TimingModel class"""

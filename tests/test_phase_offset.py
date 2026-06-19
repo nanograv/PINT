@@ -46,8 +46,11 @@ def test_phase_offset():
     mean1 = res.calc_phase_mean().value
     # The new mean should be equal to (0.2 - -0.1).
     assert np.isclose(mean1 - mean0, 0.3, atol=1e-3)
+    print(res.calc_phase_resids(), res.calc_phase_resids().__class__)
+    print(1 / t.get_errors() ** 2, t.get_errors().__class__)
     assert np.isclose(
-        np.average(res.calc_phase_resids(), weights=1 / t.get_errors() ** 2),
+        np.sum(res.calc_phase_resids() / t.get_errors().value ** 2)
+        / np.sum(1 / t.get_errors().value ** 2),
         0.3,
         atol=1e-3,
     )

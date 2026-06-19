@@ -1,7 +1,7 @@
-"""Phase jumps. """
+"""Phase jumps."""
 
 import astropy.units as u
-import numpy
+import numpy as np
 from loguru import logger as log
 
 from pint.models.parameter import maskParameter
@@ -50,7 +50,7 @@ class DelayJump(DelayComponent):
         in the unit of seconds.
         """
         tbl = toas.table
-        jdelay = numpy.zeros(len(tbl))
+        jdelay = np.zeros(len(tbl))
         for jump in self.jumps:
             jump_par = getattr(self, jump)
             mask = jump_par.select_toa_mask(toas)
@@ -61,7 +61,7 @@ class DelayJump(DelayComponent):
 
     def d_delay_d_jump(self, toas, jump_param, acc_delay=None):
         tbl = toas.table
-        d_delay_d_j = numpy.zeros(len(tbl))
+        d_delay_d_j = np.zeros(len(tbl))
         jpar = getattr(self, jump_param)
         mask = jpar.select_toa_mask(toas)
         d_delay_d_j[mask] = -1.0
@@ -122,7 +122,7 @@ class PhaseJump(PhaseComponent):
         """
         tbl = toas.table
         # base this on the first available jump (doesn't have to be JUMP1)
-        jphase = numpy.zeros(len(tbl)) * (
+        jphase = np.zeros(len(tbl)) * (
             getattr(self, self.get_params_of_type("maskParameter")[0]).units
             * self._parent.F0.units
         )
@@ -131,13 +131,15 @@ class PhaseJump(PhaseComponent):
             mask = jump_par.select_toa_mask(toas)
             # NOTE: Currently parfile jump value has opposite sign with our
             # phase calculation.
-            jphase[mask] += jump_par.quantity * self._parent.F0.quantity
+            jphase[mask] += jump_par.quantity * self._parent.F0.quantity.astype(
+                np.float64
+            )
         return jphase
 
     def d_phase_d_jump(self, toas, jump_param, delay):
         tbl = toas.table
         jpar = getattr(self, jump_param)
-        d_phase_d_j = numpy.zeros(len(tbl))
+        d_phase_d_j = np.zeros(len(tbl))
         mask = jpar.select_toa_mask(toas)
         d_phase_d_j[mask] = self._parent.F0.value
         return (d_phase_d_j * self._parent.F0.units).to(1 / u.second)

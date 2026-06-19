@@ -303,12 +303,12 @@ def get_Fermi_TOAs(
         t = Time(
             val=mjds[:, 0],
             val2=mjds[:, 1],
-            format="mjd",
+            format="mjd_long",
             scale=scale,
             location=location,
         )
     else:
-        t = Time(mjds, format="mjd", scale=scale, location=location)
+        t = Time(mjds, format="mjd_long", scale=scale, location=location)
     if weightcolumn is None:
         flags = [{"energy": str(e)} for e in energies.to_value(u.MeV)]
     else:

@@ -48,7 +48,6 @@ def model_eccentric_toas_ecorr():
     model_eccentric = get_model(
         io.StringIO("\n".join([par_eccentric, "ECORR tel @ 2"]))
     )
-
     toas = merge_TOAs(
         [
             make_fake_toas_uniform(
@@ -70,7 +69,6 @@ def model_eccentric_toas_wb():
     model_eccentric = get_model(
         io.StringIO("\n".join([par_eccentric, "ECORR tel @ 2"]))
     )
-
     toas = merge_TOAs(
         [
             make_fake_toas_uniform(
