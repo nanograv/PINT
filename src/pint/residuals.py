@@ -170,6 +170,8 @@ class Residuals:
         self._is_combined = False
 
         self.noise_ampls: Dict[str, u.Quantity] = {}
+        if "PhaseOffset" not in model.components:
+            self.noise_ampls["offset"] = np.zeros(1) * u.s
         for component in model.NoiseComponent_list:
             if component.introduces_correlated_errors:
                 self.noise_ampls[component.category] = (
@@ -568,15 +570,87 @@ class Residuals:
             )
         return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 
-    def calc_whitened_resids(self) -> u.Quantity:
+    def calc_noise_ampls(self, force_refit: bool = False) -> Dict[str, u.Quantity]:
+        """Compute mode amplitudes describing the noise realization.
+
+        Noise amplitudes are automatically computed as the result of a fit,
+        and stored on the `Residuals` object. If they are already present,
+        this function will simply return the cached values, and not attempt
+        to re-calculate them, unless `force_refit` is set to `True`.
+        Otherwise, a single fitter step is taken and the results returned.
+
+        Parameters
+        ----------
+        force_refit: bool, optional
+            Whether to take a fitter step even if a stored `noise_resids`
+            dictionary is already available.
+
+        Returns
+        -------
+        noise_ampls: dict
+            A dictionary mapping correlated noise component category names
+            (e.g., 'pl_red_noise', 'ecorr_noise') to `Quantity` arrays
+            containing the corresponding noise amplitudes.
+            Also available as an attribute of the `Residuals` object.
+            If the model does not have an explicit `PhaseOffset` component,
+            this dictionary also has an 'offset' entry giving the delay
+            corresponding to the implicit offset added by PINT.
+        """
+        import pint.fitter
+
+        if not hasattr(self, "noise_ampls") or force_refit:
+            # do a single GLSFitter step
+            M, params, units = self.model.full_designmatrix(self.toas)
+            M, norm = pint.fitter.normalize_designmatrix(M, params)
+            phiinv = 1 / self.model.full_basis_weight(self.toas) / norm**2
+            Nvec = errors.to_value(u.s) ** 2
+            mtcm, mtcy = pint.fitter.get_gls_mtcm_mtcy(
+                phiinv,
+                Nvec,
+                M,
+                time_resids.to_value(u.s),
+            )
+            xvar, xhat = pint.fitter._solve_svd(
+                mtcm,
+                mtcy,
+                threshold=0,
+                params=params,
+            )
+
+            # extract noise_ampls
+            noise_dims = self.model.noise_model_dimensions(self.toas)
+            self.noise_ampls = {}
+            if "Offset" in params:
+                offset = xhat[0] / norm[0]
+                offset = np.atleast_1d(offset)
+                offset = (offset / self.model.F0.quantity).to(u.s)
+                self.noise_ampls["offset"] = offset
+            ntmpar = self.model.ntmpar
+            for comp in noise_dims:
+                # The first column of designmatrix is "offset", add 1 to match
+                # the indices of noise designmatrix
+                p0 = noise_dims[comp][0] + ntmpar
+                p1 = p0 + noise_dims[comp][1]
+                self.noise_ampls[comp] = (xhat / norm)[p0:p1] * u.s
+
+        return self.noise_ampls
+
+    def calc_whitened_resids(
+        self,
+        force_refit: bool = False,
+        normalize: bool = True,
+        remove_only: Optional[List[str]] = None,
+    ) -> u.Quantity:
         """Compute whitened timing residuals (dimensionless).
 
         Whitened residuals are computed by subtracting the correlated
-        noise realization from the time residuals and normalizes the
-        result using scaled TOA uncertainties.
+        noise realization from the time residuals and (optionally)
+        normalizing the result using scaled TOA uncertainties.
 
-        This requires the `noise_resids` attribute to be set. This is
-        usually available in a post-fit residuals object.
+        If the `noise_ampls` attribute is available (such as for a
+        post-fit residuals object), it will be used. Otherwise, a single
+        fitter step is taken. To ignore `noise_resids` and always perform
+        a fit, use the `force_refit` option.
 
         Example usage::
 
@@ -585,20 +659,55 @@ class Residuals:
             >>> res = ftr.resids
             >>> white_res = res.calc_whitened_resids()
 
+        Parameters
+        ----------
+        force_refit: bool, optional
+            Whether to take a fitter step even if `noise_resids` is present.
+        normalize: bool, optional
+            If `True`, normalize the result using scaled TOA uncertainties.
+        remove_only: list of str, optional
+            List of names of noise components which should be removed.
+            Each string should the name of a `NoiseComponent` class.
+            For example, to remove only power-law red noise, set
+            ``remove_only=["PLRedNoise"]``. If this is `None` (the default),
+            all correlated noise components will be removed.
+
         See Also
         --------
         :meth:`pint.residuals.Residuals.calc_time_resids`
         :meth:`pint.residuals.Residuals.calc_phase_resids`
         """
-        r = self.calc_time_resids().to_value("s")
-        errs = self.get_data_error().to_value("s")
+        time_resids = self.calc_time_resids()
+        errors = self.get_data_error()
 
-        if self.model.has_correlated_errors:
-            U = self.model.noise_model_designmatrix(self.toas)
-            Phidiag = self.model.noise_model_basis_weight(self.toas)
-            return whiten_residuals(r, errs, U, Phidiag)
+        self.calc_noise_ampls(force_refit=force_refit)
+
+        if remove_only is None:
+            remove_only = [
+                cname
+                for cname, component in self.model.components.items()
+                if component in self.model.NoiseComponent_list
+                and component.introduces_correlated_errors
+            ]
+
+        whitened_resids = time_resids.copy()
+        for cname in remove_only:
+            component = self.model.components[cname]
+            noise_resids = (
+                component.get_noise_basis(self.toas)
+                @ self.noise_ampls[component.category]
+            )
+            whitened_resids -= noise_resids
+        if "offset" in self.noise_ampls:
+            whitened_resids -= self.noise_ampls["offset"]
+
+        if normalize:
+            whitened_resids /= errors
+            whitened_resids = whitened_resids.to("")
         else:
-            return r / errs
+            whitened_resids = whitened_resids.to(u.us)
+
+        return whitened_resids
 
     def whitened_resids_kstest(self) -> Tuple[float, float]:
         """Checks if the whitened residuals are unit-normal distributed using a KS test. A small p-value indicates a
