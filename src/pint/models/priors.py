@@ -8,7 +8,7 @@ such as total proper motion, 2-d sky location, etc.
 """
 
 import numpy as np
-from scipy.stats import rv_continuous, uniform
+from scipy.stats import rv_continuous, truncnorm, uniform
 
 
 class Prior:
@@ -145,10 +145,9 @@ def GaussianBoundedRV(loc=0.0, scale=1.0, lower_bound=-np.inf, upper_bound=np.in
     upper_bound : number
         Upper bound of allowed parameter range
 
-    Returns a frozen rv_continuous instance with a gaussian probability
-    inside the range lower_bound to upper_bound and 0.0 outside
+    Returns a frozen truncnorm instance with a gaussian probability inside
+    the range lower_bound to upper_bound and 0.0 outside
     """
     ymin = (lower_bound - loc) / scale
     ymax = (upper_bound - loc) / scale
-    n = GaussianRV_gen(name="bounded_gaussian", a=ymin, b=ymax)
-    return n(loc=loc, scale=scale)
+    return truncnorm(a=ymin, b=ymax, loc=loc, scale=scale)

@@ -1,5 +1,4 @@
-""" pint_matrix module defines the pint matrix base class, the design matrix .  and the covariance matrix
-"""
+"""pint_matrix module defines the pint matrix base class, the design matrix .  and the covariance matrix"""
 
 import copy
 from collections import OrderedDict
@@ -749,7 +748,7 @@ class CovarianceMatrix(PintMatrix):
                 cm = self.matrix
         else:
             cm = self.matrix
-        if offset == False:
+        if offset == False and "Offset" in fps:
             nfps = fps.remove("Offset")
             cm = self.get_label_matrix(fps).matrix
         if self.matrix_type == "covariance":

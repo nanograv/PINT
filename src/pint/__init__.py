@@ -55,9 +55,6 @@ __version__ = get_versions()["version"]
 
 # Define a few important constants
 
-# light-second unit
-ls = u.def_unit("ls", c.c * 1.0 * u.s)
-
 # DM unit (pc cm^-3)
 dmu = u.def_unit("dmu", u.pc * u.cm**-3)
 
@@ -66,7 +63,7 @@ dmu = u.def_unit("dmu", u.pc * u.cm**-3)
 DMconst = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
 
 # define equivalency for astropy units
-light_second_equivalency = [(ls, si.second, lambda x: x, lambda x: x)]
+light_second_equivalency = [(u.lsec, si.second, lambda x: x, lambda x: x)]
 # hourangle_second unit
 hourangle_second = u.def_unit("hourangle_second", u.hourangle / np.longdouble(3600.0))
 
@@ -95,8 +92,8 @@ JD_MJD = 2400000.5
 pint_units = {
     "H:M:S": u.hourangle,
     "D:M:S": u.deg,
-    "lt-s": ls,
-    "ls": ls,
+    "lt-s": u.lsec,
+    "ls": u.lsec,
     "Tsun": Tsun,
     "GMsun": GMsun,
     "MJD": u.day,
