@@ -2,6 +2,7 @@
 
 import os
 import copy
+import warnings
 from io import StringIO
 import pytest
 import numpy as np
@@ -12,7 +13,7 @@ from astropy import units as u
 from pint.models import get_model, get_model_and_toas
 from pint.fitter import Fitter
 from pint.simulation import make_fake_toas_uniform
-from pint.models.solar_wind_dispersion import SolarWindDispersionX
+from pint.models.solar_wind_dispersion import SolarWindDispersionX, SolarWindProxyRegression
 import pint.utils
 from pinttestdata import datadir
 
@@ -456,3 +457,105 @@ def test_expression():
         )[-1],
         (m.NE_SW.quantity + dt * m.NE_SW1.quantity),
     )
+
+# ---------------------------------------------------------------------------
+# SolarWindProxyRegression tests
+# ---------------------------------------------------------------------------
+
+# Par string shared by proxy tests.  ELAT != 0 so S(t) is not degenerate.
+_PROXY_PAR = """
+PSR J1234+5678
+F0 1
+DM 10
+ELAT 10
+ELONG 0
+PEPOCH 54000
+"""
+
+_TSTART = 54000
+_TEND = 54000 + 365.25 * 2  # two years
+
+_NE_SW_TRUE = 7.9  # cm^-3
+_BETA1_TRUE = 2.1  # cm^-3 (per unit normalised proxy)
+
+
+def _make_proxy(toas):
+    """Return (proxy_mjd, proxy_vals) — a sinusoidal solar-cycle proxy."""
+    mjds = np.linspace(_TSTART - 100, _TEND + 100, 2000)
+    vals = 5.0 + 3.0 * np.sin(2 * np.pi * (mjds - _TSTART) / (11 * 365.25))
+    return mjds, vals
+
+
+def _proxy_model(ne_sw=_NE_SW_TRUE, beta1=_BETA1_TRUE, swm=0):
+    """Build a SolarWindProxyRegression model with one proxy loaded."""
+    base = get_model(StringIO(_PROXY_PAR))
+    comp = SolarWindProxyRegression()
+    base.add_component(comp)
+    base.NE_SW.value = ne_sw
+    base.SWPRBETA1.value = beta1
+    base.SWM.value = swm
+    toas = make_fake_toas_uniform(_TSTART, _TEND, 50, base, obs="gbt")
+    proxy_mjd, proxy_vals = _make_proxy(toas)
+    base.components["SolarWindProxyRegression"].set_proxy(proxy_mjd, proxy_vals)
+    return base, toas, proxy_mjd, proxy_vals
+
+
+def test_sw_proxy_instantiation():
+    """Component can be programmatically added and has the expected parameters."""
+    model = get_model(StringIO(_PROXY_PAR))
+    model.add_component(SolarWindProxyRegression())
+    assert "SolarWindProxyRegression" in model.components
+    assert hasattr(model, "NE_SW")
+    assert hasattr(model, "SWPRBETA1")
+    assert hasattr(model, "SWPRLAG1")
+
+
+def test_sw_proxy_dm_zero_when_ne_zero():
+    """DM is zero when both NE_SW and BETA1 are zero."""
+    model, toas, _, _ = _proxy_model(ne_sw=0.0, beta1=0.0)
+    dm = model.components["SolarWindProxyRegression"].solar_wind_dm(toas)
+    assert np.all(dm.value == 0.0)
+
+
+def test_sw_proxy_dm_positive():
+    """DM values are positive when NE_SW > 0 with a loaded proxy."""
+    model, toas, _, _ = _proxy_model()
+    dm = model.components["SolarWindProxyRegression"].solar_wind_dm(toas)
+    assert np.all(dm.value > 0)
+
+
+def test_sw_proxy_d_dm_d_beta1_units():
+    """d_dm_d_beta1 has units pc cm^-3 / cm^-3 = pc and correct shape."""
+    model, toas, _, _ = _proxy_model()
+    comp = model.components["SolarWindProxyRegression"]
+
+    d = comp.d_dm_d_swprbeta(toas, "SWPRBETA1")
+    assert d.shape == (len(toas),)
+    assert d.unit.is_equivalent(u.pc / u.cm**3 / (u.cm**-3))
+
+
+def test_sw_proxy_d_dm_d_lag1_shape():
+    """d_dm_d_lag1 has the right shape."""
+    model, toas, _, _ = _proxy_model()
+    # Give the lag a non-trivial value for a meaningful derivative
+    model.SWPRLAG1.value = 5.0
+    comp = model.components["SolarWindProxyRegression"]
+    d = comp.d_dm_d_swprlag(toas, "SWPRLAG1")
+    assert d.shape == (len(toas),)
+
+
+def test_sw_proxy_print_par_includes_proxy_params():
+    """print_par output includes SWPRBETA1 and SWPRLAG1 lines."""
+    model, _, _, _ = _proxy_model()
+    par_text = model.components["SolarWindProxyRegression"].print_par()
+    assert "SWPRBETA1" in par_text
+    assert "SWPRLAG1" in par_text
+    assert "NE_SW" in par_text
+
+
+def test_sw_proxy_delay_positive():
+    """solar_wind_delay is positive (delays are positive for dispersion)."""
+    model, toas, _, _ = _proxy_model()
+    delay = model.components["SolarWindProxyRegression"].solar_wind_delay(toas)
+    assert np.all(delay.to_value(u.s) > 0)
+
