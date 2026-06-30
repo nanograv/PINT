@@ -269,7 +269,7 @@ class PulsarBinary(DelayComponent):
         self.warn_default_params = ["ECC", "OM"]
         # Set up delay function
         self.delay_funcs_component += [self.binarymodel_delay]
-        self.delay_deriv_wrt_prev_delay_func += [self.d_binary_delay_d_prev_delay]
+        self.delay_deriv_wrt_prev_delay_funcs += [self.d_binary_delay_d_prev_delay]
 
     def _apply_param_suffix(self):
         """Rename this component's PINT-facing parameters with ``param_suffix``.

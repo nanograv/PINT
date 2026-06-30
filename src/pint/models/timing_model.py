@@ -2270,7 +2270,7 @@ class TimingModel:
             )
 
             d_delay_d_prev_delay = 0
-            for f in cp.delay_derivs_wrt_prev_delay:
+            for f in cp.delay_deriv_wrt_prev_delay_funcs:
                 d_delay_d_prev_delay += f(toas, d)().to("")
             result *= 1 + d_delay_d_prev_delay
 
@@ -4065,7 +4065,7 @@ class DelayComponent(Component):
     def __init__(self):
         super().__init__()
         self.delay_funcs_component = []
-        self.delay_derivs_wrt_prev_delay = []
+        self.delay_deriv_wrt_prev_delay_funcs = []
 
 
 class PhaseComponent(Component):
