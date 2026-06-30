@@ -34,6 +34,7 @@ class ELL1BaseModel(PSR_BINARY):
         self.ELL1_interVars = ["eps1", "eps2", "Phi", "Dre", "Drep", "Drepp", "nhat"]
         self.add_inter_vars(self.ELL1_interVars)
         self.orbits_func = self.orbits_ELL1
+        self.d_binarydelay_d_prev_delay_par = "TASC"
 
     @property
     def tt0(self):

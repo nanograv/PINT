@@ -2262,10 +2262,23 @@ class TimingModel:
                 f"Derivative function for '{param}' is not provided"
                 f" or not registered; parameter '{param}' may not be fittable. "
             )
-        for df in delay_derivs[param]:
-            result += df(toas, param, acc_delay).to(
-                result.unit, equivalencies=u.dimensionless_angles()
+
+        result = np.longdouble(np.zeros(toas.ntoas) << (u.s / par.units))
+        for cp in self.DelayComponent_list:
+            d = self.delay(
+                toas, cutoff_component=cp.__class__.__name__, include_last=False
             )
+
+            d_delay_d_prev_delay = 0
+            for f in cp.delay_derivs_wrt_prev_delay:
+                d_delay_d_prev_delay += f(toas, d)().to("")
+            result *= 1 + d_delay_d_prev_delay
+
+            if param in cp.deriv_funcs:
+                for df in cp.deriv_funcs[param]:
+                    result += df(toas, param, d).to(
+                        result.unit, equivalencies=u.dimensionless_angles()
+                    )
         return result
 
     def d_phase_d_param_num(
@@ -4052,6 +4065,7 @@ class DelayComponent(Component):
     def __init__(self):
         super().__init__()
         self.delay_funcs_component = []
+        self.delay_derivs_wrt_prev_delay = []
 
 
 class PhaseComponent(Component):

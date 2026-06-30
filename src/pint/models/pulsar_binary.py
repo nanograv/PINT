@@ -269,6 +269,7 @@ class PulsarBinary(DelayComponent):
         self.warn_default_params = ["ECC", "OM"]
         # Set up delay function
         self.delay_funcs_component += [self.binarymodel_delay]
+        self.delay_deriv_wrt_prev_delay_func += [self.d_binary_delay_d_prev_delay]
 
     def _apply_param_suffix(self):
         """Rename this component's PINT-facing parameters with ``param_suffix``.
@@ -656,6 +657,11 @@ class PulsarBinary(DelayComponent):
         if self.param_suffix and param.endswith(self.param_suffix):
             param = param[: -len(self.param_suffix)]
         return self.binary_instance.d_binarydelay_d_par(param)
+
+    def d_binary_delay_d_prev_delay(self, toas, acc_delay):
+        """Return derivative of binary delay w.r.t. previous delays"""
+        self.update_binary_object(toas, acc_delay)
+        return self.binary_instance.d_binarydelay_d_prevdelay
 
     def print_par(self, format="pint"):
         tag = self.binary_param_tag
