@@ -12,6 +12,8 @@ pars = [
         PSR         VLBITEST1
         RAJ         05:00:00    1
         DECJ        15:00:00    1
+        PMRA        1e-6
+        PMDEC       1e-6
         POSEPOCH    55000
         VLBIAX      -0.15
         VLBIAY      0.05
