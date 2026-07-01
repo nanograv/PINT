@@ -32,4 +32,5 @@ the released changes.
 - Fixed bug in `model.compare()` where it failed for `PosixPath` objects
 - Fixed bug in printing of parameter correlation/covariance matrices
 - `make_fake_toas_fromMJDs` now does not assume `PLANET_SHAPIRO` is in the model - it checks.
+- Make VLBI frame rotation work correctly when proper motion is present.
 ### Removed

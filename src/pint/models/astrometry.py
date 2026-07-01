@@ -709,7 +709,7 @@ class AstrometryEquatorial(Astrometry):
         # Reference: Madison+ 2023, The Astrophysical Journal 777 104 (Equations 9, 10)
         Omega = self.vlbi_coord_rotation()
         Khat = self.xyz_from_radec(ra, dec)
-        result = Omega @ Khat if Omega is not None else Khat
+        result = (Omega @ Khat.T).T if Omega is not None else Khat
         if self.use_ssb_cache:
             self._ssb_cache_icrs = result.copy()
             self._ssb_cache_key_icrs = key
