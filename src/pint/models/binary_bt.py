@@ -66,18 +66,46 @@ class BinaryBT(PulsarBinary):
         """Validate BT model parameters"""
         super().validate()
         for p in ("T0", "A1"):
-            if getattr(self, p).value is None:
+            if self._bp(p).value is None:
                 raise MissingParameter("BT", p, f"{p} is required for BT")
 
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
-            if getattr(self, p).value is None:
-                getattr(self, p).value = "0"
-                getattr(self, p).frozen = True
+            if self._bp(p).value is None:
+                self._bp(p).value = "0"
+                self._bp(p).frozen = True
 
-        if self.GAMMA.value is None:
-            self.GAMMA.value = "0"
-            self.GAMMA.frozen = True
+        if self._bp("GAMMA").value is None:
+            self._bp("GAMMA").value = "0"
+            self._bp("GAMMA").frozen = True
+
+
+class BinaryBT2(BinaryBT):
+    """Outer-orbit Blandford and Teukolsky model for a hierarchical triple.
+
+    This is identical to :class:`pint.models.binary_bt.BinaryBT` except that all
+    of its parameters carry a ``_2`` suffix (``PB_2``, ``A1_2``, ``T0_2``, ...)
+    and it is selected with the ``BINARY2`` parfile parameter instead of
+    ``BINARY``. See :class:`pint.models.binary_dd.BinaryDD2` for a description of
+    how the outer orbit couples into the inner binary.
+
+    Orbital-frequency (``FBn``) and ``ORBWAVE`` parameterizations are not
+    supported for the outer orbit.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_bt.BinaryBT2
+    """
+
+    register = True
+    category = "pulsar_system_outer"
+    param_suffix = "_2"
+    binary_param_tag = "BINARY2"
+
+    def __init__(self):
+        super().__init__()
+        self._apply_param_suffix()
 
 
 class BinaryBTPiecewise(PulsarBinary):
