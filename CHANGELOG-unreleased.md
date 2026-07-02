@@ -13,6 +13,7 @@ the released changes.
 - `WidebandDownhillFitter` now handles correlated noise correctly.
 - `pintk` Diff/Unc calculation now uses post-fit uncertainties.
 - Updated GMRT coordinates.
+- Replaced custom ``pint.ls`` with astropy ``u.lsec``
 ### Added
 - Plot whitened DM residuals in pintk.
 - `ssb_to_psb_xyz_ECL` and `ssb_to_psb_xyz_ICRS` are now cached
@@ -28,6 +29,7 @@ the released changes.
 - Fixed bug in changing epoch for ELL1k model
 - Fixed `gridutils` behavior for 1 CPU
 - Fixed bug in `GaussianRV_gen`, where the probability distribution function was not normalized correctly. Changed to use `scipy.stats.truncnorm` instead of the custom `GaussianRV_gen`.
+- Fixed `convert_binary()` for ELL1H models to run `setup()` and not use H4 when not desired
 - Fixed bug in `model.compare()` where it failed for `PosixPath` objects
 - Fixed bug in printing of parameter correlation/covariance matrices
 - `make_fake_toas_fromMJDs` now does not assume `PLANET_SHAPIRO` is in the model - it checks.

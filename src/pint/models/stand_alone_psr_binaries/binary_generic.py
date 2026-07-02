@@ -6,7 +6,7 @@ import numpy as np
 from erfa import DAYSEC as SECS_PER_DAY
 from loguru import logger as log
 
-from pint import Tsun, ls
+from pint import Tsun
 from pint.models.stand_alone_psr_binaries.binary_orbits import OrbitPB
 
 SECS_PER_JUL_YEAR = SECS_PER_DAY * 365.25
@@ -96,8 +96,8 @@ class PSR_BINARY:
             "PBDOT": 0.0 * u.day / u.day,
             "ECC": 0.0 * u.Unit(""),
             "EDOT": 0.0 / u.second,
-            "A1": 10.0 * ls,
-            "A1DOT": 0.0 * ls / u.second,
+            "A1": 10.0 * u.lsec,
+            "A1DOT": 0.0 * u.lsec / u.second,
             "T0": np.longdouble(54000.0) * u.day,
             "OM": 0.0 * u.deg,
             "OMDOT": 0.0 * u.deg / u.year,

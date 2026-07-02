@@ -12,7 +12,6 @@ import numpy as np
 from astropy.coordinates import SkyCoord
 from loguru import logger as log
 
-from pint import ls
 from pint.exceptions import MissingParameter, TimingModelError, UnknownParameter
 from pint.models.parameter import (
     MJDParameter,
@@ -126,7 +125,7 @@ class PulsarBinary(DelayComponent):
         self.add_param(
             floatParameter(
                 name="A1",
-                units=ls,
+                units=u.lsec,
                 description="Projected semi-major axis of pulsar orbit, ap*sin(i)",
                 tcb2tdb_scale_factor=(1 / consts.c),
             )
@@ -137,7 +136,7 @@ class PulsarBinary(DelayComponent):
             floatParameter(
                 name="A1DOT",
                 aliases=["XDOT"],
-                units=ls / u.s,
+                units=u.lsec / u.s,
                 description="Derivative of projected semi-major axis, d[ap*sin(i)]/dt",
                 unit_scale=True,
                 scale_factor=1e-12,

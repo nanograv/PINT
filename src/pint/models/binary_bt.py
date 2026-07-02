@@ -5,7 +5,6 @@ import astropy.units as u
 import numpy as np
 from astropy.time import Time
 
-from pint import ls
 from pint.exceptions import MissingParameter
 from pint.models.parameter import floatParameter, prefixParameter
 from pint.models.pulsar_binary import PulsarBinary
@@ -150,7 +149,7 @@ class BinaryBTPiecewise(PulsarBinary):
         self.remove_param("SINI")
         self.add_group_range(None, None)
         self.add_piecewise_param(0, T0=0 * u.d)
-        self.add_piecewise_param(0, A1=0 * ls)
+        self.add_piecewise_param(0, A1=0 * u.lsec)
 
         self.remove_param("ORBWAVEC0")
         self.remove_param("ORBWAVES0")
@@ -286,7 +285,7 @@ class BinaryBTPiecewise(PulsarBinary):
                 paramx = kwargs[key]
 
                 if key == "A1":
-                    param_unit = ls
+                    param_unit = u.lsec
                     if isinstance(paramx, u.quantity.Quantity):
                         paramx = paramx.value
                     elif isinstance(paramx, np.float64):
@@ -514,7 +513,7 @@ class BinaryBTPiecewise(PulsarBinary):
             param_unit = u.d
         elif param_name[:2] == "A1":
             paramX_mapping = self.get_prefix_mapping_component("A1X_")
-            param_unit = ls
+            param_unit = u.lsec
         else:
             raise AttributeError(
                 f"param '{param_name}' not found. Please choose another. Currently implemented: 'T0' or 'A1' "
