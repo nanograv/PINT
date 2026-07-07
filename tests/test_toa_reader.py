@@ -271,7 +271,7 @@ def test_toa_merge_different_columns_strict():
     # add a pulse_number column.  then the merge should fail
     toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
     toas[0].compute_pulse_numbers(model)
-    with pytest.raises(astropy.table.np_utils.TableMergeError) as exc:
+    with pytest.raises(astropy.table.TableMergeError) as exc:
         nt = toa.merge_TOAs(toas, strict=True)
     assert "pulse_number" in str(exc)
 
@@ -311,7 +311,7 @@ def test_toa_merge_different_columns_TDB_strict():
     # remove the tdb column
     # merge should fail if strict
     del toas[1].table["tdb"]
-    with pytest.raises(astropy.table.np_utils.TableMergeError) as exc:
+    with pytest.raises(astropy.table.TableMergeError) as exc:
         nt = toa.merge_TOAs(toas, strict=True)
     assert "tdb" in str(exc)
 
@@ -339,7 +339,7 @@ def test_toa_merge_different_columns_posvel_strict():
     # remove the ssb_obs_pos column
     # merge should fail if strict
     del toas[1].table["ssb_obs_pos"]
-    with pytest.raises(astropy.table.np_utils.TableMergeError) as exc:
+    with pytest.raises(astropy.table.TableMergeError) as exc:
         nt = toa.merge_TOAs(toas, strict=True)
     assert "ssb_obs_pos" in str(exc)
 
@@ -616,31 +616,25 @@ def test_chained_include_directories(tmp_path):
     t1 = tmp_path / "test.tim"
     b = tmp_path / "b"
     b.mkdir()
-    t1.write_text(
-        """
+    t1.write_text("""
         FORMAT 1
 
         toa1 1404.000 55336.989701997555466   3.469  gbt  -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 1740.3
 
         INCLUDE b/test2.tim
-    """
-    )
-    (b / "test2.tim").write_text(
-        """
+    """)
+    (b / "test2.tim").write_text("""
         FORMAT 1
 
         toa2 1404.000 55337.989701997555466   3.469  gbt  -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 1740.3
 
         INCLUDE ../test3.tim
-    """
-    )
-    (tmp_path / "test3.tim").write_text(
-        """
+    """)
+    (tmp_path / "test3.tim").write_text("""
         FORMAT 1
 
         toa3 1404.000 55338.989701997555466   3.469  gbt  -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 1740.3
-    """
-    )
+    """)
 
     assert len(toa.get_TOAs(str(t1))) == 3
 
