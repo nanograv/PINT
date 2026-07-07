@@ -264,7 +264,7 @@ def test_ssb_cache_invalidates():
     xyz2 = m.ssb_to_psb_xyz_ICRS(epoch=t + 0.1 * u.d)
     cachekey2 = m.components["AstrometryEcliptic"]._ssb_cache_key_icrs
     assert cachekey != cachekey2
-    assert ~np.allclose(xyz, xyz2)
+    assert not np.allclose(xyz, xyz2)
 
 
 def test_ssb_cache_merge():
