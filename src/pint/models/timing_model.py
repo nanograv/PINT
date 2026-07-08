@@ -2673,9 +2673,9 @@ class TimingModel:
         assert format.lower() in ["text", "markdown"]
         format = format.lower()
 
-        model_name = self.name.split("/")[-1] if self.name != "" else "Model 1"
+        model_name = str(self.name).split("/")[-1] if self.name != "" else "Model 1"
         if othermodel.name != "":
-            other_model_name = othermodel.name.split("/")[-1]
+            other_model_name = str(othermodel.name).split("/")[-1]
         else:
             other_model_name = "Model 2"
 
@@ -3598,7 +3598,7 @@ class TimingModel:
                 s += f"T0  = {t0:SP}\n"
                 outdict["T0"] = t0
 
-                a1 = self.A1.quantity if self.A1.quantity is not None else 0 * pint.ls
+                a1 = self.A1.quantity if self.A1.quantity is not None else 0 * u.lsec
                 if rms is not None and ntoas is not None:
                     s += pint.utils.ELL1_check(
                         a1,
@@ -3610,7 +3610,7 @@ class TimingModel:
                 s += "\n"
             # Masses and inclination
             if not self.A1.frozen:
-                a1 = self.A1.as_ufloat(pint.ls)
+                a1 = self.A1.as_ufloat(u.lsec)
                 # This is the mass function, done explicitly so that we get
                 # uncertainty propagation automatically.
                 # TODO: derived quantities funcs should take uncertainties

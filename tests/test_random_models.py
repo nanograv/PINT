@@ -98,7 +98,7 @@ def test_random_models_wb(fitter):
     assert np.all(dphase.std(axis=0) < 1e-4)
 
 
-@pytest.mark.parametrize("clock", ["UTC(NIST)", "TT(BIPM2021)", "TT(BIPM2015)"])
+@pytest.mark.parametrize("clock", ["TT(TAI)", "TT(BIPM2021)", "TT(BIPM2015)"])
 def test_random_model_clock(clock):
     m, t = get_model_and_toas(
         os.path.join(datadir, "NGC6440E.par"), os.path.join(datadir, "NGC6440E.tim")
@@ -110,4 +110,4 @@ def test_random_model_clock(clock):
         ] == m.CLOCK.value.replace("TT(", "").replace(")", "")
         assert simulation.get_fake_toa_clock_versions(m)["include_bipm"]
     else:
-        assert ~simulation.get_fake_toa_clock_versions(m)["include_bipm"]
+        assert not simulation.get_fake_toa_clock_versions(m)["include_bipm"]

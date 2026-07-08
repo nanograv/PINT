@@ -5,7 +5,6 @@ import astropy.units as u
 import numpy as np
 from astropy.time import Time
 
-from pint import ls
 from pint.exceptions import MissingParameter
 from pint.models.parameter import floatParameter, prefixParameter
 from pint.models.pulsar_binary import PulsarBinary
@@ -122,7 +121,7 @@ class BinaryBTPiecewise(PulsarBinary):
         self.remove_param("SINI")
         self.add_group_range(None, None)
         self.add_piecewise_param(0, T0=0 * u.d)
-        self.add_piecewise_param(0, A1=0 * ls)
+        self.add_piecewise_param(0, A1=0 * u.lsec)
 
         self.remove_param("ORBWAVEC0")
         self.remove_param("ORBWAVES0")
@@ -258,7 +257,7 @@ class BinaryBTPiecewise(PulsarBinary):
                 paramx = kwargs[key]
 
                 if key == "A1":
-                    param_unit = ls
+                    param_unit = u.lsec
                     if isinstance(paramx, u.quantity.Quantity):
                         paramx = paramx.value
                     elif isinstance(paramx, np.float64):
@@ -404,14 +403,14 @@ class BinaryBTPiecewise(PulsarBinary):
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
             if getattr(self, p).value is None:
-                getattr(self, p).set("0")
+                getattr(self, p).value = 0
                 getattr(self, p).frozen = True
 
             if getattr(self, p).value is not None and self.T0.value is None:
                 raise MissingParameter("BT", "T0", "T0 is required if *DOT is set")
 
         if self.GAMMA.value is None:
-            self.GAMMA.set("0")
+            self.GAMMA.value = 0
             self.GAMMA.frozen = True
 
         dct_plb = self.get_prefix_mapping_component("XR1_")
@@ -486,7 +485,7 @@ class BinaryBTPiecewise(PulsarBinary):
             param_unit = u.d
         elif param_name[:2] == "A1":
             paramX_mapping = self.get_prefix_mapping_component("A1X_")
-            param_unit = ls
+            param_unit = u.lsec
         else:
             raise AttributeError(
                 f"param '{param_name}' not found. Please choose another. Currently implemented: 'T0' or 'A1' "

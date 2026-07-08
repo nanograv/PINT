@@ -2098,7 +2098,7 @@ def ELL1_check(
     Parameters
     ----------
     A1 : astropy.units.Quantity
-        Projected semi-major axis (aka ASINI) in `pint.ls`
+        Projected semi-major axis (aka ASINI) in `u.lsec`
     E : astropy.units.Quantity (dimensionless)
         Eccentricity
     TRES : astropy.units.Quantity

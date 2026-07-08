@@ -4,7 +4,6 @@ import pint.toa
 import numpy as np
 import pint.fitter
 import astropy.units as u
-from pint import ls
 from copy import deepcopy
 import pint.residuals
 from io import StringIO
@@ -122,7 +121,7 @@ def build_piecewise_model_with_two_pieces(model_no_pieces):
     for i in range(len(lower_bound)):
         piecewise_model.add_group_range(lower_bound[i], upper_bound[i], piece_index=i)
         piecewise_model.add_piecewise_param(
-            A1=(piecewise_model.A1.value + (i + 1) * 1e-3) * ls, piece_index=i
+            A1=(piecewise_model.A1.value + (i + 1) * 1e-3) * u.lsec, piece_index=i
         )
         piecewise_model.add_piecewise_param(
             T0=(piecewise_model.T0.value + (i + 1) * 1e-3) * u.d, piece_index=i
@@ -234,7 +233,7 @@ def test_round_trips_to_parfile(model_no_pieces):
     for i in range(0, n):
         m_piecewise.add_group_range(lower_bounds[i], upper_bounds[i], piece_index=i)
         m_piecewise.add_piecewise_param(
-            A1=(m_piecewise.A1.value + i) * ls, piece_index=i
+            A1=(m_piecewise.A1.value + i) * u.lsec, piece_index=i
         )
         m_piecewise.add_piecewise_param(
             T0=(m_piecewise.T0.value + i) * u.d, piece_index=i
@@ -364,7 +363,7 @@ def test_group_index_matching(model_no_pieces):
         m_piecewise.add_group_range(
             m_piecewise.START.value, m_piecewise.FINISH.value, piece_index=1
         )
-        m_piecewise.add_piecewise_param(A1=m_piecewise.A1.value * ls, piece_index=2)
+        m_piecewise.add_piecewise_param(A1=m_piecewise.A1.value * u.lsec, piece_index=2)
         # Errors raised in validate, which is run when groups are "locked in"
         m_piecewise.setup()
         m_piecewise.validate()
@@ -380,11 +379,11 @@ def test_group_index_matching(model_no_pieces):
     with pytest.raises(ValueError):
         # check whether boundaries are overlapping
         m_piecewise.add_group_range(55000, 55200, piece_index=1)
-        m_piecewise.add_piecewise_param(A1=m_piecewise.A1.value * ls, piece_index=1)
+        m_piecewise.add_piecewise_param(A1=m_piecewise.A1.value * u.lsec, piece_index=1)
         m_piecewise.add_piecewise_param(T0=m_piecewise.T0.value * u.d, piece_index=1)
 
         m_piecewise.add_group_range(55100, 55300, piece_index=2)
-        m_piecewise.add_piecewise_param(A1=m_piecewise.A1.value * ls, piece_index=2)
+        m_piecewise.add_piecewise_param(A1=m_piecewise.A1.value * u.lsec, piece_index=2)
         m_piecewise.add_piecewise_param(T0=m_piecewise.T0.value * u.d, piece_index=2)
 
         m_piecewise.setup()
