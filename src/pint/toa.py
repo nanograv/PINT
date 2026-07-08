@@ -2724,7 +2724,7 @@ class TOAs:
             nt.table = table.vstack(
                 tables, join_type="exact", metadata_conflicts="silent"
             )
-        except table.np_utils.TableMergeError as e:
+        except table.TableMergeError as e:
             # the astropy vstack will enforce having the same columns throughout
             # but the error messages aren't very useful.
             # This isn't an exhaustive check
@@ -2743,7 +2743,7 @@ class TOAs:
                     message.append(
                         f"File {i+1} has missing column(s): {','.join(missing_columns)}"
                     )
-            raise table.np_utils.TableMergeError(", ".join(message)) from e
+            raise table.TableMergeError(", ".join(message)) from e
 
             # Fix the table meta data about filenames
         nt.table.meta["filename"] = nt.filename

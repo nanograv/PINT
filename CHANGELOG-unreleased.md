@@ -14,6 +14,7 @@ the released changes.
 - `pintk` Diff/Unc calculation now uses post-fit uncertainties.
 - Updated GMRT coordinates.
 - Replaced custom ``pint.ls`` with astropy ``u.lsec``
+- Updated code to remove deprecation warnings during CI
 ### Added
 - Plot whitened DM residuals in pintk.
 - Time-domain solar wind GP noise components: ridge, squared-exponential, Matérn, and quasi-periodic kernels
@@ -34,4 +35,5 @@ the released changes.
 - Fixed bug in `model.compare()` where it failed for `PosixPath` objects
 - Fixed bug in printing of parameter correlation/covariance matrices
 - `make_fake_toas_fromMJDs` now does not assume `PLANET_SHAPIRO` is in the model - it checks.
+- Changed some API to pass Mac CI
 ### Removed

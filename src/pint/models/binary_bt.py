@@ -403,14 +403,14 @@ class BinaryBTPiecewise(PulsarBinary):
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
             if getattr(self, p).value is None:
-                getattr(self, p).set("0")
+                getattr(self, p).value = 0
                 getattr(self, p).frozen = True
 
             if getattr(self, p).value is not None and self.T0.value is None:
                 raise MissingParameter("BT", "T0", "T0 is required if *DOT is set")
 
         if self.GAMMA.value is None:
-            self.GAMMA.set("0")
+            self.GAMMA.value = 0
             self.GAMMA.frozen = True
 
         dct_plb = self.get_prefix_mapping_component("XR1_")

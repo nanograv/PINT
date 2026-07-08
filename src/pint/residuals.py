@@ -16,7 +16,7 @@ import astropy.units as u
 import numpy as np
 from loguru import logger as log
 from scipy.linalg import cho_factor, cho_solve, LinAlgError
-from scipy.stats import kstest
+from scipy.stats import kstest, norm
 
 from pint import dmu
 from pint.models.dispersion_model import Dispersion
@@ -617,7 +617,7 @@ class Residuals:
         :meth:`~pint.residuals.Residuals.whitened_resids_adtest`
         """
         rw = self.calc_whitened_resids().astype(float)
-        ks = kstest(rw, "norm", args=(0, 1))
+        ks = kstest(rw, norm(loc=0, scale=1).cdf)
         return ks.statistic, ks.pvalue
 
     def whitened_resids_adtest(self) -> Tuple[float, float]:
@@ -1422,7 +1422,7 @@ class WidebandTOAResiduals(CombinedResiduals):
         :meth:`~pint.residuals.WidebandTOAResiduals.whitened_resids_adtest`
         """
         rw = self.calc_wideband_whitened_resids().astype(float)
-        ks = kstest(rw, "norm", args=(0, 1))
+        ks = kstest(rw, norm(loc=0, scale=1).cdf)
         return ks.statistic, ks.pvalue
 
     def whitened_resids_adtest(self) -> Tuple[float, float]:

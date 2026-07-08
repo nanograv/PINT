@@ -271,7 +271,7 @@ def test_toa_merge_different_columns_strict():
     # add a pulse_number column.  then the merge should fail
     toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
     toas[0].compute_pulse_numbers(model)
-    with pytest.raises(astropy.table.np_utils.TableMergeError) as exc:
+    with pytest.raises(astropy.table.TableMergeError) as exc:
         nt = toa.merge_TOAs(toas, strict=True)
     assert "pulse_number" in str(exc)
 
@@ -311,7 +311,7 @@ def test_toa_merge_different_columns_TDB_strict():
     # remove the tdb column
     # merge should fail if strict
     del toas[1].table["tdb"]
-    with pytest.raises(astropy.table.np_utils.TableMergeError) as exc:
+    with pytest.raises(astropy.table.TableMergeError) as exc:
         nt = toa.merge_TOAs(toas, strict=True)
     assert "tdb" in str(exc)
 
@@ -339,7 +339,7 @@ def test_toa_merge_different_columns_posvel_strict():
     # remove the ssb_obs_pos column
     # merge should fail if strict
     del toas[1].table["ssb_obs_pos"]
-    with pytest.raises(astropy.table.np_utils.TableMergeError) as exc:
+    with pytest.raises(astropy.table.TableMergeError) as exc:
         nt = toa.merge_TOAs(toas, strict=True)
     assert "ssb_obs_pos" in str(exc)
 
