@@ -112,6 +112,6 @@ def test_cm_dm_comparison():
     ftr = WLSFitter(t, m1)
     ftr.fit_toas(maxiter=3)
 
-    assert ftr.resids.chi2_reduced < 1.5
+    assert ftr.resids.reduced_chi2 < 1.5
     assert (ftr.model.CM.value - m0.DM.value) / ftr.model.CM.uncertainty_value < 1.1
     assert np.isclose(ftr.model.CM.uncertainty_value, m0.DM.uncertainty_value, atol=0.1)

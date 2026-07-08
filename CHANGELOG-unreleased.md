@@ -14,6 +14,7 @@ the released changes.
 - `pintk` Diff/Unc calculation now uses post-fit uncertainties.
 - Updated GMRT coordinates.
 - Replaced custom ``pint.ls`` with astropy ``u.lsec``
+- Updated code to remove deprecation warnings during CI
 ### Added
 - Plot whitened DM residuals in pintk.
 - `ssb_to_psb_xyz_ECL` and `ssb_to_psb_xyz_ICRS` are now cached

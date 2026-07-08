@@ -74,7 +74,7 @@ def test_cmx(model_and_toas):
         3 * ftr.model.CMX_0003.uncertainty_value
     )
 
-    assert ftr.resids.chi2_reduced < 1.6
+    assert ftr.resids.reduced_chi2 < 1.6
 
     assert "CMX_0001" in str(ftr.model)
 
