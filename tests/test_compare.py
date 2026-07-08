@@ -29,7 +29,7 @@ class TestCompare:
         modelcp = cp(model)
 
         for verbosity in verbosities:
-            for pn in model.params_ordered:
+            for pn in model.params:
                 if (
                     pn.startswith("DMX")
                     or pn in ["PSR", "START", "FINISH"]
@@ -78,7 +78,7 @@ class TestCompare:
         modelcp = cp(model)
 
         for verbosity in verbosities:
-            for pn in model.params_ordered:
+            for pn in model.params:
                 if (
                     pn.startswith("DMX")
                     or pn in ["PSR", "START", "FINISH"]
@@ -142,7 +142,7 @@ class TestCompare:
         model_1 = mod.get_model(io.StringIO(par_base1))
         model_2 = mod.get_model(io.StringIO(par_base2))
 
-        for pn in model_1.params_ordered[1:]:
+        for pn in model_1.params[1:]:
             param1 = getattr(model_1, pn)
             param2 = getattr(model_2, pn)
             if (
