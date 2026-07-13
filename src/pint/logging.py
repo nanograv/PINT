@@ -327,7 +327,6 @@ def setup(
         filter=filter,
         format=format,
         colorize=usecolors,
-        enqueue=True,
     )
     # change default colors
     for level in colors:
