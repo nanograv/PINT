@@ -77,7 +77,7 @@ class SolarSystemShapiro(DelayComponent):
         # the solar system object, rather than from the object to the
         # pulsar (as described after Eqn 4.3 in the paper).
         # See also https://en.wikipedia.org/wiki/Shapiro_time_delay
-        # where \Delta t = \frac{2GM}{c^3}\log(1-\vec{R}\cdot\vec{x})
+        # where \\Delta t = \\frac{2GM}{c^3}\\log(1-\\vec{R}\\cdot\\vec{x})
         return -2.0 * T_obj * np.log((r - rcostheta) / const.au).value
 
     def solar_system_shapiro_delay(self, toas, acc_delay=None):
