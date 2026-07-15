@@ -1143,7 +1143,7 @@ class PLRedNoise(CorrelatedNoiseComponent):
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         T = (
-            np.max(t) - np.min(t)
+            (np.max(t) - np.min(t)) * u.day
             if self.TNREDTSPAN.quantity is None
             else self.TNREDTSPAN.quantity
         )
