@@ -1302,14 +1302,20 @@ def get_rednoise_freqs(
         f_lin = np.linspace(f_min_lin, f_min_lin + (n_lin - 1) * df_lin, n_lin)
 
         # Log portion
-        f_log = np.logspace(
-            np.log10(f_min_), np.log10((1 + logmode_) / T), n_log, endpoint=False
+        f_log = (
+            np.logspace(
+                np.log10(f_min_.to_value(f_min_lin.unit)),
+                np.log10(f_min_lin.value),
+                n_log,
+                endpoint=False,
+            )
+            * f_min_lin.unit
         )
 
         # Combine log + linear
         return np.concatenate((f_log, f_lin))
 
-    have_logmode = logmode is not None and logmode > 0
+    have_logmode = logmode is not None and logmode >= 0
     have_nlog = nlog is not None and nlog > 0
     have_fmin = f_min is not None and f_min > 0
 
