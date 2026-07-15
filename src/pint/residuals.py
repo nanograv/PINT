@@ -655,13 +655,13 @@ class Residuals:
         assert self.model.has_correlated_errors
 
         s = self.time_resids.to_value(u.s)
-        Ndiag = self.get_data_error().to_value(u.s) ** 2
-        U = self.model.noise_model_designmatrix(self.toas)
-        Phidiag = self.model.noise_model_basis_weight(self.toas)
+        Ndiag = (self.get_data_error().to_value(u.s) ** 2).astype(np.float64)
+        U = self.model.noise_model_designmatrix(self.toas).astype(np.float64)
+        Phidiag = self.model.noise_model_basis_weight(self.toas).astype(np.float64)
 
         if "PHOFF" not in self.model.free_params:
-            U = np.append(U, np.ones((len(self.toas), 1)), axis=1)
-            Phidiag = np.append(Phidiag, [1e40])
+            U = np.append(U, np.ones((len(self.toas), 1)), axis=1).astype(np.float64)
+            Phidiag = np.append(Phidiag, [1e40]).astype(np.float64)
 
         chi2, logdet_C = woodbury_dot(Ndiag, U, Phidiag, s, s)
 
@@ -1450,6 +1450,11 @@ def whiten_residuals(
     Similar computation is done by the following methods: `pint.fitter.GLSFitter.fit_toas()`,
     `pint.fitter.WidebandTOAFitter.fit_toas()`, `pint.fitter.GLSState.step()`,
     `pint.fitter.WidebandState.step()`."""
+    y = y.astype(np.float64)
+    yerr = yerr.astype(np.float64)
+    U = U.astype(np.float64)
+    Phidiag = Phidiag.astype(np.float64)
+
     Ndiag = yerr**2
     Ninv_U = U / Ndiag[:, None]
     UT_Ninv_U = U.T @ Ninv_U

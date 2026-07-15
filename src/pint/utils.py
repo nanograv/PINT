@@ -3079,6 +3079,12 @@ def sherman_morrison_dot(
     logdetC: float
         log-determinant of C
     """
+    Ndiag = Ndiag.astype(np.float64)
+    v = v.astype(np.float64)
+    w = w.astype(np.float64)
+    x = x.astype(np.float64)
+    y = y.astype(np.float64)
+
     Ninv = 1 / Ndiag
 
     Ninv_v = Ninv * v
@@ -3131,6 +3137,11 @@ def woodbury_dot(
     logdetC: float
         log-determinant of C
     """
+    Ndiag = Ndiag.astype(np.float64)
+    U = U.astype(np.float64)
+    Phidiag = Phidiag.astype(np.float64)
+    x = x.astype(np.float64)
+    y = y.astype(np.float64)
 
     x_Ninv_y = np.sum(x * y / Ndiag)
     x_Ninv_U = (x / Ndiag) @ U

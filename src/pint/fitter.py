@@ -2608,6 +2608,9 @@ def get_gls_mtcm_mtcy_fullcov(
     given the data covariance matrix (`cov`), timing model design matrix (`M`),
     and residuals y (`residuals`).
     """
+    cov = cov.astype(np.float64)
+    M = M.astype(np.float64)
+    residuals = residuals.astype(np.float64)
     cf = scipy.linalg.cho_factor(cov)
     cm = scipy.linalg.cho_solve(cf, M)
     mtcm = np.dot(M.T, cm)
@@ -2629,6 +2632,11 @@ def get_gls_mtcm_mtcy(
     full design matrix (`M`) containing the timing model design matrix and the
     correlated noise basis, and residuals y (`residuals`).
     """
+    phiinv = phiinv.astype(np.float64)
+    Nvec = Nvec.astype(np.float64)
+    M = M.astype(np.float64)
+    residuals = residuals.astype(np.float64)
+
     cinv = 1 / Nvec
     mtcmplain = np.dot(M.T, cinv[:, None] * M)
     mtcm = mtcmplain + np.diag(phiinv)
