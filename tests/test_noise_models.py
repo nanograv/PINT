@@ -179,3 +179,39 @@ def test_white_noise_model_derivs():
     assert np.isclose(
         dq2[-1], sigma[-1] * m.EQUAD2.quantity * (m.EFAC2.quantity / sigma[-1]) ** 2
     )
+
+
+def test_log_frequencies():
+    par = """
+        PSR         TEST
+        RAJ         05:00:00
+        DECJ        15:00:00
+        F0          100
+        F1          -1e-15
+        PEPOCH      55000
+        TNREDAMP    -15
+        TNREDGAM    3.5
+        TNREDC      4
+        TNREDFLOG   2
+        TNREDFLOG_FACTOR 2
+        TZRMJD      55000
+        TZRFRQ      inf
+        TZRSITE     ssb
+        EPHEM       DE440
+        CLOCK       TT(BIPM2023)
+        UNITS       TDB
+    """
+    m = get_model(StringIO(par))
+    t = make_fake_toas_uniform(
+        54000,
+        56000,
+        100,
+        m,
+        add_noise=True,
+        add_correlated_noise=True,
+    )
+    assert np.allclose(
+        m.components["PLRedNoise"].get_time_frequencies(t)[1]
+        * t.get_Tspan().to_value("s"),
+        np.array([0.25, 0.5, 1, 2, 3, 4]),
+    )
