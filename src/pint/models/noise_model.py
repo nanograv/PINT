@@ -1141,11 +1141,11 @@ class PLRedNoise(CorrelatedNoiseComponent):
         """Return the frequencies of the noise model"""
 
         tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        t = (tbl["tdbld"].quantity * u.day).to_value(u.s)
         T = (
-            (np.max(t) - np.min(t)) * u.day
+            (np.max(t) - np.min(t))
             if self.TNREDTSPAN.quantity is None
-            else self.TNREDTSPAN.quantity
+            else self.TNREDTSPAN.quantity.to_value(u.s)
         )
 
         (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
@@ -1302,14 +1302,11 @@ def get_rednoise_freqs(
         f_lin = np.linspace(f_min_lin, f_min_lin + (n_lin - 1) * df_lin, n_lin)
 
         # Log portion
-        f_log = (
-            np.logspace(
-                np.log10(f_min_.to_value(f_min_lin.unit)),
-                np.log10(f_min_lin.value),
-                n_log,
-                endpoint=False,
-            )
-            * f_min_lin.unit
+        f_log = np.logspace(
+            np.log10(f_min_),
+            np.log10(f_min_lin),
+            n_log,
+            endpoint=False,
         )
 
         # Combine log + linear
