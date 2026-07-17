@@ -1859,10 +1859,10 @@ class TimingModel:
                     for nc in self.NoiseComponent_list
                     if nc.introduces_correlated_errors
                 ]
-            )
+            ).astype(float)
             if self.has_correlated_errors
             else None
-        ).astype(float)
+        )
 
     def noise_model_wideband_designmatrix(self, toas: TOAs) -> Optional[np.ndarray]:
         """Returns the design/basis matrix for all noise components for wideband TOAs.
@@ -1875,10 +1875,10 @@ class TimingModel:
                     for nc in self.NoiseComponent_list
                     if nc.introduces_correlated_errors
                 ]
-            )
+            ).astype(float)
             if self.has_correlated_errors
             else None
-        ).astype(float)
+        )
 
     def full_designmatrix(
         self, toas: TOAs
