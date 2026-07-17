@@ -942,7 +942,7 @@ class PLChromNoise(CorrelatedNoiseComponent):
         """Return the frequencies of the noise model"""
 
         tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to_value
+        t = (tbl["tdbld"].quantity * u.day).to_value(u.s)
         T = (
             np.max(t) - np.min(t)
             if self.TNCHROMTSPAN.quantity is None
