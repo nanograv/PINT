@@ -1318,7 +1318,7 @@ def get_rednoise_freqs(
 
     use_log = all([have_logmode, have_nlog, have_fmin])
 
-    if (not use_log) and (have_logmode or have_nlog):
+    if (not use_log) and have_nlog:
         log.warning(
             "Log-linear frequency spacing appears to be "
             "incorrectly specified. Got logmode={logmode}, "
