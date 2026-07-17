@@ -598,11 +598,11 @@ class PLDMNoise(CorrelatedNoiseComponent):
         """Return the frequencies of the noise model"""
 
         tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        t = (tbl["tdbld"].quantity * u.day).to_value(u.s)
         T = (
             np.max(t) - np.min(t)
             if self.TNDMTSPAN.quantity is None
-            else self.TNDMTSPAN.quantity
+            else self.TNDMTSPAN.quantity.to_value(u.s)
         )
 
         (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
@@ -942,11 +942,11 @@ class PLChromNoise(CorrelatedNoiseComponent):
         """Return the frequencies of the noise model"""
 
         tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        t = (tbl["tdbld"].quantity * u.day).to_value
         T = (
             np.max(t) - np.min(t)
             if self.TNCHROMTSPAN.quantity is None
-            else self.TNCHROMTSPAN.quantity
+            else self.TNCHROMTSPAN.quantity.to_value(u.s)
         )
 
         (_, _, n_lin, n_log, f_min_ratio) = self.get_plc_vals()
