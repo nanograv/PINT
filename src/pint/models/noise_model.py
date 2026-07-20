@@ -70,9 +70,7 @@ class CorrelatedNoiseComponent(NoiseComponent):
         toa_noise_basis = self.get_noise_basis(toas)
         if self.introduces_dm_errors:
             freqs = self._parent.barycentric_radio_freq(toas)
-            return (toa_noise_basis * (freqs**2 / DMconst)[:, None]).to_value(
-                dmu / u.s
-            )
+            return (toa_noise_basis * (freqs**2 / DMconst)[:, None]).to_value(dmu / u.s)
         else:
             return np.zeros_like(toa_noise_basis)
 
@@ -2028,10 +2026,7 @@ def periodic_kernel(
     p = 10**log10_p * 365.25 * 86400  # years -> seconds
     gam_p = 10**log10_gam_p
     d = np.eye(r.shape[0]) * (sigma / 50000) ** 2
-    K = (
-        sigma**2 * np.exp(-(r**2) / 2 / l**2 - gam_p * np.sin(np.pi * r / p) ** 2)
-        + d
-    )
+    K = sigma**2 * np.exp(-(r**2) / 2 / l**2 - gam_p * np.sin(np.pi * r / p) ** 2) + d
     return K
 
 
