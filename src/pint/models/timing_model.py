@@ -1983,9 +1983,9 @@ class TimingModel:
         result = [nf(toas)[1] for nf in self.basis_funcs]
         has_matrix = any(np.ndim(phi) == 2 for phi in result)
         if not has_matrix:
-            Phi = np.hstack(list(result))
+            Phi = np.hstack(list(result)).astype(float)
             self._noise_basis_weight_cache = {"key": key, "Phi": Phi}
-            return Phi.astype(float)
+            return Phi
 
         blocks = [np.diag(phi) if np.ndim(phi) == 1 else phi for phi in result]
         Phi = self._block_diag(blocks).astype(float)
