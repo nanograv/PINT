@@ -1774,7 +1774,31 @@ class TimingModel:
         N = np.diag(self.scaled_wideband_uncertainty(toas) ** 2)
         U = self.noise_model_wideband_designmatrix(toas)
         Phi = self.noise_model_basis_weight(toas)
-        return (N + np.dot(U * Phi[None, :], U.T) if U is not None else N).astype(float)
+        return (N + self._project_basis_covariance(U, Phi) if U is not None else N).astype(float)
+
+    @staticmethod
+    def _project_basis_covariance(U: np.ndarray, Phi: np.ndarray) -> np.ndarray:
+        """Project basis-space covariance to data-space covariance.
+
+        Supports both diagonal basis covariance (1D vector of variances) and
+        full basis covariance (2D matrix).
+        """
+        if np.ndim(Phi) == 1:
+            return np.dot(U * Phi[None, :], U.T)
+        return np.dot(U, np.dot(Phi, U.T))
+
+    @staticmethod
+    def _block_diag(matrices: List[np.ndarray]) -> np.ndarray:
+        """Construct a dense block-diagonal matrix from square blocks."""
+        size = sum(mat.shape[0] for mat in matrices)
+        dtype = np.result_type(*[mat.dtype for mat in matrices])
+        out = np.zeros((size, size), dtype=dtype)
+        start = 0
+        for mat in matrices:
+            stop = start + mat.shape[0]
+            out[start:stop, start:stop] = mat
+            start = stop
+        return out
 
     def scaled_toa_uncertainty(self, toas: TOAs) -> u.Quantity:
         """Get the scaled TOA data uncertainties noise models.
@@ -1866,7 +1890,10 @@ class TimingModel:
         if cache is not None and cache.get("key") == key:
             return cache["U"]
         result = [nf(toas)[0] for nf in self.basis_funcs]
-        return np.hstack(result)
+        U = np.hstack(result).astype(float)
+        self._noise_designmatrix_cache = {"key": key, "U": U}
+        return U
+
 
     def noise_model_dm_designmatrix(self, toas: TOAs) -> np.ndarray:
         """Returns the design/basis matrix for all noise components for wideband DMs.
@@ -1953,7 +1980,16 @@ class TimingModel:
             return cache["Phi"]
 
         result = [nf(toas)[1] for nf in self.basis_funcs]
-        return np.hstack(list(result))
+        has_matrix = any(np.ndim(phi) == 2 for phi in result)
+        if not has_matrix:
+            Phi = np.hstack(list(result))
+            self._noise_basis_weight_cache = {"key": key, "Phi": Phi}
+            return Phi.astype(float)
+
+        blocks = [np.diag(phi) if np.ndim(phi) == 1 else phi for phi in result]
+        Phi = self._block_diag(blocks).astype(float)
+        self._noise_basis_weight_cache = {"key": key, "Phi": Phi}
+        return Phi
 
     def full_basis_weight(self, toas: TOAs) -> np.ndarray:
         """Returns the joint basis covariance for timing and noise components.
@@ -1970,9 +2006,10 @@ class TimingModel:
         if phi_nm is None:
             return phi_tm
         if np.ndim(phi_nm) == 1:
-            return np.hstack((phi_tm, phi_nm))
-
-        return np.hstack((phi_tm, phi_nm)) if phi_nm is not None else phi_tm
+            return (
+                np.hstack((phi_tm, phi_nm)).astype(float) if phi_nm is not None else phi_tm
+            )
+        return self._block_diag([np.diag(phi_tm), phi_nm]).astype(float)
 
     def noise_model_dimensions(self, toas: TOAs) -> Dict[str, Tuple[int, int]]:
         """Number of basis functions for each noise model component.
