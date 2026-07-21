@@ -1774,7 +1774,9 @@ class TimingModel:
         N = np.diag(self.scaled_wideband_uncertainty(toas) ** 2)
         U = self.noise_model_wideband_designmatrix(toas)
         Phi = self.noise_model_basis_weight(toas)
-        return (N + self._project_basis_covariance(U, Phi) if U is not None else N).astype(float)
+        return (
+            N + self._project_basis_covariance(U, Phi) if U is not None else N
+        ).astype(float)
 
     @staticmethod
     def _project_basis_covariance(U: np.ndarray, Phi: np.ndarray) -> np.ndarray:
@@ -1894,7 +1896,6 @@ class TimingModel:
         self._noise_designmatrix_cache = {"key": key, "U": U}
         return U
 
-
     def noise_model_dm_designmatrix(self, toas: TOAs) -> np.ndarray:
         """Returns the design/basis matrix for all noise components for wideband DMs.
         Returns None if no correlated noise component is present. Non-zero elements
@@ -2007,7 +2008,9 @@ class TimingModel:
             return phi_tm
         if np.ndim(phi_nm) == 1:
             return (
-                np.hstack((phi_tm, phi_nm)).astype(float) if phi_nm is not None else phi_tm
+                np.hstack((phi_tm, phi_nm)).astype(float)
+                if phi_nm is not None
+                else phi_tm
             )
         return self._block_diag([np.diag(phi_tm), phi_nm]).astype(float)
 
