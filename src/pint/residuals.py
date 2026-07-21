@@ -443,7 +443,7 @@ class Residuals:
             w = 1.0 / (self.get_data_error().value ** 2)
             mean, err = weighted_mean(full, w)
 
-        return full - mean
+        return (full - mean).astype(float)
 
     def _calc_mean(
         self,
@@ -567,7 +567,9 @@ class Residuals:
                 use_weighted_mean=use_weighted_mean,
                 use_abs_phase=use_abs_phase,
             )
-        return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
+        return (
+            (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s).astype(float)
+        )
 
     def calc_whitened_resids(self) -> u.Quantity:
         """Compute whitened timing residuals (dimensionless).
@@ -1097,7 +1099,7 @@ class WidebandDMResiduals(Residuals):
                 resids -= wm
             else:
                 resids -= resids.mean()
-        return resids
+        return resids.astype(float)
 
     def calc_chi2(self) -> float:
         data_errors = self.get_data_error()
