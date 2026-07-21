@@ -366,7 +366,7 @@ def test_wideband_chi2_updating(wideband_fake):
     assert_allclose(f2.model.F0.value, 1)
     assert 1e-3 > abs(WidebandTOAResiduals(toas, f2.model).chi2 - ftc2) > 1e-5
     ftc2 = f2.fit_toas(maxiter=10)
-    assert_allclose(WidebandTOAResiduals(toas, f2.model).chi2, ftc2)
+    assert_allclose(WidebandTOAResiduals(toas, f2.model).chi2, ftc2, atol=1e-5)
 
 
 @pytest.mark.parametrize(

@@ -35,4 +35,5 @@ the released changes.
 - `make_fake_toas_fromMJDs` now does not assume `PLANET_SHAPIRO` is in the model - it checks.
 - Make VLBI frame rotation work correctly when proper motion is present.
 - Changed some API to pass Mac CI
+- Log-separated frequency computation for red noise components.
 ### Removed
