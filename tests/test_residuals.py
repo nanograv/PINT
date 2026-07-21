@@ -234,7 +234,7 @@ def test_residuals_wideband_chi2(wideband_fake):
     assert_allclose(f.fit_toas(), r.chi2)
     assert f.fit_toas() >= rn.chi2
 
-    assert np.all(np.isfinite(list(r.rms_weighted().values())))
+    assert all(map(lambda x: np.isfinite(x.value), r.rms_weighted().values()))
     assert np.all(np.isfinite(list(r._combined_data_error)))
 
     assert r.whitened_resids_kstest()[1] > 0.05
