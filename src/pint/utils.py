@@ -3045,11 +3045,26 @@ def bayesian_information_criterion(
 
 
 def get_phiinv(phi: np.ndarray) -> np.ndarray:
-    """Invert the phi matrix in a stable way.
-    We relegate phi to double precision before inverting because we don't care about the precision of the noise parameters,
-    and this allows us to use the more stable double precision Cholesky decomposition for inversion.
-    Uses Cholesky-based inversion for SPD covariance matrices, with fallback to
-    direct inversion when Cholesky fails.
+    """Invert the phi (noise covariance) matrix in a numerically stable way.
+
+    The input is cast down to double precision before inverting. The precision of
+    the noise parameters is not important, and double precision allows the use of
+    the more stable Cholesky decomposition for inversion. Cholesky-based inversion
+    is used for symmetric positive-definite matrices, with a fallback to direct
+    inversion when the Cholesky factorization fails. A one-dimensional phi is
+    interpreted as the diagonal of a diagonal matrix and inverted element-wise.
+
+    Parameters
+    ----------
+    phi: array-like
+        The phi matrix to invert. If one-dimensional, it is treated as the diagonal
+        elements of a diagonal matrix; if two-dimensional, it is treated as a
+        symmetric positive-definite covariance matrix.
+
+    Returns
+    -------
+    phiinv: numpy.ndarray
+        The inverse of phi, in double precision.
     """
     if np.ndim(phi) == 1:
         return 1 / phi

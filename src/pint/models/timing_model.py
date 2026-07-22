@@ -1763,7 +1763,7 @@ class TimingModel:
 
         for nf in self.dm_covariance_matrix_funcs:
             result += nf(toas)
-        return result
+        return result.astype(float)
 
     def wideband_covariance_matrix(self, toas: TOAs) -> np.ndarray:
         """Get the (2*Ntoa x 2*Ntoa) wideband covariance matrix for noise models.
@@ -1774,7 +1774,9 @@ class TimingModel:
         N = np.diag(self.scaled_wideband_uncertainty(toas) ** 2)
         U = self.noise_model_wideband_designmatrix(toas)
         Phi = self.noise_model_basis_weight(toas)
-        return N + self._project_basis_covariance(U, Phi) if U is not None else N
+        return (
+            N + self._project_basis_covariance(U, Phi) if U is not None else N
+        ).astype(float)
 
     @staticmethod
     def _project_basis_covariance(U: np.ndarray, Phi: np.ndarray) -> np.ndarray:
@@ -1821,7 +1823,7 @@ class TimingModel:
 
         for nf in self.scaled_toa_uncertainty_funcs:
             result += nf(toas)
-        return result
+        return result.astype(float)
 
     def scaled_dm_uncertainty(self, toas: TOAs) -> u.Quantity:
         """Get the scaled DM data uncertainties noise models.
@@ -1844,7 +1846,7 @@ class TimingModel:
 
         for nf in self.scaled_dm_uncertainty_funcs:
             result += nf(toas)
-        return result
+        return result.astype(float)
 
     def scaled_wideband_uncertainty(self, toas: TOAs) -> np.ndarray:
         """Returns the combined scaled TOA and DM uncertainty values as a single
@@ -1863,7 +1865,7 @@ class TimingModel:
         """
         terr = self.scaled_toa_uncertainty(toas).to_value(u.s)
         derr = self.scaled_dm_uncertainty(toas).to_value(pint.dmu)
-        return np.hstack((terr, derr))
+        return np.hstack((terr, derr)).astype(float)
 
     def _noise_designmatrix_cache_key(self, toas: TOAs) -> Tuple[int, int, Tuple]:
         """Build a cache key for noise design-matrix evaluation."""
@@ -1890,7 +1892,7 @@ class TimingModel:
         if cache is not None and cache.get("key") == key:
             return cache["U"]
         result = [nf(toas)[0] for nf in self.basis_funcs]
-        U = np.hstack(result)
+        U = np.hstack(result).astype(float)
         self._noise_designmatrix_cache = {"key": key, "U": U}
         return U
 
@@ -1905,7 +1907,7 @@ class TimingModel:
                     for nc in self.NoiseComponent_list
                     if nc.introduces_correlated_errors
                 ]
-            )
+            ).astype(float)
             if self.has_correlated_errors
             else None
         )
@@ -1921,7 +1923,7 @@ class TimingModel:
                     for nc in self.NoiseComponent_list
                     if nc.introduces_correlated_errors
                 ]
-            )
+            ).astype(float)
             if self.has_correlated_errors
             else None
         )
@@ -1981,12 +1983,12 @@ class TimingModel:
         result = [nf(toas)[1] for nf in self.basis_funcs]
         has_matrix = any(np.ndim(phi) == 2 for phi in result)
         if not has_matrix:
-            Phi = np.hstack(list(result))
+            Phi = np.hstack(list(result)).astype(float)
             self._noise_basis_weight_cache = {"key": key, "Phi": Phi}
             return Phi
 
         blocks = [np.diag(phi) if np.ndim(phi) == 1 else phi for phi in result]
-        Phi = self._block_diag(blocks)
+        Phi = self._block_diag(blocks).astype(float)
         self._noise_basis_weight_cache = {"key": key, "Phi": Phi}
         return Phi
 
@@ -2005,9 +2007,12 @@ class TimingModel:
         if phi_nm is None:
             return phi_tm
         if np.ndim(phi_nm) == 1:
-            return np.hstack((phi_tm, phi_nm))
-
-        return self._block_diag([np.diag(phi_tm), phi_nm])
+            return (
+                np.hstack((phi_tm, phi_nm)).astype(float)
+                if phi_nm is not None
+                else phi_tm
+            )
+        return self._block_diag([np.diag(phi_tm), phi_nm]).astype(float)
 
     def noise_model_dimensions(self, toas: TOAs) -> Dict[str, Tuple[int, int]]:
         """Number of basis functions for each noise model component.
@@ -2499,7 +2504,7 @@ class TimingModel:
                 M[:, ii] = q.to_value(the_unit) / F0.value
                 units.append(the_unit / F0.unit)
 
-        return M, params, units
+        return M.astype(float), params, units
 
     def dm_designmatrix(
         self, toas: TOAs, incoffset=True
@@ -2559,7 +2564,7 @@ class TimingModel:
                 M[:, ii] = q.to_value(the_unit)
                 units.append(the_unit)
 
-        return M, params, units
+        return M.astype(float), params, units
 
     def wideband_designmatrix(self, toas: TOAs, incoffset=True):
         """The wideband design matrix including the partial derivatives of the
