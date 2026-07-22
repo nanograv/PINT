@@ -17,6 +17,8 @@ the released changes.
 - Updated code to remove deprecation warnings during CI
 ### Added
 - Plot whitened DM residuals in pintk.
+- Time-domain solar wind GP noise components: ridge, squared-exponential, Matérn, and quasi-periodic kernels
+- Regression tests for noise design-matrix caching, including multi-basis coverage (red, DMGP, SWGP, and chromatic GP)
 - `ssb_to_psb_xyz_ECL` and `ssb_to_psb_xyz_ICRS` are now cached
 ### Fixed
 - `WidebandTOAFitter` raises a warning if the model has correlated errors (It used to give wrong results before).
