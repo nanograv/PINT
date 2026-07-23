@@ -249,7 +249,7 @@ class TroposphereDelay(DelayComponent):
 
         # modify the delay if any of the altitudes are invalid
         if not np.all(altIsValid):
-            delay *= altIsValid  # this will make the invalid delays zero
+            delay *= np.float64(altIsValid)  # this will make the invalid delays zero
         return delay
 
     def pressure_from_altitude(self, H: u.Quantity) -> u.Quantity:

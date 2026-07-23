@@ -65,7 +65,7 @@ DMconst = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
 # define equivalency for astropy units
 light_second_equivalency = [(u.lsec, si.second, lambda x: x, lambda x: x)]
 # hourangle_second unit
-hourangle_second = u.def_unit("hourangle_second", u.hourangle / np.longdouble(3600.0))
+hourangle_second = u.def_unit("hourangle_second", u.hourangle / np.float64(3600.0))
 
 # Following are from here:
 # http://ssd.jpl.nasa.gov/?constants (grabbed on 30 Dec 2013)

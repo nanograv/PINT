@@ -39,10 +39,11 @@ from pint.pulsar_mjd import (
     time_to_longdouble,
     time_to_mjd_string,
     two_sum,
+    eps,
 )
 from pint.utils import PosVel
 
-time_eps = (np.finfo(float).eps * u.day).to(u.ns)
+time_eps = (eps * u.day).to(u.ns)
 
 
 leap_sec_mjds = {
@@ -187,7 +188,7 @@ def test_str2longdouble_rejects_bytes(s):
         ("1", 1),
         (1.0, 1.0),
         (np.float32(1.0), 1.0),
-        (np.longdouble(1.0), 1.0),
+        (np.float64(1.0).astype(np.longdouble), 1.0),
         (np.array([1]), np.array([1.0])),
         (np.array([[1]]), np.array([[1.0]])),
     ],
@@ -205,7 +206,7 @@ def test_data2longdouble_accepts_types(d, ld):
         [1],
         [1, 2, 3],
         [1.5, 2],
-        np.ones(5, dtype=np.longdouble) + np.finfo(np.longdouble).eps,
+        np.ones(5, dtype=np.longdouble) + eps,
         np.random.randn(2, 3, 4),
     ],
 )
@@ -477,9 +478,9 @@ def test_pulsar_mjd_never_differs_too_much_from_mjd_utc(i_f):
 
 def test_posvel_respects_longdouble():
     pos = np.ones(3, dtype=np.longdouble)
-    pos[0] += np.finfo(np.longdouble).eps
+    pos[0] += eps
     vel = np.ones(3, dtype=np.longdouble)
-    vel[1] += np.finfo(np.longdouble).eps
+    vel[1] += eps
     pv = PosVel(pos, vel)
     assert_array_equal(pv.pos, pos)
     assert_array_equal(pv.vel, vel)
