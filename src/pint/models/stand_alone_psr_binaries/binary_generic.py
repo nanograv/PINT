@@ -122,6 +122,7 @@ class PSR_BINARY:
         self.cache_vars = ["E", "nu"]
         self.binary_delay_funcs = []
         self.d_binarydelay_d_par_funcs = []
+        self.d_binarydelay_d_prev_delay_par = "T0"
         self.orbits_cls = OrbitPB(self, ["PB", "PBDOT", "XPBDOT", "T0"])
 
     @property
@@ -260,6 +261,19 @@ class PSR_BINARY:
             for df in self.d_binarydelay_d_par_funcs[1:]:
                 result += df(par)
 
+        return result
+
+    def d_binarydelay_d_prevdelay(self):
+        """Get the derivative of the binary delay w.r.t. delays accumulated
+        from previous components
+
+        Returns
+        -------
+        float
+            Derivative of binary delay w.r.t. earlier delays (dimensionless)
+        """
+
+        result = self.d_binarydelay_d_par(self.d_binarydelay_d_prev_delay_par).to("")
         return result
 
     def prtl_der(self, y, x):

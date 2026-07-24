@@ -125,6 +125,7 @@ DEFAULT_ORDER = [
     "dispersion_constant",
     "dispersion_dmx",
     "dispersion_jump",
+    "pulsar_system_outer",
     "pulsar_system",
     "frequency_dependent",
     "absolute_phase",
@@ -323,6 +324,14 @@ class TimingModel:
             "",
         )
         self.add_param_from_top(
+            strParameter(
+                name="BINARY2",
+                description="Outer-orbit binary model for a hierarchical triple system",
+                value=None,
+            ),
+            "",
+        )
+        self.add_param_from_top(
             boolParameter(
                 name="DILATEFREQ",
                 value=False,
@@ -489,14 +498,33 @@ class TimingModel:
 
         from pint.models.pulsar_binary import PulsarBinary
 
+        def num_binaries_with_tag(tag):
+            return len(
+                list(
+                    filter(
+                        lambda c: isinstance(c, PulsarBinary)
+                        and getattr(c, "binary_param_tag", "BINARY") == tag,
+                        self.components.values(),
+                    )
+                )
+            )
+
         has_binary_attr = hasattr(self, "BINARY") and self.BINARY.value
         if has_binary_attr:
             assert (
-                num_components_of_type(PulsarBinary) == 1
-            ), "BINARY attribute is set but no PulsarBinary component found."
+                num_binaries_with_tag("BINARY") == 1
+            ), "BINARY attribute is set but no (inner) PulsarBinary component found."
+        has_binary2_attr = hasattr(self, "BINARY2") and self.BINARY2.value
+        if has_binary2_attr:
+            assert (
+                num_binaries_with_tag("BINARY2") == 1
+            ), "BINARY2 attribute is set but no outer PulsarBinary component found."
         assert (
-            num_components_of_type(PulsarBinary) <= 1
-        ), "Model can have at most one PulsarBinary component."
+            num_binaries_with_tag("BINARY") <= 1
+        ), "Model can have at most one inner PulsarBinary component."
+        assert (
+            num_binaries_with_tag("BINARY2") <= 1
+        ), "Model can have at most one outer PulsarBinary component."
 
         from pint.models.solar_wind_dispersion import (
             SolarWindDispersion,
@@ -925,6 +953,26 @@ class TimingModel:
 
         return any(isinstance(x, PulsarBinary) for x in self.components.values())
 
+    def _get_primary_binary_component(self):
+        """Return the binary component tagged by ``BINARY`` when present.
+
+        For hierarchical triples we want orbital utility methods to operate on
+        the inner orbit (the component selected by the ``BINARY`` line), not the
+        outer ``BINARY2`` component.
+        """
+        from pint.models.pulsar_binary import PulsarBinary
+
+        binaries = [c for c in self.components.values() if isinstance(c, PulsarBinary)]
+        if not binaries:
+            return None
+
+        for b in binaries:
+            if getattr(b, "binary_param_tag", "BINARY") == "BINARY":
+                return b
+
+        # Fallback for legacy/single-binary behavior.
+        return binaries[0]
+
     def orbital_phase(
         self,
         barytimes: Union[time.Time, TOAs, np.ndarray, float, MJDParameter],
@@ -963,10 +1011,7 @@ class TimingModel:
         """
         if not self.is_binary:  # punt if not a binary
             return None
-        # Find the binary model
-        b = self.components[
-            [x for x in self.components.keys() if x.startswith("Binary")][0]
-        ]
+        b = self._get_primary_binary_component()
         # Make sure that the binary instance has the binary params
         b.update_binary_object(None)
         # Handle input times and update them in stand-alone binary models
@@ -1034,9 +1079,7 @@ class TimingModel:
         """
         # this should also update the binary instance
         nu = self.orbital_phase(barytimes, anom="true")
-        b = self.components[
-            [x for x in self.components.keys() if x.startswith("Binary")][0]
-        ]
+        b = self._get_primary_binary_component()
         bbi = b.binary_instance  # shorthand
         psi = nu + bbi.omega()
         return (
@@ -1108,10 +1151,7 @@ class TimingModel:
         """
         if not self.is_binary:  # punt if not a binary
             return None
-        # Find the binary model
-        b = self.components[
-            [x for x in self.components.keys() if x.startswith("Binary")][0]
-        ]
+        b = self._get_primary_binary_component()
         bbi = b.binary_instance  # shorthand
         # Superior conjunction occurs when true anomaly + omega == 90 deg
         # We will need to solve for this using a root finder (brentq)
@@ -1133,7 +1173,7 @@ class TimingModel:
         scs = []
         for bt in bts:
             # Make 11 times over one orbit after bt
-            pb = self.pb()[0].to_value("day")
+            pb = b.pb()[0].to_value("day")
             ts = np.linspace(bt, bt + pb, 11)
             # Compute the true anomalies and omegas for those times
             nus = self.orbital_phase(ts, anom="true")
@@ -2224,10 +2264,23 @@ class TimingModel:
                 f"Derivative function for '{param}' is not provided"
                 f" or not registered; parameter '{param}' may not be fittable. "
             )
-        for df in delay_derivs[param]:
-            result += df(toas, param, acc_delay).to(
-                result.unit, equivalencies=u.dimensionless_angles()
+
+        result = np.longdouble(np.zeros(toas.ntoas) << (u.s / par.units))
+        for cp in self.DelayComponent_list:
+            d = self.delay(
+                toas, cutoff_component=cp.__class__.__name__, include_last=False
             )
+
+            d_delay_d_prev_delay = 0
+            for f in cp.delay_deriv_wrt_prev_delay_funcs:
+                d_delay_d_prev_delay += f(toas, d)().to("")
+            result *= 1 + d_delay_d_prev_delay
+
+            if param in cp.deriv_funcs:
+                for df in cp.deriv_funcs[param]:
+                    result += df(toas, param, d).to(
+                        result.unit, equivalencies=u.dimensionless_angles()
+                    )
         return result
 
     def d_phase_d_param_num(
@@ -3135,7 +3188,8 @@ class TimingModel:
         if format.lower() == "tempo2":
             result_begin += "MODE 1\n"
         for p in self.top_level_params:
-            if p == "BINARY":  # Will print the Binary model name in the binary section
+            # Will print the binary model name in the (outer) binary section
+            if p in ("BINARY", "BINARY2"):
                 continue
             result_begin += getattr(self, p).as_parfile_line(format=format)
         for cat in start_order:
@@ -4013,6 +4067,7 @@ class DelayComponent(Component):
     def __init__(self):
         super().__init__()
         self.delay_funcs_component = []
+        self.delay_deriv_wrt_prev_delay_funcs = []
 
 
 class PhaseComponent(Component):
@@ -4225,13 +4280,20 @@ class AllComponents:
                 component_special_params[cps[0]].append(param)
         return component_special_params
 
-    def search_binary_components(self, system_name: str) -> "Component":
+    def search_binary_components(
+        self, system_name: str, category: str = "pulsar_system"
+    ) -> "Component":
         """Search the pulsar binary component based on given name.
 
         Parameters
         ----------
         system_name : str
             Searching name for the pulsar binary/system
+        category : str, optional
+            The component category to search within. Defaults to
+            ``"pulsar_system"`` (the inner binary). Use
+            ``"pulsar_system_outer"`` to find the outer-orbit component of a
+            hierarchical triple.
 
         Return
         ------
@@ -4243,7 +4305,7 @@ class AllComponents:
             If the input binary model name does not match any PINT defined binary
             model.
         """
-        all_systems = self.category_component_map["pulsar_system"]
+        all_systems = self.category_component_map[category]
         if system_name in all_systems:
             return self.components[system_name]
         for cp_name in all_systems:
