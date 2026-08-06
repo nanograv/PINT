@@ -63,6 +63,7 @@ import copy
 from functools import cached_property
 from typing import Dict, List, Literal, Optional, Tuple, Union
 from warnings import warn
+import os
 
 import astropy.units as u
 import numpy as np
@@ -111,6 +112,8 @@ __all__ = [
     "StepProblem",
     "MaxiterReached",
 ]
+
+_mtcm_cache: dict = {}
 
 
 class Fitter:
@@ -1327,6 +1330,10 @@ class GLSState(ModelState):
         super().__init__(fitter, model)
         self.threshold = threshold
         self.full_cov = full_cov
+        self.use_gls_cache = not (
+            os.environ.get("PINT_DISABLE_CACHE") == "1"
+            or os.environ.get("PINT_DISABLE_GLS_CACHE") == "1"
+        )
 
     @cached_property
     def step(self) -> np.ndarray:
@@ -1345,7 +1352,28 @@ class GLSState(ModelState):
             Nvec = (
                 self.model.scaled_toa_uncertainty(self.fitter.toas).to_value(u.s) ** 2
             )
-            mtcm, mtcy = get_gls_mtcm_mtcy(phiinv, Nvec, M, residuals)
+            n_timing = len(params)
+            noise_key = self.model._noise_designmatrix_cache_key(self.fitter.toas)
+            if (
+                self.use_gls_cache
+                and _mtcm_cache.get("key") is not None
+                and _mtcm_cache["key"] == noise_key
+            ):
+                log.debug(f"Using cached mtcm value: {_mtcm_cache['n']}")
+                _precomputed = _mtcm_cache["value"]
+                _mtcm_cache["n"] += 1
+            else:
+                cinv = 1 / Nvec
+                M_n = M[:, n_timing:]
+                nn = np.dot(M_n.T, cinv[:, None] * M_n)
+                _precomputed = {"n_timing": n_timing, "noise_cinv_noise": nn}
+                if self.use_gls_cache:
+                    _mtcm_cache["key"] = noise_key
+                    _mtcm_cache["value"] = _precomputed
+                    _mtcm_cache["n"] = 0
+            mtcm, mtcy = get_gls_mtcm_mtcy(
+                phiinv, Nvec, M, residuals, precomputed=_precomputed
+            )
 
         self.params = params
         self.units = units
@@ -1388,6 +1416,11 @@ class DownhillGLSFitter(DownhillFitter):
 
     Most of the machinery here is in :class:`pint.fitter.GLSState`
     or :class:`pint.fitter.DownhillFitter`.
+
+    Notes
+    -----
+    Some of the matrix computations here are slow, so when the noise parameters are fixed they are cached by default unless
+    ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_GLS_CACHE=```
     """
 
     # FIXME: do something clever to efficiently compute chi-squared
@@ -1824,6 +1857,11 @@ class GLSFitter(Fitter):
     This fitter extends the :class:`pint.fitter.WLSFitter` to permit the errors
     on the data points to be correlated. The fitting proceeds by decomposing
     the data covariance matrix.
+
+    Notes
+    -----
+    Some of the matrix computations here are slow, so when the noise parameters are fixed they are cached by default unless
+    ``$PINT_DISABLE_CACHE=1`` or ``$PINT_DISABLE_GLS_CACHE=```
     """
 
     def __init__(
@@ -2620,17 +2658,40 @@ def get_gls_mtcm_mtcy(
     Nvec: np.ndarray,
     M: np.ndarray,
     residuals: np.ndarray,
+    precomputed: Optional[Tuple] = None,
     return_mtcmplain=False,
-):
+) -> Tuple[np.ndarray, np.ndarray]:
     """A utility function used by the GLS fitters.
 
     Computes the matrix products `mtcm = M^T N^-1 M` and `mtcy = M^T N^-1 y`
     given the parameter weights (`phiinv`), white noise variances (`Nvec`),
     full design matrix (`M`) containing the timing model design matrix and the
     correlated noise basis, and residuals y (`residuals`).
+
+    Can optionally pass ``precomputed`` with partial results of prior
+    calculation to speed up passes when the noise has not changed
     """
     cinv = 1 / Nvec
-    mtcmplain = np.dot(M.T, cinv[:, None] * M)
+    if precomputed is not None and "noise_cinv_noise" in precomputed:
+        n_t = precomputed["n_timing"]
+        # from Claude recommendation
+        # separate timing and noise sub-blocks
+        M_t, M_n = M[:, :n_t], M[:, n_t:]
+        cinv_M_n = cinv[:, None] * M_n
+        # timing-timing
+        tt = np.dot(M_t.T, cinv[:, None] * M_t)
+        # timing-noise
+        tn = np.dot(M_t.T, cinv_M_n)
+        # noise-noise
+        nn = precomputed["noise_cinv_noise"]
+        mtcmplain = np.empty((M.shape[1], M.shape[1]))
+        mtcmplain[:n_t, :n_t] = tt
+        mtcmplain[:n_t, n_t:] = tn
+        mtcmplain[n_t:, :n_t] = tn.T
+        mtcmplain[n_t:, n_t:] = nn
+    else:
+        # compute from scratch
+        mtcmplain = np.dot(M.T, cinv[:, None] * M)
     mtcm = mtcmplain + np.diag(phiinv)
     mtcy = np.dot(M.T, cinv * residuals)
     return (mtcm, mtcy) if not return_mtcmplain else (mtcm, mtcy, mtcmplain)

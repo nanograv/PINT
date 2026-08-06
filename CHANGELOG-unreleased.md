@@ -9,6 +9,7 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Caching of intermediate woodbury calculation
 - Moved altitude calculation to TOAs object, to make it only happen once
 - `WidebandDownhillFitter` now handles correlated noise correctly.
 - `pintk` Diff/Unc calculation now uses post-fit uncertainties.

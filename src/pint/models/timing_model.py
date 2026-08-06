@@ -399,6 +399,15 @@ class TimingModel:
     def __str__(self) -> str:
         return self.as_parfile()
 
+    def _noise_tuple(self) -> Tuple:
+        out = []
+        for cp in self.NoiseComponent_list:
+            out.append((cp.category,) + tuple([self[p].value for p in cp.params]))
+        return tuple(out)
+
+    def _noise_designmatrix_cache_key(self, toas: TOAs) -> Tuple:
+        return (id(toas), len(toas), self._noise_tuple())
+
     def validate(self, allow_tcb: bool = False) -> None:
         """Validate component setup.
 
