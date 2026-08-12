@@ -350,14 +350,14 @@ class PSR_BINARY:
         """
         if hasattr(eccentricity, "unit"):
             # FIXME: isn't this an error?
-            e = np.longdouble(eccentricity).value
+            e = np.longdouble(eccentricity)
         else:
             e = eccentricity
         if any(e < 0) or any(e >= 1):
             raise ValueError("Eccentricity should be in the range of [0,1).")
 
         if hasattr(mean_anomaly, "unit"):
-            ma = np.longdouble(mean_anomaly).value
+            ma = np.longdouble(mean_anomaly)
         else:
             ma = mean_anomaly
         k = lambda E: E - e * np.sin(E) - ma  # Kepler Equation

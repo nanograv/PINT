@@ -33,7 +33,8 @@ def test_change_pepoch(model):
     epoch_diff = (t0.mjd_long - model.PEPOCH.quantity.mjd_long) * u.day
     F0_at_t0 = model.F0.quantity + model.F1.quantity * epoch_diff.to(u.s)
     model.change_pepoch(t0)
-    assert model.F0.quantity == F0_at_t0
+    # previous test was for equality.  Now get slight differences at high precision
+    assert np.isclose(model.F0.quantity, F0_at_t0, atol=1e-15)
 
 
 def test_change_posepoch(model):

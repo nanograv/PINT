@@ -35,28 +35,14 @@ import erfa
 import numpy as np
 from astropy.time import Time
 from astropy.time.formats import TimeFormat
+import astropy.time.core
+import pint
 
 try:
     maketrans = str.maketrans
 except AttributeError:
     # fallback for Python 2
     from string import maketrans
-
-
-# This check is implemented in pint.utils, but we want to avoid circular imports
-if np.finfo(np.longdouble).eps > 2e-19:
-    import warnings
-
-    def readable_warning(message, category, filename, lineno, line=None):
-        return "%s: %s\n" % (category.__name__, message)
-
-    warnings.formatwarning = readable_warning
-
-    msg = (
-        "This platform does not support extended precision "
-        "floating-point, and PINT will run at reduced precision."
-    )
-    warnings.warn(msg, RuntimeWarning)
 
 
 __all__ = [
@@ -81,6 +67,83 @@ __all__ = [
     "mjds_to_jds_pulsar",
     "jds_to_mjds_pulsar",
 ]
+
+use_npq = False
+eps = np.finfo(np.longdouble).eps
+longdoubledtype = np.longdouble
+# This check is implemented in pint.utils, but we want to avoid circular imports
+if eps > 2e-19:
+    import warnings
+
+    def readable_warning(message, category, filename, lineno, line=None):
+        return "%s: %s\n" % (category.__name__, message)
+
+    warnings.formatwarning = readable_warning
+    ok = False
+    try:
+        import numpy_quaddtype as npq
+
+        ok = npq.epsilon < 2e-19
+    except ImportError:
+        pass
+
+    if not ok:
+        msg = (
+            "This platform does not support extended precision "
+            "floating-point, and PINT will run at reduced precision."
+        )
+        warnings.warn(msg, RuntimeWarning)
+    else:
+        use_npq = True
+
+if use_npq:
+    from numpy_quaddtype import QuadPrecDType, QuadPrecision
+
+    # needed to register the dtype for string representations
+    # see https://github.com/nanograv/PINT/issues/1944#issuecomment-3774471273
+    np._core.sctypeDict[str(QuadPrecDType())] = QuadPrecDType()
+
+    np.longdouble = QuadPrecision
+    longdoubledtype = QuadPrecDType(backend="sleef")
+    eps = npq.epsilon
+
+    def _make_array(val, copy=None):
+        """
+        Take ``val`` and convert/reshape to an array.  If ``copy`` is `True`
+        then copy input values.
+
+        Returns
+        -------
+        val : ndarray
+            Array version of ``val``.
+        """
+        if isinstance(val, (tuple, list)) and len(val) > 0 and isinstance(val[0], Time):
+            dtype = object
+        else:
+            dtype = None
+
+        val = np.array(val, copy=copy, subok=True, dtype=dtype)
+
+        # Allow only float64, string or object arrays as input
+        # (object is for datetime, maybe add more specific test later?)
+        # This also ensures the right byteorder for float64 (closes #2942).
+        # also allow for QuadPrecision now
+        if (
+            val.dtype.kind == "f"
+            and val.dtype.itemsize >= np.dtype(np.float64).itemsize
+        ):
+            pass
+        elif val.dtype.kind in "OSUMaV":
+            pass
+        elif val.dtype == longdoubledtype:
+            pass
+        else:
+            val = np.asanyarray(val, dtype=np.float64)
+
+        return val
+
+    # monkeypatch this into astropy
+    astropy.time.core._make_array = _make_array
 
 
 class PulsarMJD(TimeFormat):
@@ -118,7 +181,7 @@ class MJDLong(TimeFormat):
     name = "mjd_long"
 
     def _check_val_type(self, val1, val2):
-        if val1.dtype != np.longdouble:
+        if val1.dtype != longdoubledtype:
             raise ValueError(
                 "mjd_long requires a long double number but got {!r} of type {}".format(
                     val1, val1.dtype
@@ -126,7 +189,7 @@ class MJDLong(TimeFormat):
             )
         if val2 is None:
             val2 = 0
-        elif val2.dtype != np.longdouble:
+        elif val2.dtype != longdoubledtype:
             raise ValueError(
                 "mjd_long requires a long double number but got {!r} of type {}".format(
                     val2, val2.dtype
@@ -263,10 +326,11 @@ def time_from_mjd_string(s, scale="utc", format="pulsar_mjd"):
 
 
 def time_from_longdouble(t, scale="utc", format="pulsar_mjd"):
-    t = np.longdouble(t)
-    i = float(np.floor(t))
-    f = float(t - i)
-    return astropy.time.Time(val=i, val2=f, format=format, scale=scale)
+    if isinstance(t, str):
+        t = np.longdouble(t)
+    i = np.floor(t)
+    f = t - i
+    return astropy.time.Time(val=float(i), val2=float(f), format=format, scale=scale)
 
 
 def time_to_mjd_string(t):
@@ -280,7 +344,7 @@ def time_to_mjd_string(t):
         return t.mjd_string
 
 
-longdouble_mjd_eps = (70000 * u.day * np.finfo(np.longdouble).eps).to(u.ns)
+longdouble_mjd_eps = (70000 * u.day * eps).to(u.ns)
 
 
 def time_to_longdouble(t):
@@ -327,7 +391,16 @@ def data2longdouble(data):
     np.longdouble
 
     """
-    return str2longdouble(data) if type(data) is str else np.longdouble(data)
+    if type(data) is str:
+        return str2longdouble(data)
+    elif isinstance(data, (np.ndarray, np.number)):
+        return data.astype(longdoubledtype)
+    elif isinstance(data, list):
+        return data2longdouble(np.array(data))
+    elif isinstance(data, astropy.time.Time):
+        return astropy.time.Time(data2longdouble(data.mjd), format="mjd")
+    else:
+        return np.longdouble(data)
 
 
 def quantity2longdouble_withunit(data):
@@ -427,7 +500,7 @@ def mjds_to_jds_pulsar(mjd1, mjd2):
     # then back to astropy/ERFA-convention jd1,jd2 using the
     # ERFA dtf2d() routine which handles leap seconds.
     v1, v2 = day_frac(mjd1, mjd2)
-    (y, mo, d, f) = erfa.jd2cal(erfa.DJM0 + v1, v2)
+    y, mo, d, f = erfa.jd2cal(erfa.DJM0 + v1, v2)
     # Fractional day to HMS.  Uses 86400-second day always.
     # Seems like there should be a ERFA routine for this..
     # There is: erfa.d2tf. Unfortunately it takes a "number of
@@ -466,7 +539,7 @@ def _str_to_mjds(s):
             if len(mjd_s) == 1:
                 mjd_s.append("0")
             imjd_s, fmjd_s = mjd_s
-            imjd = np.longdouble(int(imjd_s))
+            imjd = int(imjd_s)
             fmjd = np.longdouble(f"0.{fmjd_s}")
             if ss.startswith("-"):
                 fmjd = -fmjd
@@ -504,7 +577,7 @@ def str_to_mjds(s):
 
 
 def _mjds_to_str(mjd1, mjd2):
-    (imjd, fmjd) = day_frac(mjd1, mjd2)
+    imjd, fmjd = day_frac(mjd1, mjd2)
     imjd = int(imjd)
     assert np.fabs(fmjd) < 1.0
     while fmjd < 0.0:

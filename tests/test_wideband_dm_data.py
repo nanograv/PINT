@@ -1,4 +1,4 @@
-""" Various of tests on the wideband DM data"""
+"""Various of tests on the wideband DM data"""
 
 import io
 import os
@@ -67,7 +67,7 @@ def wb_toas_all(wb_model):
         r = Residuals(toas, wb_model)
         if np.all(r.time_resids < 1 * u.ns):
             break
-        toas.adjust_TOAs(TimeDelta(-r.time_resids))
+        toas.adjust_TOAs(TimeDelta(-np.float64(r.time_resids)))
     else:
         raise ValueError
     return toas
