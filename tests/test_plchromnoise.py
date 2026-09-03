@@ -180,3 +180,39 @@ def test_PLRedNoise_recovery():
     # check residuals are equivalent within error
     rs_diff = r2.time_resids.value - r1.time_resids.value
     assert np.all(np.isclose(rs_diff, 0, atol=1e-6))
+
+
+def test_PLChromNoise_basis_uses_CM_FREF():
+    """The chromatic noise basis is scaled by (CM_FREF/f)**TNCHROMIDX."""
+    par = """
+        PSRJ J1234+5678
+        ELAT 0
+        ELONG 0
+        F0 1
+        PEPOCH 58000
+        DM 10
+        CM 0
+        TNCHROMIDX 4
+        TNCHROMAMP -13
+        TNCHROMGAM 3
+        TNCHROMC 5
+        CM_FREF {fref}
+    """
+    mjds = np.linspace(57000, 58000, 40)
+    freqs = np.tile([500.0, 1400.0, 2000.0], 40)[:40] * u.MHz
+
+    model = get_model(io.StringIO(par.format(fref=1400)))
+    toas = make_fake_toas_fromMJDs(mjds, model=model, freq=freqs)
+
+    model2 = get_model(io.StringIO(par.format(fref=700)))
+
+    basis = model.components["PLChromNoise"].get_noise_basis(toas)
+    basis2 = model2.components["PLChromNoise"].get_noise_basis(toas)
+
+    # halving the reference frequency scales every row by (1/2)**TNCHROMIDX
+    assert np.allclose(basis2, basis * 0.5**model.TNCHROMIDX.value)
+
+    # and the basis is the Fourier design matrix scaled by (fref/f)**alpha
+    bfreqs = model.barycentric_radio_freq(toas).to_value(u.MHz)
+    D = (1400 / bfreqs) ** model.TNCHROMIDX.value
+    assert np.allclose(basis / D[:, None], basis2 / (D[:, None] * 0.5**4))

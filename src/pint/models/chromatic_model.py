@@ -27,12 +27,17 @@ class Chromatic(DelayComponent):
 
         self.alpha_deriv_funcs = {}
 
-    def chromatic_time_delay(self, cm, alpha, freq):
+    def chromatic_time_delay(self, cm, alpha, freq, fref=None):
         """Return the chromatic time delay for a set of frequencies.
 
-        delay_chrom = cm * DMconst * (freq / 1 MHz)**alpha
+        delay_chrom = cm * DMconst * (freq / CM_FREF)**(-alpha)
+
+        If *fref* is None, the reference frequency is taken from the CM_FREF
+        parameter of the parent model.
         """
-        cmdelay = cm * DMconst * (freq / u.MHz) ** (-alpha)
+        if fref is None:
+            fref = self._parent["CM_FREF"].quantity
+        cmdelay = cm * DMconst * (freq / fref) ** (-alpha)
         return cmdelay.to(u.s)
 
     def chromatic_type_delay(self, toas):
@@ -44,7 +49,8 @@ class Chromatic(DelayComponent):
 
         cm = self.cm_value(toas)
         alpha = self._parent["TNCHROMIDX"].quantity
-        return self.chromatic_time_delay(cm, alpha, bfreq)
+        fref = self._parent["CM_FREF"].quantity
+        return self.chromatic_time_delay(cm, alpha, bfreq, fref)
 
     def cm_value(self, toas):
         """Compute modeled CM value at given TOAs.
@@ -88,11 +94,12 @@ class Chromatic(DelayComponent):
         param_unit = getattr(self, param_name).units
         d_cm_d_cmparam = np.zeros(toas.ntoas) * cmu / param_unit
         alpha = self._parent["TNCHROMIDX"].quantity
+        fref = self._parent["CM_FREF"].quantity
 
         for df in self.cm_deriv_funcs[param_name]:
             d_cm_d_cmparam += df(toas, param_name)
 
-        return DMconst * d_cm_d_cmparam * (bfreq / u.MHz) ** (-alpha)
+        return DMconst * d_cm_d_cmparam * (bfreq / fref) ** (-alpha)
 
     def register_cm_deriv_funcs(self, func, param):
         """Register the derivative function in to the deriv_func dictionaries.
@@ -120,6 +127,12 @@ class ChromaticCM(Chromatic):
 
     This model uses Taylor expansion to model CM variation over time. It
     can also be used for a constant CM.
+
+    The delay is ``CM * DMconst * (freq / CM_FREF)**(-TNCHROMIDX)``, i.e. CM is
+    the chromatic measure at the reference frequency CM_FREF (1400 MHz by
+    default). Note that CM_FREF was previously fixed at 1 MHz; CM values from
+    par files written before CM_FREF was introduced must be divided by
+    ``CM_FREF**TNCHROMIDX`` (with CM_FREF in MHz) to describe the same delay.
 
     Fitting for the chromatic index is not supported because the fit is too
     unstable when fit simultaneously with the DM.
@@ -175,6 +188,17 @@ class ChromaticCM(Chromatic):
                 convert_tcb2tdb=False,
             )
         )
+        self.add_param(
+            floatParameter(
+                name="CM_FREF",
+                units=u.MHz,
+                value=1400.0,
+                frozen=True,
+                description="Reference frequency of the chromatic measure",
+                long_double=True,
+                convert_tcb2tdb=False,
+            )
+        )
 
         self.cm_value_funcs += [self.base_cm]
         self.delay_funcs_component += [self.constant_chromatic_delay]
@@ -205,6 +229,8 @@ class ChromaticCM(Chromatic):
                     "CMEPOCH",
                     "CMEPOCH or PEPOCH is required if CM1 or higher are set",
                 )
+        if not self.CM_FREF.value:
+            raise ValueError("CM_FREF cannot be set to 0")
 
     def CM_derivative_unit(self, n):
         return f"pc cm^-3 MHz^-2 / yr^{n:d}" if n else "pc cm^-3 MHz^-2"

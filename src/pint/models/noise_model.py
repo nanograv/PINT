@@ -600,6 +600,16 @@ class PLDMNoise(CorrelatedNoiseComponent):
                 tcb2tdb_scale_factor=1,
             )
         )
+        self.add_param(
+            floatParameter(
+                name="DM_FREF",
+                units=u.MHz,
+                value=1400.0,
+                frozen=True,
+                description="Reference frequency of the DM noise amplitude",
+                convert_tcb2tdb=False,
+            )
+        )
 
         self.covariance_matrix_funcs += [self.pl_dm_cov_matrix]
         self.basis_funcs += [self.pl_dm_basis_weight_pair]
@@ -646,7 +656,7 @@ class PLDMNoise(CorrelatedNoiseComponent):
         t, f = self.get_time_frequencies(toas)
         Fmat = create_fourier_design_matrix(t, f)
         freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
-        fref = 1400 * u.MHz
+        fref = self.DM_FREF.quantity.to(u.MHz)
         D = (fref.value / freqs.value) ** 2
 
         return Fmat * D[:, None]
@@ -667,8 +677,10 @@ class PLDMNoise(CorrelatedNoiseComponent):
 
         A Fourier design matrix contains the sine and cosine basis_functions
         in a Fourier series expansion. Here we scale the design matrix by
-        (fref/f)**2, where fref = 1400 MHz to match the convention used in
-        enterprise.
+        (fref/f)**2, where fref is the DM_FREF parameter (1400 MHz by default,
+        matching the convention used in enterprise). TNDMAMP is the amplitude
+        of the DM noise delays at fref, so changing DM_FREF rescales TNDMAMP
+        by (DM_FREF/1400 MHz)**2.
 
         The weights used are the power-law PSD values at frequencies n/T,
         where n is in [1, TNDMC] and T is the total observing duration of
@@ -988,7 +1000,7 @@ class PLChromNoise(CorrelatedNoiseComponent):
         t, f = self.get_time_frequencies(toas)
         Fmat = create_fourier_design_matrix(t, f)
         freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
-        fref = 1400 * u.MHz
+        fref = self._parent.CM_FREF.quantity.to(u.MHz)
         alpha = self._parent.TNCHROMIDX.value
         D = (fref.value / freqs.value) ** alpha
 
@@ -1010,8 +1022,9 @@ class PLChromNoise(CorrelatedNoiseComponent):
 
         A Fourier design matrix contains the sine and cosine basis_functions
         in a Fourier series expansion. Here we scale the design matrix by
-        (fref/f)**2, where fref = 1400 MHz to match the convention used in
-        enterprise.
+        (fref/f)**TNCHROMIDX, where fref is the CM_FREF parameter of the
+        ChromaticCM component (1400 MHz by default, matching the convention
+        used in enterprise).
 
         The weights used are the power-law PSD values at frequencies n/T,
         where n is in [1, TNCHROMC] and T is the total observing duration of

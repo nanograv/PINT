@@ -172,3 +172,48 @@ def test_PLRedNoise_recovery():
     # check residuals are equivalent within error
     rs_diff = r2.time_resids.value - r1.time_resids.value
     assert np.all(np.isclose(rs_diff, 0, atol=1e-6))
+
+
+def test_PLDMNoise_DM_FREF_default():
+    """DM_FREF defaults to 1400 MHz, is frozen, and round-trips through a par file."""
+    model = get_model(io.StringIO(parfile_contents))
+
+    assert model.DM_FREF.quantity == 1400 * u.MHz
+    assert model.DM_FREF.frozen
+    assert "DM_FREF" in str(model)
+
+    model2 = get_model(io.StringIO(str(model)))
+    assert model2.DM_FREF.quantity == model.DM_FREF.quantity
+
+
+def test_PLDMNoise_basis_uses_DM_FREF():
+    """The DM noise basis is scaled by (DM_FREF/f)**2."""
+    par = """
+        PSRJ J1234+5678
+        ELAT 0
+        ELONG 0
+        F0 1
+        PEPOCH 58000
+        DM 10
+        TNDMAMP -13
+        TNDMGAM 3
+        TNDMC 5
+        DM_FREF {fref}
+    """
+    mjds = np.linspace(57000, 58000, 40)
+    freqs = np.tile([500.0, 1400.0, 2000.0], 40)[:40] * u.MHz
+
+    model = get_model(io.StringIO(par.format(fref=1400)))
+    toas = make_fake_toas_fromMJDs(mjds, model=model, freq=freqs)
+    model2 = get_model(io.StringIO(par.format(fref=700)))
+
+    basis = model.components["PLDMNoise"].get_noise_basis(toas)
+    basis2 = model2.components["PLDMNoise"].get_noise_basis(toas)
+
+    # halving the reference frequency scales every row by (1/2)**2
+    assert np.allclose(basis2, basis * 0.25)
+
+    # the default basis is the Fourier design matrix scaled by (1400 MHz / f)**2
+    bfreqs = model.barycentric_radio_freq(toas).to_value(u.MHz)
+    D = (1400 / bfreqs) ** 2
+    assert np.allclose(basis / D[:, None], basis2 / (D[:, None] * 0.25))

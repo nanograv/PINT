@@ -93,7 +93,7 @@ def test_cmx_delay(model_and_toas):
         toas.get_mjds().value >= model.CMXR1_0001.value,
         toas.get_mjds().value <= model.CMXR2_0001.value,
     )
-    cmx1_freqs = toas.get_freqs()[cmx1_mask]
+    cmx1_freqs = model.barycentric_radio_freq(toas)[cmx1_mask]
     assert all(
         np.isclose(
             model.components["ChromaticCMX"].chromatic_time_delay(
@@ -107,7 +107,7 @@ def test_cmx_delay(model_and_toas):
         toas.get_mjds().value >= model.CMXR1_0002.value,
         toas.get_mjds().value <= model.CMXR2_0002.value,
     )
-    cmx2_freqs = toas.get_freqs()[cmx2_mask]
+    cmx2_freqs = model.barycentric_radio_freq(toas)[cmx2_mask]
     assert all(
         np.isclose(
             model.components["ChromaticCMX"].chromatic_time_delay(
@@ -121,7 +121,7 @@ def test_cmx_delay(model_and_toas):
         toas.get_mjds().value >= model.CMXR1_0003.value,
         toas.get_mjds().value <= model.CMXR2_0003.value,
     )
-    cmx3_freqs = toas.get_freqs()[cmx3_mask]
+    cmx3_freqs = model.barycentric_radio_freq(toas)[cmx3_mask]
     assert all(
         np.isclose(
             model.components["ChromaticCMX"].chromatic_time_delay(
