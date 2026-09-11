@@ -255,7 +255,7 @@ class BinaryELL1(PulsarBinary):
         # make sure that the PB is the base parameter
         if self.PB.quantity is not None and not isinstance(self.PB, funcParameter):
             PB = self.PB.quantity
-            if self.PBDOT.quantity is not None:
+            if hasattr(self, "PBDOT") and self.PBDOT.quantity is not None:
                 PBDOT = self.PBDOT.quantity
             else:
                 PBDOT = 0.0 * u.Unit("")

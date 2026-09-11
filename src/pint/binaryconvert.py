@@ -21,6 +21,7 @@ from pint.models.binary_bt import BinaryBT
 from pint.models.binary_dd import BinaryDD, BinaryDDH, BinaryDDS
 from pint.models.binary_ddk import BinaryDDK
 from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
+from pint.models.parameter import funcParameter
 
 # output types
 # DDGR is not included as there is not a well-defined way to get a unique output
@@ -28,6 +29,19 @@ binary_types = ["DD", "DDK", "DDS", "DDH", "BT", "ELL1", "ELL1H", "ELL1k"]
 
 
 __all__ = ["convert_binary"]
+
+
+def _ordinary_pb_frozen(model: pint.models.TimingModel) -> bool:
+    """Return the freeze flag for the independent orbital-period parameter.
+
+    Under canonical FBX, ``PB`` is a derived ``funcParameter`` and is always
+    frozen; the independent period information lives on ``FB0``.
+    """
+    if model.PB.quantity is not None and not isinstance(model.PB, funcParameter):
+        return model.PB.frozen
+    if hasattr(model, "FB0") and model.FB0.quantity is not None:
+        return model.FB0.frozen
+    return model.PB.frozen
 
 
 def _M2SINI_to_orthometric(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
@@ -800,20 +814,12 @@ def convert_binary(
             outmodel.OM.frozen = model.EPS1.frozen or model.EPS2.frozen
             outmodel.T0.quantity = T0
             outmodel.T0.uncertainty = T0_unc
-            if model.PB.quantity is not None:
-                outmodel.T0.frozen = (
-                    model.EPS1.frozen
-                    or model.EPS2.frozen
-                    or model.TASC.frozen
-                    or model.PB.frozen
-                )
-            elif model.FB0.quantity is not None:
-                outmodel.T0.frozen = (
-                    model.EPS1.frozen
-                    or model.EPS2.frozen
-                    or model.TASC.frozen
-                    or model.FB0.frozen
-                )
+            outmodel.T0.frozen = (
+                model.EPS1.frozen
+                or model.EPS2.frozen
+                or model.TASC.frozen
+                or _ordinary_pb_frozen(model)
+            )
             if EDOT is not None:
                 outmodel.EDOT.quantity = EDOT
             if EDOT_unc is not None:
@@ -1156,7 +1162,7 @@ def convert_binary(
             outmodel.TASC.frozen = (
                 model.ECC.frozen
                 or model.OM.frozen
-                or model.PB.frozen
+                or _ordinary_pb_frozen(model)
                 or model.T0.frozen
             )
             if EPS1DOT is not None and output != "ELL1k":
@@ -1271,7 +1277,10 @@ def convert_binary(
                     f"Setting KIN={outmodel.KIN} from SINI={model.SINI}: check that the sign is correct"
                 )
                 outmodel.KIN.frozen = model.SINI.frozen
-    outmodel.validate()
+    # Match ModelBuilder ordering: normalize/setup before validate so that
+    # BinaryDD/BT defaults (e.g. PBDOT=0) are not invented before FBX
+    # canonicalization removes an unset PBDOT.
     outmodel.setup()
+    outmodel.validate()
 
     return outmodel

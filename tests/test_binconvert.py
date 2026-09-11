@@ -11,29 +11,6 @@ import pint.fitter
 import pint.binaryconvert
 
 
-def _assert_roundtrip_value(p, m, mback):
-    """Compare one parameter after a binary-model roundtrip.
-
-    Numeric parameters use ``np.isclose``.  MJD/``Time`` parameters cannot use
-    exact ``==``: ``convert_binary`` propagates TASC↔T0 through
-    ``uncertainties`` (float64), and platforms with IEEE binary128
-    ``numpy.longdouble`` (e.g. Linux aarch64) expose sub-ns residuals that
-    still matched under 80-bit x87 longdouble bit-equality by coincidence.
-    Allow about one float64 ulp at the MJD magnitude.
-    """
-    q = getattr(m, p).quantity
-    v0, v1 = getattr(m, p).value, getattr(mback, p).value
-    if isinstance(q, (str, bool)):
-        assert v0 == v1, f"{p}: {v0} does not match {v1}"
-    elif isinstance(q, astropy.time.Time):
-        a = np.longdouble(v0)
-        b = np.longdouble(v1)
-        atol = np.finfo(np.float64).eps * max(abs(float(a)), abs(float(b)), 1.0)
-        assert np.isclose(a, b, rtol=0.0, atol=atol), f"{p}: {v0} does not match {v1}"
-    else:
-        assert np.isclose(v0, v1), f"{p}: {v0} does not match {v1}"
-
-
 parDD = """
 PSRJ           1855+09
 RAJ             18:57:36.3932884         0  0.00002602730280675029
@@ -170,6 +147,48 @@ EPS2DOT           -1e-10 1 1e-11
 kwargs = {"ELL1H": {"NHARMS": 3, "useSTIGMA": True}, "DDK": {"KOM": 0 * u.deg}}
 
 
+def _assert_roundtrip_param(m, mback, p):
+    """Compare one parameter after a binary-model roundtrip.
+
+    Numeric parameters use ``np.isclose``.  MJD/``Time`` parameters cannot use
+    exact ``==``: ``convert_binary`` propagates TASC↔T0 through
+    ``uncertainties`` (float64), and platforms with IEEE binary128
+    ``numpy.longdouble`` (e.g. Linux aarch64) expose sub-ns residuals that
+    still matched under 80-bit x87 longdouble bit-equality by coincidence.
+    Allow about one float64 ulp at the MJD magnitude.
+    """
+    left = getattr(m, p)
+    right = getattr(mback, p)
+    if left.value is None:
+        return
+    if isinstance(left.quantity, (str, bool)):
+        assert (
+            left.value == right.value
+        ), f"{p}: {left.value} does not match {right.value}"
+        return
+    if isinstance(left.quantity, astropy.time.Time):
+        a = np.longdouble(left.value)
+        b = np.longdouble(right.value)
+        atol = np.finfo(np.float64).eps * max(abs(float(a)), abs(float(b)), 1.0)
+        assert np.isclose(
+            a, b, rtol=0.0, atol=atol
+        ), f"{p}: {left.value} does not match {right.value}"
+        return
+    assert np.isclose(
+        left.value, right.value
+    ), f"{p}: {left.value} does not match {right.value}"
+    if left.uncertainty is not None:
+        # some precision may be lost in uncertainty conversion
+        assert np.isclose(
+            left.uncertainty_value,
+            right.uncertainty_value,
+            rtol=0.2,
+        ), (
+            f"{p} uncertainty: {left.uncertainty_value} does not match "
+            f"{right.uncertainty_value}"
+        )
+
+
 @pytest.mark.parametrize(
     "output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK", "DDH"]
 )
@@ -203,19 +222,7 @@ def test_ELL1_roundtrip(output):
         if output == "BT" and p in ["M2", "SINI"]:
             # these are not in BT
             continue
-        if getattr(m, p).value is None:
-            continue
-        _assert_roundtrip_value(p, m, mback)
-        if (
-            not isinstance(getattr(m, p).quantity, (str, bool, astropy.time.Time))
-            and getattr(m, p).uncertainty is not None
-        ):
-            # some precision may be lost in uncertainty conversion
-            assert np.isclose(
-                getattr(m, p).uncertainty_value,
-                getattr(mback, p).uncertainty_value,
-                rtol=0.2,
-            ), f"{p} uncertainty: {getattr(m, p).uncertainty_value} does not match {getattr(mback, p).uncertainty_value}"
+        _assert_roundtrip_param(m, mback, p)
 
 
 @pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
@@ -235,19 +242,7 @@ def test_ELL1_roundtripFB0(output):
         if output == "BT" and p in ["M2", "SINI"]:
             # these are not in BT
             continue
-        if getattr(m, p).value is None:
-            continue
-        _assert_roundtrip_value(p, m, mback)
-        if (
-            not isinstance(getattr(m, p).quantity, (str, bool, astropy.time.Time))
-            and getattr(m, p).uncertainty is not None
-        ):
-            # some precision may be lost in uncertainty conversion
-            assert np.isclose(
-                getattr(m, p).uncertainty_value,
-                getattr(mback, p).uncertainty_value,
-                rtol=0.2,
-            ), f"{p} uncertainty: {getattr(m, p).uncertainty_value} does not match {getattr(mback, p).uncertainty_value}"
+        _assert_roundtrip_param(m, mback, p)
 
 
 @pytest.mark.parametrize(
@@ -281,24 +276,14 @@ def test_DD_roundtrip(output):
             continue
         if getattr(m, p).value is None:
             continue
-        # print(getattr(m, p), getattr(mback, p))
-        _assert_roundtrip_value(p, m, mback)
-        if (
-            not isinstance(getattr(m, p).quantity, (str, bool, astropy.time.Time))
-            and getattr(m, p).uncertainty is not None
-        ):
-            # some precision may be lost in uncertainty conversion
-            if output in ["ELL1", "ELL1H", "ELL1k"] and p in ["ECC"]:
-                # we lose precision on ECC since it also contains a contribution from OM now
-                continue
-            if output in ["ELL1H", "DDH"] and p == "M2":
-                # this also loses precision
-                continue
-            assert np.isclose(
-                getattr(m, p).uncertainty_value,
-                getattr(mback, p).uncertainty_value,
-                rtol=0.2,
-            ), f"Parameter '{p}' failed: initial uncertainty {getattr(m, p).uncertainty_value} but returned {getattr(mback, p).uncertainty_value}"
+        # Value still checked; skip loose uncertainty for known precision losses.
+        if output in ["ELL1", "ELL1H", "ELL1k"] and p == "ECC":
+            assert np.isclose(getattr(m, p).value, getattr(mback, p).value)
+            continue
+        if output in ["ELL1H", "DDH"] and p == "M2":
+            assert np.isclose(getattr(m, p).value, getattr(mback, p).value)
+            continue
+        _assert_roundtrip_param(m, mback, p)
 
 
 @pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
@@ -347,24 +332,13 @@ def test_DDFB0_roundtrip(output):
             continue
         if getattr(m, p).value is None:
             continue
-        # print(getattr(m, p), getattr(mback, p))
-        _assert_roundtrip_value(p, m, mback)
-        if (
-            not isinstance(getattr(m, p).quantity, (str, bool, astropy.time.Time))
-            and getattr(m, p).uncertainty is not None
-        ):
-            # some precision may be lost in uncertainty conversion
-            if output in ["ELL1", "ELL1H", "ELL1k"] and p in ["ECC"]:
-                # we lose precision on ECC since it also contains a contribution from OM now
-                continue
-            if output == "ELL1H" and p == "M2":
-                # this also loses precision
-                continue
-            assert np.isclose(
-                getattr(m, p).uncertainty_value,
-                getattr(mback, p).uncertainty_value,
-                rtol=0.2,
-            )
+        if output in ["ELL1", "ELL1H", "ELL1k"] and p == "ECC":
+            assert np.isclose(getattr(m, p).value, getattr(mback, p).value)
+            continue
+        if output == "ELL1H" and p == "M2":
+            assert np.isclose(getattr(m, p).value, getattr(mback, p).value)
+            continue
+        _assert_roundtrip_param(m, mback, p)
 
 
 def test_ELL1_ELL1H():

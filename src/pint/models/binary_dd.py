@@ -395,6 +395,12 @@ class BinaryDDH(BinaryDD):
     This uses the full expression for the Shapiro delay, not the harmonic
     decomposition used in :class:`pint.models.stand_alone_psr_binaries.ELL1H_model.ELL1Hmodel`.
 
+    A negative ``H3`` (equivalently a negative derived companion mass ``M2``)
+    is accepted with a warning: in the orthometric parameterization a weak
+    Shapiro-delay measurement can legitimately have a best-fit ``H3 < 0``,
+    and wherever the ordinary DD logarithm is valid the delay remains smooth
+    through ``H3=0``. Finite positive ``STIGMA`` is still required.
+
     References
     ----------
     - Freire & Wex (2010), MNRAS, 409 (1), 199-212 [1]_
@@ -405,6 +411,7 @@ class BinaryDDH(BinaryDD):
     """
 
     register = True
+    _allow_negative_derived_m2 = True
 
     def __init__(self):
         super().__init__()
@@ -458,7 +465,12 @@ class BinaryDDH(BinaryDD):
         self.update_binary_object(None)
 
     def validate(self):
-        """Parameter validation."""
+        """Validate the native DDH domain before evaluating derived values."""
+        if self.H3.value is not None and not np.isfinite(self.H3.value):
+            raise ValueError(f"H3 must be finite ({self.H3.quantity})")
+        if self.STIGMA.value is not None:
+            if not np.isfinite(self.STIGMA.value):
+                raise ValueError(f"STIGMA must be finite ({self.STIGMA.quantity})")
+            if self.STIGMA.value <= 0:
+                raise ValueError(f"STIGMA must be positive ({self.STIGMA.quantity})")
         super().validate()
-        # if self.H3.quantity is None:
-        #     raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")

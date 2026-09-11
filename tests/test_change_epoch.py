@@ -178,10 +178,12 @@ def test_change_binary_epoch(binary_model):
     epoch_name = "TASC" if model_kind in ["ELL1", "ELL1H"] else "T0"
     orig_epoch = getattr(model, epoch_name).quantity
 
-    # Get PB and PBDOT from model
-    if model.PB.quantity is not None:
+    # Get PB and PBDOT from model. Derived PB means the active phase is FBX.
+    from pint.models.parameter import funcParameter
+
+    if model.PB.quantity is not None and not isinstance(model.PB, funcParameter):
         PB = model.PB.quantity
-        if model.PBDOT.quantity is not None:
+        if hasattr(model, "PBDOT") and model.PBDOT.quantity is not None:
             PBDOT = model.PBDOT.quantity
         else:
             PBDOT = 0.0 * u.Unit("")

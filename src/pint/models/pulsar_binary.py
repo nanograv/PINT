@@ -24,12 +24,17 @@ from pint.models.timing_model import DelayComponent
 from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.utils import parse_time, taylor_horner_deriv
 
-# def _p_to_f(p):
-#     return 1 / p
+_SECS_PER_DAY = np.longdouble(86400)
 
 
-# def _pdot_to_fdot(p, pdot):
-#     return -pdot / p**2
+def _pb_from_fb0(fb0):
+    """Derived orbital period in days from FB0."""
+    return (1 / fb0).to(u.day)
+
+
+def _pbdot_from_fb0_fb1(fb0, fb1):
+    """Derived orbital-period derivative from FB0 and FB1."""
+    return (-fb1 / fb0**2).to(u.day / u.day)
 
 
 class PulsarBinary(DelayComponent):
@@ -57,6 +62,13 @@ class PulsarBinary(DelayComponent):
         - SINI - system inclination (0<=SINI<=1)
         - FB0 - orbital frequency (1/s, alternative to PB, non-negative)
         - FBn - time derivatives of orbital frequency (1/s**(n+1))
+
+    If any ``FBn`` (n>=1) is provided together with ``PB`` but without ``FB0``
+    (a hybrid parameterization accepted by tempo2), ``PB`` (and ordinary
+    ``PBDOT``, when present) are converted to ``FB0`` (and ``FB1``) on setup.
+    Missing interior FB coefficients are inserted as frozen zeros. ``PB`` and,
+    when ``FB1`` is present, ``PBDOT`` remain available as read-only derived
+    parameters.
 
     The following ORBWAVEs parameters define a Fourier series model for orbital phase
     variations, as an alternative to the FBn Taylor series expansion:
@@ -86,6 +98,7 @@ class PulsarBinary(DelayComponent):
     """
 
     category = "pulsar_system"
+    _allow_negative_derived_m2 = False
 
     def __init__(self):
         super().__init__()
@@ -259,7 +272,227 @@ class PulsarBinary(DelayComponent):
         # Set up delay function
         self.delay_funcs_component += [self.binarymodel_delay]
 
+    def _fbx_mapping(self):
+        """Return the component's ordered FB-index mapping."""
+        return self.get_prefix_mapping_component("FB")
+
+    def _add_or_get_fbx(self, index):
+        """Return FB[index], creating its prefix parameter when absent."""
+        mapping = self._fbx_mapping()
+        if index not in mapping:
+            self.add_param(self.FB0.new_param(index))
+            mapping = self._fbx_mapping()
+        return getattr(self, mapping[index])
+
+    def _set_fbx_frozen_zero(self, index):
+        """Set an absent or valueless FB coefficient to an exact frozen zero."""
+        par = self._add_or_get_fbx(index)
+        if par.quantity is None:
+            par.value = np.longdouble(0)
+            par.frozen = True
+            par.uncertainty = None
+            return True
+        return False
+
+    def _bridge_pb_to_fb0(self):
+        """Convert hybrid PB + higher-FBn input to an FB0 coefficient."""
+        mapping = self._fbx_mapping()
+        higher_fbn_set = any(
+            index >= 1 and getattr(self, name).quantity is not None
+            for index, name in mapping.items()
+        )
+        if not (
+            higher_fbn_set
+            and self.FB0.quantity is None
+            and self.PB.quantity is not None
+            and not isinstance(self.PB, funcParameter)
+        ):
+            return
+
+        pb_days = np.longdouble(self.PB.quantity.to_value(u.day))
+        if pb_days <= 0:
+            raise ValueError(f"Binary period PB must be positive ({self.PB.quantity})")
+
+        self.FB0.value = 1 / (pb_days * _SECS_PER_DAY)
+        self.FB0.frozen = self.PB.frozen
+        self.FB0.uncertainty = None
+        if self.PB.uncertainty is not None:
+            sigma_pb_days = np.longdouble(self.PB.uncertainty.to_value(u.day))
+            self.FB0.uncertainty_value = abs(sigma_pb_days) / (
+                pb_days**2 * _SECS_PER_DAY
+            )
+
+        log.warning(
+            f"Converting PB={self.PB.quantity} to FB0={self.FB0.quantity}; "
+            "FBX supplies the complete orbital phase."
+        )
+
+    def _convert_pbdot_to_fb1(self):
+        """Resolve ordinary or derived PBDOT under the complete-FBX policy."""
+        if "PBDOT" not in self.params:
+            return
+
+        pbdot = self.PBDOT
+        if isinstance(pbdot, funcParameter):
+            if pbdot._func is _pbdot_from_fb0_fb1:
+                # Already canonicalized by an earlier setup() call.
+                return
+            raise ValueError(
+                "FBX is not supported for a binary model with a non-FBX "
+                f"derived PBDOT ({self.binary_model_name}); use the PB "
+                "parameterization or implement the required dynamic PB/FB "
+                "chain rule."
+            )
+
+        if pbdot.quantity is None:
+            return
+
+        if "FB1" in self.params and self.FB1.quantity is not None:
+            log.warning(
+                f"Both PBDOT={pbdot.quantity} and FB1={self.FB1.quantity} "
+                "are set; explicit FB1 wins and PBDOT is discarded."
+            )
+            return
+
+        fb0 = np.longdouble(self.FB0.quantity.to_value(1 / u.s))
+        pbdot_value = np.longdouble(pbdot.quantity.to_value(u.s / u.s))
+        fb1 = self._add_or_get_fbx(1)
+        fb1.value = -pbdot_value * fb0**2
+        fb1.frozen = pbdot.frozen
+        fb1.uncertainty = None
+
+        variance_terms = []
+        if pbdot.uncertainty is not None:
+            sigma_pbdot = np.longdouble(pbdot.uncertainty.to_value(u.s / u.s))
+            variance_terms.append((fb0**2 * sigma_pbdot) ** 2)
+        if self.FB0.uncertainty is not None:
+            sigma_fb0 = np.longdouble(self.FB0.uncertainty.to_value(1 / u.s))
+            variance_terms.append((2 * pbdot_value * fb0 * sigma_fb0) ** 2)
+        if variance_terms:
+            fb1.uncertainty_value = np.sqrt(
+                np.sum(np.asarray(variance_terms, dtype=np.longdouble))
+            )
+
+        log.warning(
+            f"Converting PBDOT={pbdot.quantity} to FB1={fb1.quantity}; "
+            "FBX supplies the complete orbital phase."
+        )
+
+    def _fill_sparse_fbx_terms(self):
+        """Insert frozen zeros for missing coefficients below the maximum FBn."""
+        mapping = self._fbx_mapping()
+        valued_indices = [
+            index
+            for index, name in mapping.items()
+            if getattr(self, name).quantity is not None
+        ]
+        if not valued_indices:
+            return
+
+        inserted = [
+            index
+            for index in range(max(valued_indices) + 1)
+            if self._set_fbx_frozen_zero(index)
+        ]
+        if inserted:
+            names = ", ".join(f"FB{index}" for index in inserted)
+            log.warning(
+                f"Inserted frozen zero FB coefficients for sparse series: {names}."
+            )
+
+    def _canonicalize_fbx_views(self):
+        """Install idempotent PB/PBDOT views derived from active FB coefficients."""
+        pb_is_canonical = (
+            isinstance(self.PB, funcParameter) and self.PB._func is _pb_from_fb0
+        )
+        if not pb_is_canonical:
+            self.remove_param("PB")
+            self.add_param(
+                funcParameter(
+                    name="PB",
+                    units=u.day,
+                    description="Orbital period",
+                    long_double=True,
+                    params=("FB0",),
+                    func=_pb_from_fb0,
+                )
+            )
+
+        have_fb1 = "FB1" in self.params and self.FB1.quantity is not None
+        pbdot_is_canonical = (
+            "PBDOT" in self.params
+            and isinstance(self.PBDOT, funcParameter)
+            and self.PBDOT._func is _pbdot_from_fb0_fb1
+        )
+        if have_fb1 and not pbdot_is_canonical:
+            if "PBDOT" in self.params:
+                self.remove_param("PBDOT")
+            self.add_param(
+                funcParameter(
+                    name="PBDOT",
+                    units=u.day / u.day,
+                    description="Orbital period derivative respect to time",
+                    unit_scale=True,
+                    scale_factor=1e-12,
+                    scale_threshold=1e-7,
+                    params=("FB0", "FB1"),
+                    func=_pbdot_from_fb0_fb1,
+                )
+            )
+        elif not have_fb1 and "PBDOT" in self.params:
+            # Do not expose a writable parameter that OrbitFBX would ignore.
+            self.remove_param("PBDOT")
+
+    def _setup_fbx_parameterization(self):
+        """Normalize all active FBX models before ordinary component setup."""
+        ordinary_pb = not isinstance(self.PB, funcParameter)
+        if (
+            ordinary_pb
+            and self.PB.quantity is not None
+            and self.FB0.quantity is not None
+        ):
+            raise ValueError("Model cannot have values for both FB0 and PB")
+
+        mapping = self._fbx_mapping()
+        using_fbx = any(
+            getattr(self, name).quantity is not None for name in mapping.values()
+        )
+        if not using_fbx:
+            return
+
+        # All unsupported combinations are rejected before bridge mutation.
+        if hasattr(self, "XPBDOT") and self.XPBDOT.quantity is not None:
+            raise ValueError(
+                "XPBDOT is not supported together with the FBX orbital-phase "
+                "parameterization; encode the complete orbital-frequency "
+                "evolution in FBn or remove the FBn parameters."
+            )
+        if (
+            "PBDOT" in self.params
+            and isinstance(self.PBDOT, funcParameter)
+            and self.PBDOT._func is not _pbdot_from_fb0_fb1
+        ):
+            raise ValueError(
+                "FBX is not supported for a binary model with a non-FBX "
+                f"derived PBDOT ({self.binary_model_name}); use the PB "
+                "parameterization or implement the required dynamic PB/FB "
+                "chain rule."
+            )
+
+        self._bridge_pb_to_fb0()
+        if self.FB0.quantity is None:
+            raise ValueError("Some FBn parameters are set but FB0 is not.")
+        if self.FB0.value <= 0:
+            raise ValueError(
+                f"Binary frequency FB0 must be positive ({self.FB0.quantity})"
+            )
+
+        self._convert_pbdot_to_fb1()
+        self._fill_sparse_fbx_terms()
+        self._canonicalize_fbx_views()
+
     def setup(self):
+        self._setup_fbx_parameterization()
         super().setup()
         for bpar in self.params:
             self.register_deriv_funcs(self.d_binary_delay_d_xxxx, bpar)
@@ -268,42 +501,17 @@ class PulsarBinary(DelayComponent):
         # Setup the FBX orbits if FB is set.
         # TODO this should use a smarter way to set up orbit.
         FBX_mapping = self.get_prefix_mapping_component("FB")
-        FBXs = {fbn: getattr(self, fbn).quantity for fbn in FBX_mapping.values()}
-        if any(v is not None for v in FBXs.values()):
-            if self.FB0.value is None:
-                raise ValueError("Some FBn parameters are set but FB0 is not.")
+        FBXs = {
+            fbn: getattr(self, fbn).quantity
+            for fbn in FBX_mapping.values()
+            if getattr(self, fbn).quantity is not None
+        }
+        if FBXs:
             for fb_name, fb_value in FBXs.items():
                 self.binary_instance.add_binary_params(fb_name, fb_value)
             self.binary_instance.orbits_cls = bo.OrbitFBX(
                 self.binary_instance, list(FBXs.keys())
             )
-            # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
-
-            # # remove the PB parameterization, replace with functions
-            # self.remove_param("PB")
-            # self.remove_param("PBDOT")
-            # self.add_param(
-            #     funcParameter(
-            #         name="PB",
-            #         units=u.day,
-            #         description="Orbital period",
-            #         long_double=True,
-            #         params=("FB0",),
-            #         func=_p_to_f,
-            #     )
-            # )
-            # self.add_param(
-            #     funcParameter(
-            #         name="PBDOT",
-            #         units=u.day / u.day,
-            #         description="Orbital period derivative respect to time",
-            #         unit_scale=True,
-            #         scale_factor=1e-12,
-            #         scale_threshold=1e-7,
-            #         params=("FB0", "FB1"),
-            #         func=_pdot_to_fdot,
-            #     )
-            # )
 
         ORBWAVES_mapping = self.get_prefix_mapping_component("ORBWAVES")
         ORBWAVES = {
@@ -324,7 +532,7 @@ class PulsarBinary(DelayComponent):
             for k in ORBWAVEC.keys():
                 self.binary_instance.add_binary_params(k, ORBWAVEC[k])
 
-            using_FBX = any(v is not None for v in FBXs.values())
+            using_FBX = bool(FBXs)
             if using_FBX:
                 fbx = sorted(list(FBXs.keys()))
                 if len(fbx) > 2:
@@ -346,32 +554,6 @@ class PulsarBinary(DelayComponent):
                     + list(ORBWAVEC.keys()),
                 )
 
-        # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
-        # else:
-        #     # remove the FB parameterization, replace with functions
-        #     self.remove_param("FB0")
-        #     self.add_param(
-        #         funcParameter(
-        #             name="FB0",
-        #             units="1/s^1",
-        #             description="0th time derivative of frequency of orbit",
-        #             aliases=["FB"],
-        #             long_double=True,
-        #             params=("PB",),
-        #             func=_p_to_f,
-        #         )
-        #     )
-        #     self.add_param(
-        #         funcParameter(
-        #             name="FB1",
-        #             units="1/s^2",
-        #             description="1st time derivative of frequency of orbit",
-        #             long_double=True,
-        #             params=("PB", "PBDOT"),
-        #             func=_pdot_to_fdot,
-        #         )
-        #     )
-
         # Update the parameters in the stand alone binary
         self.update_binary_object(None)
 
@@ -386,9 +568,15 @@ class PulsarBinary(DelayComponent):
                 f"Sine of inclination angle must be between zero and one ({self.SINI.quantity})"
             )
         if hasattr(self, "M2") and self.M2.value is not None and self.M2.value < 0:
-            raise ValueError(
-                f"Companion mass M2 cannot be negative ({self.M2.quantity})"
-            )
+            if self._allow_negative_derived_m2 and isinstance(self.M2, funcParameter):
+                log.warning(
+                    f"DDH signed H3 gives M2={self.M2.quantity}; this is a "
+                    "valid signed H3 fit but not a physical companion mass."
+                )
+            else:
+                raise ValueError(
+                    f"Companion mass M2 cannot be negative ({self.M2.quantity})"
+                )
         if (
             hasattr(self, "ECC")
             and self.ECC.value is not None
@@ -620,7 +808,7 @@ class PulsarBinary(DelayComponent):
         # Get PB and PBDOT from model
         if self.PB.quantity is not None and not isinstance(self.PB, funcParameter):
             PB = self.PB.quantity
-            if self.PBDOT.quantity is not None:
+            if hasattr(self, "PBDOT") and self.PBDOT.quantity is not None:
                 PBDOT = self.PBDOT.quantity
             else:
                 PBDOT = 0.0 * u.Unit("")
@@ -689,7 +877,9 @@ class PulsarBinary(DelayComponent):
         else:
             t0 = self.T0.quantity
         t = t0 if t is None else parse_time(t)
-        if self.PB.quantity is not None:
+        # Derived PB (funcParameter) means the active phase is the FBX series;
+        # do not treat it as an independent OrbitPB parameterization.
+        if self.PB.quantity is not None and not isinstance(self.PB, funcParameter):
             if self.PBDOT.quantity is None and (
                 not hasattr(self, "XPBDOT")
                 or getattr(self, "XPBDOT").quantity is not None

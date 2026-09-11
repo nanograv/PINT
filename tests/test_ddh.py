@@ -9,6 +9,10 @@ from pinttestdata import datadir
 import pint.binaryconvert
 import pint.derived_quantities
 import pint.simulation
+from pint.residuals import Residuals
+from loguru import logger as log
+from contextlib import contextmanager
+import pytest
 
 parDD = """
 PSRJ           1855+09
@@ -94,6 +98,162 @@ def test_ddh_sim():
     assert np.isclose(f.resids.calc_chi2(), f2.resids.calc_chi2(), atol=0.5)
     assert np.isclose(f.model.M2.value, f2.model.M2.value, atol=0.01)
     assert np.isclose(f.model.SINI.value, f2.model.SINI.value, atol=0.01)
+
+
+# ---- signed-H3 DDH validation ----
+
+parDDH = """
+PSR J1234+5678
+ELAT 0
+ELONG 0
+PEPOCH 57000
+F0 1
+BINARY DDH
+PB 1
+A1 10
+T0 57000
+ECC 0.1
+OM 45
+H3 H3_VALUE
+STIG STIG_VALUE
+"""
+
+
+def make_ddh_par(h3="1e-7", stigma="0.5"):
+    return parDDH.replace("H3_VALUE", str(h3)).replace("STIG_VALUE", str(stigma))
+
+
+@contextmanager
+def captured_warnings():
+    messages = []
+    sink = log.add(
+        lambda message: messages.append(str(message)),
+        level="WARNING",
+        format="{message}",
+    )
+    try:
+        yield messages
+    finally:
+        log.remove(sink)
+
+
+@pytest.mark.parametrize("h3", [-1e-7, 0.0, 1e-7])
+def test_ddh_signed_h3_is_evaluable(h3):
+    model = get_model(io.StringIO(make_ddh_par(h3=h3)))
+    toas = pint.simulation.make_fake_toas_uniform(
+        58000, 58100, 32, model, add_noise=False
+    )
+    assert np.all(np.isfinite(Residuals(toas, model).time_resids))
+
+
+@pytest.mark.parametrize("stigma", [0.0, -0.5])
+def test_ddh_nonpositive_stigma_raises(stigma):
+    with pytest.raises(ValueError, match="STIGMA must be positive"):
+        get_model(io.StringIO(make_ddh_par(stigma=stigma)))
+
+
+@pytest.mark.parametrize(
+    ("name", "h3", "stigma"),
+    [
+        ("H3", "nan", "0.5"),
+        ("H3", "inf", "0.5"),
+        ("STIGMA", "1e-7", "nan"),
+        ("STIGMA", "1e-7", "inf"),
+    ],
+)
+def test_ddh_nonfinite_native_parameter_raises(name, h3, stigma):
+    with pytest.raises(ValueError, match=rf"{name}.*finite"):
+        get_model(io.StringIO(make_ddh_par(h3=h3, stigma=stigma)))
+
+
+def test_ddh_negative_h3_warning_contract():
+    with captured_warnings() as messages:
+        model = get_model(io.StringIO(make_ddh_par(h3="-1e-7")))
+
+    assert model.M2.value < 0
+    assert any(
+        "signed H3" in message and "not a physical companion mass" in message
+        for message in messages
+    )
+
+
+def test_ddh_h3_delay_is_continuous_through_zero():
+    models = [
+        get_model(io.StringIO(make_ddh_par(h3=value)))
+        for value in ("-1e-7", "0", "1e-7")
+    ]
+    toas = pint.simulation.make_fake_toas_uniform(
+        58000, 58100, 32, models[1], add_noise=False
+    )
+    delays = [model.binarymodel_delay(toas, None) for model in models]
+
+    for model, delay in zip(models, delays):
+        assert np.all(np.isfinite(delay))
+        assert np.all(np.isfinite(model.d_delay_d_param(toas, "H3")))
+    assert u.allclose(delays[0] + delays[2], 2 * delays[1], atol=1e-15 * u.s)
+
+
+def test_ddh_fit_can_cross_h3_zero():
+    model = get_model(io.StringIO(make_ddh_par(h3="-1e-7")))
+    toas = pint.simulation.make_fake_toas_uniform(
+        58000, 58100, 64, model, add_noise=True
+    )
+    for name in model.free_params:
+        if name != "H3":
+            getattr(model, name).frozen = True
+    model.H3.value = -1e-7
+    f = pint.fitter.Fitter.auto(toas, model)
+    f.fit_toas()
+    assert np.isfinite(f.resids.calc_chi2())
+
+
+def test_positive_h3_is_unchanged():
+    model = get_model(io.StringIO(make_ddh_par(h3="1e-7")))
+    assert model.M2.value > 0
+    assert model.BINARY.value == "DDH"
+
+
+def test_free_negative_m2_still_raises():
+    par = """
+PSR J1234+5678
+ELAT 0
+ELONG 0
+PEPOCH 57000
+F0 1
+BINARY DD
+PB 1
+A1 10
+T0 57000
+ECC 0.1
+OM 45
+M2 -0.3
+SINI 0.8
+"""
+    with pytest.raises(ValueError, match="M2 cannot be negative"):
+        get_model(io.StringIO(par))
+
+
+def test_invalid_ddk_derived_sini_still_raises():
+    par = """
+PSR J1234+5678
+ELAT 0
+ELONG 0
+PEPOCH 57000
+F0 1
+PMELONG 0
+PMELAT 0
+BINARY DDK
+PB 1
+A1 10
+T0 57000
+ECC 0.1
+OM 45
+M2 0.3
+KIN -10
+KOM 0
+"""
+    with pytest.raises(ValueError, match="Sine of inclination angle"):
+        get_model(io.StringIO(par))
 
 
 def test_ddh_stigma_derivative_matches_finite_difference():

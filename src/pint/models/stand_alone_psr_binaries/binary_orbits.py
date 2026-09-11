@@ -159,17 +159,23 @@ class OrbitPB(Orbit):
 class OrbitFBX(Orbit):
     """Orbits expressed in terms of orbital frequency and its derivatives FB0, FB1, FB2..."""
 
-    def __init__(self, parent, orbit_params=["FB0"]):
+    def __init__(self, parent, orbit_params=None):
+        if orbit_params is None:
+            orbit_params = ["FB0"]
+        orbit_params = list(orbit_params)
         super().__init__("orbitFBX", parent, orbit_params)
-        # add the rest of FBX parameters.
-        indices = set()
-        for k in self.binary_params:
-            if re.match(r"FB\d+", k) is not None and k not in self.orbit_params:
-                self.orbit_params += [k]
-                indices.add(int(k[2:]))
-        if indices != set(range(len(indices))):
+
+        for name in self.binary_params:
+            if re.fullmatch(r"FB\d+", name) and name not in self.orbit_params:
+                self.orbit_params.append(name)
+
+        indices = {
+            int(name[2:]) for name in self.orbit_params if re.fullmatch(r"FB\d+", name)
+        }
+        expected = set(range(max(indices) + 1)) if indices else set()
+        if indices != expected:
             raise ValueError(
-                f"Indices must be 0 up to some number k without gaps "
+                "Indices must be 0 up to some number k without gaps "
                 f"but are {indices}."
             )
 

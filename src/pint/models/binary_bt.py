@@ -69,9 +69,10 @@ class BinaryBT(PulsarBinary):
             if getattr(self, p).value is None:
                 raise MissingParameter("BT", p, f"{p} is required for BT")
 
-        # If any *DOT is set, we need T0
+        # If any *DOT is set, we need T0. Under canonical FBX, unset PBDOT may
+        # be absent entirely; skip missing attributes (same pattern as BinaryDD).
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
-            if getattr(self, p).value is None:
+            if hasattr(self, p) and getattr(self, p).value is None:
                 getattr(self, p).value = "0"
                 getattr(self, p).frozen = True
 
@@ -400,13 +401,18 @@ class BinaryBTPiecewise(PulsarBinary):
             if getattr(self, p).value is None:
                 raise MissingParameter("BT", p, f"{p} is required for BT")
 
-        # If any *DOT is set, we need T0
+        # If any *DOT is set, we need T0. Under canonical FBX, unset PBDOT may
+        # be absent entirely; skip missing attributes (same pattern as BinaryDD).
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
-            if getattr(self, p).value is None:
+            if hasattr(self, p) and getattr(self, p).value is None:
                 getattr(self, p).value = 0
                 getattr(self, p).frozen = True
 
-            if getattr(self, p).value is not None and self.T0.value is None:
+            if (
+                hasattr(self, p)
+                and getattr(self, p).value is not None
+                and self.T0.value is None
+            ):
                 raise MissingParameter("BT", "T0", "T0 is required if *DOT is set")
 
         if self.GAMMA.value is None:
