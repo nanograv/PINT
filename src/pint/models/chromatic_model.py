@@ -7,9 +7,9 @@ from astropy.time import Time
 from loguru import logger as log
 
 from pint import DMconst
-from pint.exceptions import MissingParameter
+from pint.exceptions import MissingParameter, MissingTOAs
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
-from pint.models.timing_model import DelayComponent, MissingParameter, MissingTOAs
+from pint.models.timing_model import DelayComponent
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 

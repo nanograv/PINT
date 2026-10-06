@@ -5,12 +5,18 @@ from glob import glob
 import pytest
 
 from pint.models.model_builder import get_model
-from pint.models.timing_model import MissingParameter
+from pint.exceptions import MissingParameter
 from utils import verify_stand_alone_binary_parameter_updates
 from pinttestdata import datadir
 
 
-bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par", "J1744-1134.basic.ecliptic.par"]
+bad_trouble = [
+    "J1923+2515_NANOGrav_9yv1.gls.par",
+    "J1744-1134.basic.ecliptic.par",
+    # Hierarchical triple (two binary components); this generic single-binary
+    # check cannot disambiguate the inner vs outer parameter sets.
+    "B1855+09_triple_DD.par",
+]
 
 
 @pytest.mark.parametrize("parfile", glob(join(datadir, "*.par")))

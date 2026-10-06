@@ -34,14 +34,23 @@ import datetime
 import inspect
 from collections import OrderedDict, defaultdict
 from functools import wraps
-from typing import Callable, Dict, List, Literal, Optional, Set, Tuple, Union
+from typing import (
+    Callable,
+    Dict,
+    List,
+    Literal,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 from warnings import warn
 
 import astropy.coordinates as coords
 import astropy.time as time
 import numpy as np
-from astropy import constants as c, units as u
-from astropy.table import Table
+from astropy import units as u
 from astropy.utils.decorators import lazyproperty
 from loguru import logger as log
 from scipy.optimize import brentq
@@ -51,8 +60,6 @@ import pint
 from pint.derived_quantities import dispersion_slope
 from pint.exceptions import (
     AliasConflict,
-    MissingBinaryError,
-    MissingParameter,
     MissingTOAs,
     PrefixError,
     PropertyAttributeError,
@@ -81,7 +88,6 @@ from pint.utils import (
     colorize,
     open_or_use,
     split_prefixed_name,
-    xxxselections,
     get_unit,
 )
 
@@ -122,9 +128,11 @@ DEFAULT_ORDER = [
     "troposphere",
     "solar_system_shapiro",
     "solar_wind",
+    "solar_windx",
     "dispersion_constant",
     "dispersion_dmx",
     "dispersion_jump",
+    "pulsar_system_outer",
     "pulsar_system",
     "frequency_dependent",
     "absolute_phase",
@@ -133,6 +141,23 @@ DEFAULT_ORDER = [
     "wave",
     "wavex",
 ]
+
+
+class DelayDerivChain(NamedTuple):
+    """Parameter-independent ingredients of delay-derivative calculations.
+
+    Produced by :meth:`TimingModel.delay_deriv_chain`; all lists are ordered
+    like ``TimingModel.DelayComponent_list``.
+    """
+
+    acc_delays: List[u.Quantity]
+    """Delay accumulated from all components preceding each component."""
+
+    chain_factors: List[u.Quantity]
+    """Per component, ``1 + d(component delay)/d(accumulated delay)``."""
+
+    total_delay: u.Quantity
+    """The total delay, equal to ``TimingModel.delay(toas)``."""
 
 
 def property_exists(f):
@@ -323,6 +348,14 @@ class TimingModel:
             "",
         )
         self.add_param_from_top(
+            strParameter(
+                name="BINARY2",
+                description="Outer-orbit binary model for a hierarchical triple system",
+                value=None,
+            ),
+            "",
+        )
+        self.add_param_from_top(
             boolParameter(
                 name="DILATEFREQ",
                 value=False,
@@ -489,14 +522,33 @@ class TimingModel:
 
         from pint.models.pulsar_binary import PulsarBinary
 
+        def num_binaries_with_tag(tag):
+            return len(
+                list(
+                    filter(
+                        lambda c: isinstance(c, PulsarBinary)
+                        and getattr(c, "binary_param_tag", "BINARY") == tag,
+                        self.components.values(),
+                    )
+                )
+            )
+
         has_binary_attr = hasattr(self, "BINARY") and self.BINARY.value
         if has_binary_attr:
             assert (
-                num_components_of_type(PulsarBinary) == 1
-            ), "BINARY attribute is set but no PulsarBinary component found."
+                num_binaries_with_tag("BINARY") == 1
+            ), "BINARY attribute is set but no (inner) PulsarBinary component found."
+        has_binary2_attr = hasattr(self, "BINARY2") and self.BINARY2.value
+        if has_binary2_attr:
+            assert (
+                num_binaries_with_tag("BINARY2") == 1
+            ), "BINARY2 attribute is set but no outer PulsarBinary component found."
         assert (
-            num_components_of_type(PulsarBinary) <= 1
-        ), "Model can have at most one PulsarBinary component."
+            num_binaries_with_tag("BINARY") <= 1
+        ), "Model can have at most one inner PulsarBinary component."
+        assert (
+            num_binaries_with_tag("BINARY2") <= 1
+        ), "Model can have at most one outer PulsarBinary component."
 
         from pint.models.solar_wind_dispersion import (
             SolarWindDispersion,
@@ -925,6 +977,26 @@ class TimingModel:
 
         return any(isinstance(x, PulsarBinary) for x in self.components.values())
 
+    def _get_primary_binary_component(self):
+        """Return the binary component tagged by ``BINARY`` when present.
+
+        For hierarchical triples we want orbital utility methods to operate on
+        the inner orbit (the component selected by the ``BINARY`` line), not the
+        outer ``BINARY2`` component.
+        """
+        from pint.models.pulsar_binary import PulsarBinary
+
+        binaries = [c for c in self.components.values() if isinstance(c, PulsarBinary)]
+        if not binaries:
+            return None
+
+        for b in binaries:
+            if getattr(b, "binary_param_tag", "BINARY") == "BINARY":
+                return b
+
+        # Fallback for legacy/single-binary behavior.
+        return binaries[0]
+
     def orbital_phase(
         self,
         barytimes: Union[time.Time, TOAs, np.ndarray, float, MJDParameter],
@@ -963,10 +1035,7 @@ class TimingModel:
         """
         if not self.is_binary:  # punt if not a binary
             return None
-        # Find the binary model
-        b = self.components[
-            [x for x in self.components.keys() if x.startswith("Binary")][0]
-        ]
+        b = self._get_primary_binary_component()
         # Make sure that the binary instance has the binary params
         b.update_binary_object(None)
         # Handle input times and update them in stand-alone binary models
@@ -1034,9 +1103,7 @@ class TimingModel:
         """
         # this should also update the binary instance
         nu = self.orbital_phase(barytimes, anom="true")
-        b = self.components[
-            [x for x in self.components.keys() if x.startswith("Binary")][0]
-        ]
+        b = self._get_primary_binary_component()
         bbi = b.binary_instance  # shorthand
         psi = nu + bbi.omega()
         return (
@@ -1108,10 +1175,7 @@ class TimingModel:
         """
         if not self.is_binary:  # punt if not a binary
             return None
-        # Find the binary model
-        b = self.components[
-            [x for x in self.components.keys() if x.startswith("Binary")][0]
-        ]
+        b = self._get_primary_binary_component()
         bbi = b.binary_instance  # shorthand
         # Superior conjunction occurs when true anomaly + omega == 90 deg
         # We will need to solve for this using a root finder (brentq)
@@ -1133,7 +1197,7 @@ class TimingModel:
         scs = []
         for bt in bts:
             # Make 11 times over one orbit after bt
-            pb = self.pb()[0].to_value("day")
+            pb = b.pb()[0].to_value("day")
             ts = np.linspace(bt, bt + pb, 11)
             # Compute the true anomalies and omegas for those times
             nus = self.orbital_phase(ts, anom="true")
@@ -2227,7 +2291,13 @@ class TimingModel:
         """
         raise NotImplementedError
 
-    def d_phase_d_param(self, toas: TOAs, delay: u.Quantity, param: str) -> u.Quantity:
+    def d_phase_d_param(
+        self,
+        toas: TOAs,
+        delay: u.Quantity,
+        param: str,
+        chain: Optional[DelayDerivChain] = None,
+    ) -> u.Quantity:
         """Return the derivative of phase with respect to the parameter.
 
         This is the derivative of the phase observed at each TOA with
@@ -2250,6 +2320,11 @@ class TimingModel:
             the value should be ``self.delay(toas)``.
         param : str
             The name of the parameter to differentiate with respect to.
+        chain : DelayDerivChain, optional
+            Precomputed output of :meth:`delay_deriv_chain` for these TOAs,
+            forwarded to :meth:`d_delay_d_param`. It is parameter-independent,
+            so callers evaluating derivatives for many parameters should
+            compute it once and pass it in.
 
         Returns
         -------
@@ -2260,7 +2335,7 @@ class TimingModel:
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
         if delay is None:
-            delay = self.delay(toas)
+            delay = chain.total_delay if chain is not None else self.delay(toas)
         par = getattr(self, param)
         result = np.longdouble(np.zeros(toas.ntoas)) / par.units
         phase_derivs = self.phase_deriv_funcs
@@ -2276,29 +2351,91 @@ class TimingModel:
             #                         d_Phase2/d_delay*d_delay/d_param
             #                       = (d_Phase1/d_delay + d_Phase2/d_delay) *
             #                         d_delay_d_param
-            d_delay_d_p = self.d_delay_d_param(toas, param)
+            d_delay_d_p = self.d_delay_d_param(toas, param, chain=chain)
             dpdd_result = np.longdouble(np.zeros(toas.ntoas)) / u.second
             for dpddf in self.d_phase_d_delay_funcs:
                 dpdd_result += dpddf(toas, delay)
             result = dpdd_result * d_delay_d_p
         return result.to(result.unit, equivalencies=u.dimensionless_angles())
 
+    def delay_deriv_chain(self, toas: TOAs) -> DelayDerivChain:
+        """Compute the parameter-independent parts of delay derivatives.
+
+        In a single pass over ``self.DelayComponent_list`` this computes, for
+        each delay component, the delay accumulated from all preceding
+        components (which sets the epoch at which the component is evaluated)
+        and the chain-rule factor ``1 + d(component delay)/d(accumulated
+        delay)`` describing how the component's delay responds to a change in
+        the preceding delays (e.g. a binary delay responds to a shift of its
+        evaluation epoch; most components do not depend on it at all and get a
+        factor of one).
+
+        These quantities do not depend on the parameter being differentiated,
+        so callers evaluating derivatives for many parameters (notably
+        :meth:`designmatrix`) should compute this once and pass it to
+        :meth:`d_delay_d_param` / :meth:`d_phase_d_param`.
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+            The TOAs at which delays and derivatives are evaluated.
+
+        Returns
+        -------
+        DelayDerivChain
+        """
+        acc_delays = []
+        chain_factors = []
+        delay = np.zeros(toas.ntoas) * u.second
+        for cp in self.DelayComponent_list:
+            acc_delays.append(delay)
+            factor = 1
+            for f in cp.delay_deriv_wrt_prev_delay_funcs:
+                factor = factor + f(toas, delay).to(u.dimensionless_unscaled)
+            chain_factors.append(factor)
+            # Accumulate out of place so the stored acc_delays stay intact.
+            for df in cp.delay_funcs_component:
+                delay = delay + df(toas, delay)
+        return DelayDerivChain(acc_delays, chain_factors, delay)
+
     def d_delay_d_param(
-        self, toas: TOAs, param: str, acc_delay: Optional[u.Quantity] = None
+        self, toas: TOAs, param: str, chain: Optional[DelayDerivChain] = None
     ) -> u.Quantity:
-        """Return the derivative of delay with respect to the parameter."""
+        """Return the derivative of delay with respect to the parameter.
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+            The TOAs at which the derivative should be evaluated.
+        param : str
+            The name of the parameter to differentiate with respect to.
+        chain : DelayDerivChain, optional
+            Precomputed output of :meth:`delay_deriv_chain` for these TOAs.
+            It is parameter-independent, so callers evaluating derivatives
+            for many parameters should compute it once and pass it in;
+            it is computed internally when not provided.
+        """
         par = getattr(self, param)
-        result = np.longdouble(np.zeros(toas.ntoas) << (u.s / par.units))
-        delay_derivs = self.delay_deriv_funcs
-        if param not in list(delay_derivs.keys()):
+        if param not in self.delay_deriv_funcs:
             raise AttributeError(
                 f"Derivative function for '{param}' is not provided"
                 f" or not registered; parameter '{param}' may not be fittable. "
             )
-        for df in delay_derivs[param]:
-            result += df(toas, param, acc_delay).to(
-                result.unit, equivalencies=u.dimensionless_angles()
-            )
+        if chain is None:
+            chain = self.delay_deriv_chain(toas)
+
+        result = np.longdouble(np.zeros(toas.ntoas) << (u.s / par.units))
+        for cp, acc_delay, factor in zip(
+            self.DelayComponent_list, chain.acc_delays, chain.chain_factors
+        ):
+            # Derivatives of the delays accumulated so far propagate through
+            # this component's dependence on its evaluation epoch.
+            result *= factor
+            if param in cp.deriv_funcs:
+                for df in cp.deriv_funcs[param]:
+                    result += df(toas, param, acc_delay).to(
+                        result.unit, equivalencies=u.dimensionless_angles()
+                    )
         return result
 
     def d_phase_d_param_num(
@@ -2486,7 +2623,8 @@ class TimingModel:
         F0 = self.F0.quantity  # 1/sec
         ntoas = len(toas)
         nparams = len(params)
-        delay = self.delay(toas)
+        chain = self.delay_deriv_chain(toas)
+        delay = chain.total_delay
         units = []
         # Apply all delays ?
         # tt = toas['tdbld']
@@ -2499,7 +2637,7 @@ class TimingModel:
                 M[:, ii] = 1.0 / F0.value
                 units.append(u.s / u.s)
             else:
-                q = -self.d_phase_d_param(toas, delay, param)
+                q = -self.d_phase_d_param(toas, delay, param, chain=chain)
                 the_unit = u.Unit("") / getattr(self, param).units
                 M[:, ii] = q.to_value(the_unit) / F0.value
                 units.append(the_unit / F0.unit)
@@ -3206,7 +3344,8 @@ class TimingModel:
         if format.lower() == "tempo2":
             result_begin += "MODE 1\n"
         for p in self.top_level_params:
-            if p == "BINARY":  # Will print the Binary model name in the binary section
+            # Will print the binary model name in the (outer) binary section
+            if p in ("BINARY", "BINARY2"):
                 continue
             result_begin += getattr(self, p).as_parfile_line(format=format)
         for cat in start_order:
@@ -3538,9 +3677,9 @@ class TimingModel:
             outdict["Dist (pc)"] = 1.0 / px
         # Now binary system derived parameters
         if self.is_binary:
-            for x in self.components:
-                if x.startswith("Binary"):
-                    binary = x
+            # Prefer the BINARY-tagged (inner) component so hierarchical triples
+            # do not report BinaryDD2 / BinaryBT2 here.
+            binary = self._get_primary_binary_component().__class__.__name__
 
             s += f"\nBinary model {binary}\n"
             outdict["Binary"] = binary
@@ -4084,6 +4223,7 @@ class DelayComponent(Component):
     def __init__(self):
         super().__init__()
         self.delay_funcs_component = []
+        self.delay_deriv_wrt_prev_delay_funcs = []
 
 
 class PhaseComponent(Component):
@@ -4296,13 +4436,20 @@ class AllComponents:
                 component_special_params[cps[0]].append(param)
         return component_special_params
 
-    def search_binary_components(self, system_name: str) -> "Component":
+    def search_binary_components(
+        self, system_name: str, category: str = "pulsar_system"
+    ) -> "Component":
         """Search the pulsar binary component based on given name.
 
         Parameters
         ----------
         system_name : str
             Searching name for the pulsar binary/system
+        category : str, optional
+            The component category to search within. Defaults to
+            ``"pulsar_system"`` (the inner binary). Use
+            ``"pulsar_system_outer"`` to find the outer-orbit component of a
+            hierarchical triple.
 
         Return
         ------
@@ -4314,7 +4461,7 @@ class AllComponents:
             If the input binary model name does not match any PINT defined binary
             model.
         """
-        all_systems = self.category_component_map["pulsar_system"]
+        all_systems = self.category_component_map[category]
         if system_name in all_systems:
             return self.components[system_name]
         for cp_name in all_systems:

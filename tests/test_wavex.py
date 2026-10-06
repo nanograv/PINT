@@ -6,7 +6,7 @@ from loguru import logger as log
 from astropy import units as u
 from pint.models import get_model
 from pint.models import model_builder as mb
-from pint.models.timing_model import MissingParameter
+from pint.exceptions import MissingParameter
 from pint.fitter import Fitter
 from pint.residuals import Residuals
 from pint.simulation import make_fake_toas_uniform

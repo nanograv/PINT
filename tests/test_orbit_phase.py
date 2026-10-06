@@ -1,5 +1,5 @@
-import pytest
 import os
+import io
 import pytest
 
 import numpy as np
@@ -91,3 +91,41 @@ class TestOrbitPhase:
         assert len(x) == 2, "conjunction is not returning an array"
         # make sure true anomaly before T0 is positive
         assert mJ0737.orbital_phase(52000.0, anom="true").value > 0.0
+
+    def test_triple_orbital_utilities_use_inner_binary(self):
+        with open(os.path.join(datadir, "B1855+09_triple_DD.par")) as f:
+            triple_lines = f.readlines()
+        triple_model = m.get_model(io.StringIO("".join(triple_lines)))
+
+        inner_only_par = "".join(
+            line
+            for line in triple_lines
+            if line.split()
+            and line.split()[0] != "BINARY2"
+            and not line.split()[0].endswith("_2")
+        )
+        inner_model = m.get_model(io.StringIO(inner_only_par))
+
+        # The timing-model orbital utilities should follow the BINARY-tagged
+        # (inner) component, not the outer BINARY2 component.
+        ts = triple_model.T0.value + np.linspace(0, triple_model.PB.value, 32)
+        triple_phase = triple_model.orbital_phase(ts, anom="mean", radians=False)
+        inner_phase = inner_model.orbital_phase(ts, anom="mean", radians=False)
+        assert np.allclose(triple_phase, inner_phase)
+        assert np.allclose(
+            triple_model.pulsar_radial_velocity(ts),
+            inner_model.pulsar_radial_velocity(ts),
+        )
+        assert np.isclose(
+            triple_model.conjunction(triple_model.T0.value),
+            inner_model.conjunction(inner_model.T0.value),
+        )
+
+        # Sanity check that the outer model's mean anomaly is generally different.
+        outer = triple_model.components["BinaryDD2"]
+        outer.update_binary_object(None)
+        outer.binary_instance.update_input(barycentric_toa=np.asarray(ts))
+        outer_phase = np.remainder(outer.binary_instance.M().value, 2 * np.pi) / (
+            2 * np.pi
+        )
+        assert not np.allclose(triple_phase, outer_phase)

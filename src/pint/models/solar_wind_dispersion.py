@@ -10,6 +10,7 @@ import scipy.special
 
 import pint.utils
 from pint import DMconst
+from pint.exceptions import MissingTOAs
 from pint.models.dispersion_model import Dispersion
 from pint.models.parameter import (
     MJDParameter,
@@ -17,7 +18,6 @@ from pint.models.parameter import (
     intParameter,
     prefixParameter,
 )
-from pint.models.timing_model import MissingTOAs
 from pint.toa_select import TOASelect
 
 

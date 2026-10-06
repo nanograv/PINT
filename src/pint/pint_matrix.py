@@ -449,7 +449,8 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
         M = np.zeros((data.ntoas, len(params)))
         labels = [{self.derivative_quantity: (0, M.shape[0], self.quantity_unit)}]
         labels_dim2 = {}
-        delay = model.delay(data)
+        chain = model.delay_deriv_chain(data)
+        delay = chain.total_delay
         for ii, param in enumerate(params):
             if param == "Offset":
                 M[:, ii] = offset_padding
@@ -457,7 +458,9 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
             else:
                 param_unit = getattr(model, param).units
                 # Since this is the phase derivative, we know the quantity unit.
-                q = deriv_func(data, delay, param).to(u.Unit("") / param_unit)
+                q = deriv_func(data, delay, param, chain=chain).to(
+                    u.Unit("") / param_unit
+                )
 
                 # NOTE Here we have negative sign here. Since in pulsar timing
                 # the residuals are calculated as (Phase - int(Phase)), which is different

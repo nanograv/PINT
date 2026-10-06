@@ -467,7 +467,7 @@ years, sampled densely enough to resolve the annual structure.
    # One realization of the GP.  get_noise_basis folds in the geometry factor and
    # the 1/nu^2 dispersion law, so B @ a is already a delay in seconds, while
    # U @ a is the underlying density in cm^-3.
-   U, nodes = component._get_basis_and_nodes(toas)
+   U, nodes = component.get_basis_and_nodes(toas)
    B = component.get_noise_basis(toas)
    rng = np.random.default_rng(4)
    a = rng.multivariate_normal(np.zeros(len(nodes)), square_exponential_kernel(nodes, LOGSIG, LOGELL))

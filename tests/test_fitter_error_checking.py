@@ -7,7 +7,7 @@ import re
 
 import pint.fitter
 from pint.models import get_model
-from pint.models.timing_model import MissingTOAs
+from pint.exceptions import MissingTOAs
 from pint.simulation import make_fake_toas_uniform
 
 par_base = """

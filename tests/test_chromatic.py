@@ -3,7 +3,7 @@ from copy import deepcopy
 import pytest
 from pint.models import get_model, get_model_and_toas
 from pint.models.chromatic_model import ChromaticCM
-from pint.models.timing_model import MissingParameter
+from pint.exceptions import MissingParameter
 from pint.simulation import make_fake_toas_uniform
 from pint.fitter import WLSFitter
 import astropy.units as u

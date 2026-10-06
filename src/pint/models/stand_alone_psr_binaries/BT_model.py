@@ -168,6 +168,12 @@ class BTmodel(PSR_BINARY):
     def d_delayL2_d_A1DOT(self):
         return self.tt0 * self.d_delayL2_d_A1()
 
+    def d_delayL1_d_A1DOT2(self):
+        return 0.5 * self.tt0**2 * self.d_delayL1_d_A1()
+
+    def d_delayL2_d_A1DOT2(self):
+        return 0.5 * self.tt0**2 * self.d_delayL2_d_A1()
+
     def d_delayL1_d_OM(self):
         a1 = self.a1() / c.c
         return a1 * np.cos(self.omega()) * (np.cos(self.E()) - self.ecc())
@@ -207,10 +213,22 @@ class BTmodel(PSR_BINARY):
         return np.sin(self.E())
 
     def d_delayL1_d_T0(self):
-        return self.d_delayL1_d_E() * self.d_E_d_T0()
+        # Include a1(t) secular terms (A1DOT, A1DOT2): required for the
+        # outer→inner prev-delay chain rule in hierarchical triples.
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            d_a1_d_T0 = self.prtl_der("a1", "T0")
+            return (
+                self.d_delayL1_d_E() * self.d_E_d_T0()
+                + self.d_delayL1_d_A1() * d_a1_d_T0
+            )
 
     def d_delayL2_d_T0(self):
-        return self.d_delayL2_d_E() * self.d_E_d_T0()
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            d_a1_d_T0 = self.prtl_der("a1", "T0")
+            return (
+                self.d_delayL2_d_E() * self.d_E_d_T0()
+                + self.d_delayL2_d_A1() * d_a1_d_T0
+            )
 
     def d_delayL1_d_par(self, par):
         if par not in self.binary_params:
