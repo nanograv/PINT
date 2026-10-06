@@ -17,4 +17,5 @@ the released changes.
 - `TOAs.get_tdb_seconds()`, returning the TDB times of the TOAs in seconds with a selectable dtype
 ### Fixed
 - Place ``solar_windx`` before the binary in ``DEFAULT_ORDER`` so SolarWindDispersionX delays and derivatives chain-rule through the binary the same way as ``solar_wind``.
+- `make_fake_toas` no longer crashes with a `TypeError`/`AttributeError` when `add_correlated_noise=True` is given for a model with no correlated-noise component; it now logs a warning and skips the correlated noise term.
 ### Removed

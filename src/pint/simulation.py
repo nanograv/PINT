@@ -177,16 +177,23 @@ def make_fake_toas(
     if add_correlated_noise:
         U = model.noise_model_designmatrix(tsim)
         b = model.noise_model_basis_weight(tsim)
-        if np.ndim(b) == 1:
-            a = np.random.normal(size=len(b))
-            coeffs = b**0.5 * a
+        if U is None or b is None:
+            log.warning(
+                "add_correlated_noise is True, but the model has no correlated-noise "
+                "components (e.g. PLRedNoise, PLDMNoise, EcorrNoise). Skipping "
+                "correlated noise simulation."
+            )
         else:
-            coeffs = np.random.multivariate_normal(np.zeros(b.shape[0]), b)
-        delays += (U @ coeffs) << u.s
+            if np.ndim(b) == 1:
+                a = np.random.normal(size=len(b))
+                coeffs = b**0.5 * a
+            else:
+                coeffs = np.random.multivariate_normal(np.zeros(b.shape[0]), b)
+            delays += (U @ coeffs) << u.s
 
-        if tsim.wideband:
-            Ud = model.noise_model_dm_designmatrix(tsim)
-            dms += (Ud @ coeffs) << pint.dmu
+            if tsim.wideband:
+                Ud = model.noise_model_dm_designmatrix(tsim)
+                dms += (Ud @ coeffs) << pint.dmu
 
     tsim.adjust_TOAs(time.TimeDelta(delays))
 
