@@ -151,14 +151,26 @@ in, and what kind of time you're asking for::
 
 The conventional time scale for working with pulsars, and the one PINT
 uses, is Barycentric Dynamical Time (TDB). You should be aware that there
-is another time scale, not yet fully supported in PINT, called Barycentric
-Coordinate Time (TCB). Because of different handling of relativistic 
-corrections, the TCB timescale does not advance at the same rate as TDB
-(there is also a many-second offset). TEMPO2 uses TCB by default, so
-you may encounter pulsar timing models or even measurements that use
-TCB. PINT provides a command line tool `tcb2tdb` to approximately convert
-TCB timing models to TDB. PINT can also optionally convert TCB timing models
-to TDB (approximately) upon read.
+is another time scale, not evaluated directly by PINT, called Barycentric
+Coordinate Time (TCB). TCB does not advance at the same rate as TDB and has a
+different origin. TEMPO2 uses TCB by default, so you may encounter pulsar
+timing models or measurements that use TCB.
+
+PINT's ``tcb2tdb`` tool and ``allow_tcb=True`` reader convert every supported
+parameter onto PINT's TDB forward model. Coordinate epochs use
+``astropy.time.Time``/ERFA's IAU 2006 transformation, radio frequency remains
+undilated (``DILATEFREQ N``), and PX is explicitly unchanged because PINT
+implements no corresponding spatial-coordinate scaling. Unsupported active
+deterministic terms are left unchanged and reported.
+
+The TDB that PINT evaluates is the IAU 2006 Resolution B3 realization, via
+Astropy/ERFA. TEMPO2 currently labels a different realization ``UNITS TDB``:
+Irwin & Fukushima's *Teph*, which differs from IAU 2006 TDB by a constant
+64.5 ns plus a rate of 2.8e-18 (1.8 ns over a 20-year data span). Both pieces
+fall inside the phase offset and the ``F0`` column respectively, so they do not
+move a fitted solution, but they do mean that a par file labelled ``TDB`` is
+not bit-for-bit the same object in the two packages. A change to TEMPO2 is
+being discussed to align the timescales between PINT and TEMPO2.
 
 Note that the need for leap seconds is because the Earth's rotation is
 somewhat erratic - no, we're not about to be thrown off, but its

@@ -15,16 +15,15 @@ __all__ = ["main"]
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="""`tcb2tdb` converts TCB par files to TDB.
-        Please note that this conversion is not exact and the timing model 
-        should be re-fit to the TOAs. 
-       
-        The following parameters are NOT converted although they are 
-        in fact affected by the TCB to TDB conversion:
-            1. TZRMJD and TZRFRQ
-            2. DM Jumps (the wideband kind)
-            3. FD parameters and FD jumps
-            4. EQUADs and ECORRs
-            5. GP Red noise parameters and GP DM noise parameters
+        Coordinate epochs follow Astropy/ERFA's IAU 2006 TDB, and radio
+        frequency remains undilated as in PINT's forward model. The command
+        converts every supported term and warns about unsupported active
+        deterministic terms. A fully accepted conversion reproduces the input
+        model's residuals to better than 1 ns with nothing refitted, up to the
+        overall phase gauge that TZRMJD or a reference JUMP fixes. DM-family
+        exponents follow the DILATEFREQ of the input par; a DILATEFREQ Y input
+        is converted but reported unaudited, because PINT evaluates undilated
+        frequencies.
         """,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
@@ -41,5 +40,9 @@ def main(argv=None):
     mb = ModelBuilder()
     model = mb(args.input_par, allow_tcb=True, allow_T2=args.allow_T2)
     model.write_parfile(args.output_par)
+
+    report = getattr(model, "tcb_tdb_conversion_report", None)
+    if report is not None and report.accepted:
+        log.info("Conversion satisfies the no-refit accuracy contract.")
 
     log.info(f"Output written to {args.output_par}.")

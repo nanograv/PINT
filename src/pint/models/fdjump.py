@@ -59,6 +59,7 @@ class FDJump(DelayComponent):
 
     register = True
     category = "fdjump"
+    tcb2tdb_certified = True
 
     def __init__(self):
         super().__init__()
@@ -79,7 +80,8 @@ class FDJump(DelayComponent):
                     name=f"FD{j}JUMP",
                     units="second",
                     description=f"System-dependent FD parameter of polynomial index {j}",
-                    convert_tcb2tdb=False,
+                    tcb2tdb_scale_factor=u.Quantity(1),
+                    tcb2tdb_scale_exponent=-1,
                 )
             )
 

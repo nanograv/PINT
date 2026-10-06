@@ -35,7 +35,7 @@ class AbsPhase(PhaseComponent):
                 name="TZRMJD",
                 description="Epoch of the zero phase TOA.",
                 time_scale="utc",
-                convert_tcb2tdb=False,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -47,8 +47,10 @@ class AbsPhase(PhaseComponent):
             floatParameter(
                 name="TZRFRQ",
                 units=u.MHz,
-                description="The frequency of the zero phase TOA.",
+                description="Frequency of the zero phase TOA.",
                 convert_tcb2tdb=False,
+                tcb2tdb_scale_factor=u.Quantity(1),
+                tcb2tdb_invariant=True,
             )
         )
         self.tz_cache = None
@@ -69,8 +71,9 @@ class AbsPhase(PhaseComponent):
             )
         if self.TZRSITE.value is None:
             self.TZRSITE.value = "ssb"
-            # update the TZRMJD to new time scale
-            self.TZRMJD.time_scale = "tdb"
+        if self.TZRSITE.value == "ssb":
+            # A barycentric TZRMJD follows the model's coordinate time scale.
+            self.TZRMJD.time_scale = (self._parent.UNITS.value or "TDB").lower()
             log.info("The TZRSITE is set at the solar system barycenter.")
 
         if (self.TZRFRQ.value is None) or (self.TZRFRQ.value == 0.0):

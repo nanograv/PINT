@@ -25,6 +25,16 @@ from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 # DMconst = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
 
 
+def _dm_derivative_tcb2tdb_scale_exponent(param):
+    """Scale DM derivatives as K**(order-1) at PINT's fixed radio frequency.
+
+    This is the undilated (``DILATEFREQ N``) exponent. When the TCB side of a
+    conversion declares ``DILATEFREQ Y`` the converter adds this parameter's
+    ``tcb2tdb_freq_power`` (2 for the DM family), giving K**(order+1).
+    """
+    return param.index - 1
+
+
 class Dispersion(DelayComponent):
     """A base dispersion timing model.
 
@@ -140,6 +150,7 @@ class DispersionDM(Dispersion):
 
     register = True
     category = "dispersion_constant"
+    tcb2tdb_certified = True
 
     def __init__(self):
         super().__init__()
@@ -151,6 +162,8 @@ class DispersionDM(Dispersion):
                 description="Dispersion measure",
                 long_double=True,
                 tcb2tdb_scale_factor=DMconst,
+                tcb2tdb_scale_exponent=-1,
+                tcb2tdb_freq_power=2,
             )
         )
         self.add_param(
@@ -163,6 +176,8 @@ class DispersionDM(Dispersion):
                 type_match="float",
                 long_double=True,
                 tcb2tdb_scale_factor=DMconst,
+                tcb2tdb_scale_exponent=_dm_derivative_tcb2tdb_scale_exponent,
+                tcb2tdb_freq_power=2,
             )
         )
         self.add_param(
@@ -318,6 +333,7 @@ class DispersionDMX(Dispersion):
 
     register = True
     category = "dispersion_dmx"
+    tcb2tdb_certified = True
 
     def __init__(self):
         super().__init__()
@@ -331,6 +347,7 @@ class DispersionDMX(Dispersion):
                 value=0.0,
                 description="Dispersion measure",
                 convert_tcb2tdb=False,
+                tcb2tdb_invariant=True,
             )
         )
 
@@ -401,6 +418,8 @@ class DispersionDMX(Dispersion):
                 parameter_type="float",
                 frozen=frozen,
                 tcb2tdb_scale_factor=DMconst,
+                tcb2tdb_scale_exponent=-1,
+                tcb2tdb_freq_power=2,
             )
         )
         self.add_param(
@@ -411,7 +430,8 @@ class DispersionDMX(Dispersion):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_start,
-                tcb2tdb_scale_factor=u.Quantity(1),
+                convert_tcb2tdb=False,
+                tcb2tdb_invariant=True,
             )
         )
         self.add_param(
@@ -422,7 +442,8 @@ class DispersionDMX(Dispersion):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_end,
-                tcb2tdb_scale_factor=u.Quantity(1),
+                convert_tcb2tdb=False,
+                tcb2tdb_invariant=True,
             )
         )
         self.setup()
@@ -520,6 +541,8 @@ class DispersionDMX(Dispersion):
                     parameter_type="float",
                     frozen=frozen,
                     tcb2tdb_scale_factor=DMconst,
+                    tcb2tdb_scale_exponent=-1,
+                    tcb2tdb_freq_power=2,
                 )
             )
             self.add_param(
@@ -531,6 +554,8 @@ class DispersionDMX(Dispersion):
                     time_scale="utc",
                     value=mjd_start,
                     tcb2tdb_scale_factor=u.Quantity(1),
+                    convert_tcb2tdb=False,
+                    tcb2tdb_invariant=True,
                 )
             )
             self.add_param(
@@ -542,6 +567,8 @@ class DispersionDMX(Dispersion):
                     time_scale="utc",
                     value=mjd_end,
                     tcb2tdb_scale_factor=u.Quantity(1),
+                    convert_tcb2tdb=False,
+                    tcb2tdb_invariant=True,
                 )
             )
         self.setup()

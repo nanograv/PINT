@@ -57,6 +57,7 @@ class Astrometry(DelayComponent):
 
     register = False
     category = "astrometry"
+    tcb2tdb_certified = True
 
     def __init__(self):
         super().__init__()
@@ -75,7 +76,9 @@ class Astrometry(DelayComponent):
                 units="mas",
                 value=0.0,
                 description="Parallax",
+                convert_tcb2tdb=False,
                 tcb2tdb_scale_factor=(consts.c / u.au),
+                tcb2tdb_invariant=True,
             )
         )
 

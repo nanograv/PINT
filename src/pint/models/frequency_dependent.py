@@ -30,6 +30,7 @@ class FD(DelayComponent):
 
     register = True
     category = "frequency_dependent"
+    tcb2tdb_certified = True
 
     def __init__(self):
         super().__init__()
@@ -45,7 +46,8 @@ class FD(DelayComponent):
                 descriptionTplt=self._description_template,
                 # unitTplt=lambda x: "second",
                 type_match="float",
-                convert_tcb2tdb=False,
+                tcb2tdb_scale_factor=u.Quantity(1),
+                tcb2tdb_scale_exponent=-1,
             )
         )
 

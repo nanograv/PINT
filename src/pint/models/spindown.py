@@ -36,6 +36,7 @@ class Spindown(SpindownBase):
 
     register = True
     category = "spindown"
+    tcb2tdb_certified = True
 
     def __init__(self):
         super().__init__()

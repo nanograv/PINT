@@ -30,6 +30,7 @@ class SolarSystemShapiro(DelayComponent):
 
     register = True
     category = "solar_system_shapiro"
+    tcb2tdb_certified = True
 
     def __init__(self):
         super().__init__()
