@@ -15,6 +15,7 @@ the released changes.
 - Time-domain solar wind GP noise components: ridge, squared-exponential, Matérn, and quasi-periodic kernels
 - Documentation page explaining the time-domain solar wind noise model, its interpolation basis, and how it differs from the Fourier-basis noise models
 - `TOAs.get_tdb_seconds()`, returning the TDB times of the TOAs in seconds with a selectable dtype
+- Regression tests for noise design-matrix caching, including multi-basis coverage (red, DMGP, SWGP, and chromatic GP)
 ### Fixed
 - Place ``solar_windx`` before the binary in ``DEFAULT_ORDER`` so SolarWindDispersionX delays and derivatives chain-rule through the binary the same way as ``solar_wind``.
 ### Removed

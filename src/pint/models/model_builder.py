@@ -294,6 +294,13 @@ class ModelBuilder:
                 if v.category in ("pulsar_system", "pulsar_system_outer"):
                     # The pulsar system is selected by parameter BINARY/BINARY2
                     continue
+                elif self.all_components.components[superset].category == v.category:
+                    # Same-category components are mutually exclusive alternatives.
+                    # A superset component in the same category is selected over a
+                    # subset when its extra parameters appear in the parfile, so
+                    # there is no ambiguity.  (E.g. SolarWindProxyRegression vs
+                    # SolarWindDispersion, discriminated by SWPRBETA1.)
+                    continue
                 else:
                     raise ComponentConflict(m)
 

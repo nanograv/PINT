@@ -2,6 +2,7 @@
 
 import os
 import copy
+import warnings
 from io import StringIO
 import pytest
 import numpy as np
@@ -12,7 +13,7 @@ from astropy import units as u
 from pint.models import get_model, get_model_and_toas
 from pint.fitter import Fitter
 from pint.simulation import make_fake_toas_uniform
-from pint.models.solar_wind_dispersion import SolarWindDispersionX
+from pint.models.solar_wind_dispersion import SolarWindDispersionX, SolarWindProxyRegression
 import pint.utils
 from pinttestdata import datadir
 
@@ -456,3 +457,222 @@ def test_expression():
         )[-1],
         (m.NE_SW.quantity + dt * m.NE_SW1.quantity),
     )
+
+# ---------------------------------------------------------------------------
+# SolarWindProxyRegression tests
+# ---------------------------------------------------------------------------
+
+# Par string shared by proxy tests.  ELAT != 0 so S(t) is not degenerate.
+_PROXY_PAR = """
+PSR J1234+5678
+F0 1
+DM 10
+ELAT 10
+ELONG 0
+PEPOCH 54000
+"""
+
+_TSTART = 54000
+_TEND = 54000 + 365.25 * 2  # two years
+
+_NE_SW_TRUE = 7.9  # cm^-3
+_BETA1_TRUE = 2.1  # cm^-3 (per unit normalised proxy)
+
+
+def _make_proxy(toas):
+    """Return (proxy_mjd, proxy_vals) — a sinusoidal solar-cycle proxy."""
+    mjds = np.linspace(_TSTART - 100, _TEND + 100, 2000)
+    vals = 5.0 + 3.0 * np.sin(2 * np.pi * (mjds - _TSTART) / (11 * 365.25))
+    return mjds, vals
+
+
+def _proxy_model(ne_sw=_NE_SW_TRUE, beta1=_BETA1_TRUE, swm=0):
+    """Build a SolarWindProxyRegression model with one proxy loaded."""
+    base = get_model(StringIO(_PROXY_PAR))
+    comp = SolarWindProxyRegression()
+    base.add_component(comp)
+    base.NE_SW.value = ne_sw
+    base.SWPRBETA1.value = beta1
+    base.SWM.value = swm
+    toas = make_fake_toas_uniform(_TSTART, _TEND, 50, base, obs="gbt")
+    proxy_mjd, proxy_vals = _make_proxy(toas)
+    base.components["SolarWindProxyRegression"].set_proxy(proxy_mjd, proxy_vals)
+    return base, toas, proxy_mjd, proxy_vals
+
+
+def test_sw_proxy_instantiation():
+    """Component can be programmatically added and has the expected parameters."""
+    model = get_model(StringIO(_PROXY_PAR))
+    model.add_component(SolarWindProxyRegression())
+    assert "SolarWindProxyRegression" in model.components
+    assert hasattr(model, "NE_SW")
+    assert hasattr(model, "SWPRBETA1")
+    assert hasattr(model, "SWPRLAG1")
+
+
+def test_sw_proxy_dm_zero_when_ne_zero():
+    """DM is zero when both NE_SW and BETA1 are zero."""
+    model, toas, _, _ = _proxy_model(ne_sw=0.0, beta1=0.0)
+    dm = model.components["SolarWindProxyRegression"].solar_wind_dm(toas)
+    assert np.all(dm.value == 0.0)
+
+
+def test_sw_proxy_dm_positive():
+    """DM values are positive when NE_SW > 0 with a loaded proxy."""
+    model, toas, _, _ = _proxy_model()
+    dm = model.components["SolarWindProxyRegression"].solar_wind_dm(toas)
+    assert np.all(dm.value > 0)
+
+
+def test_sw_proxy_d_dm_d_beta1_units():
+    """d_dm_d_beta1 has units pc cm^-3 / cm^-3 = pc and correct shape."""
+    model, toas, _, _ = _proxy_model()
+    comp = model.components["SolarWindProxyRegression"]
+
+    d = comp.d_dm_d_swprbeta(toas, "SWPRBETA1")
+    assert d.shape == (len(toas),)
+    assert d.unit.is_equivalent(u.pc / u.cm**3 / (u.cm**-3))
+
+
+def test_sw_proxy_d_dm_d_lag1_shape():
+    """d_dm_d_lag1 has the right shape."""
+    model, toas, _, _ = _proxy_model()
+    # Give the lag a non-trivial value for a meaningful derivative
+    model.SWPRLAG1.value = 5.0
+    comp = model.components["SolarWindProxyRegression"]
+    d = comp.d_dm_d_swprlag(toas, "SWPRLAG1")
+    assert d.shape == (len(toas),)
+
+
+def test_sw_proxy_print_par_includes_proxy_params():
+    """print_par output includes SWPRBETA1 and SWPRLAG1 lines."""
+    model, _, _, _ = _proxy_model()
+    par_text = model.components["SolarWindProxyRegression"].print_par()
+    assert "SWPRBETA1" in par_text
+    assert "SWPRLAG1" in par_text
+    assert "NE_SW" in par_text
+
+
+def test_sw_proxy_delay_positive():
+    """solar_wind_delay is positive (delays are positive for dispersion)."""
+    model, toas, _, _ = _proxy_model()
+    delay = model.components["SolarWindProxyRegression"].solar_wind_delay(toas)
+    assert np.all(delay.to_value(u.s) > 0)
+
+
+# ---------------------------------------------------------------------------
+# set_proxy() smoothing: the window is specified in DAYS, not samples
+# ---------------------------------------------------------------------------
+
+
+def _rippled_proxy(
+    cadence_days, span_days=11 * 365.25, ripple_days=27.0, ripple_amp=15.0
+):
+    """Solar-cycle proxy with a 27-day ripple, sampled at a given cadence.
+
+    The ripple stands in for the solar-rotation signal that the conventional
+    81-day F10.7 mean is meant to remove.  Set ``ripple_amp=0`` for a pure
+    11-year cycle: the ripple is undersampled at cadences approaching or
+    exceeding 27 d, where it aliases to a long-period beat that no smoothing
+    window can remove, so it must be left out of any test that compares
+    results across cadences.
+    """
+    mjds = np.arange(_TSTART, _TSTART + span_days, cadence_days)
+    cycle = 100.0 + 50.0 * np.sin(2 * np.pi * (mjds - _TSTART) / (11 * 365.25))
+    ripple = ripple_amp * np.sin(2 * np.pi * (mjds - _TSTART) / ripple_days)
+    return mjds, cycle + ripple
+
+
+def _load_proxy(proxy_mjd, proxy_vals, smooth_days):
+    """Return the stored (smoothed) proxy values for one set_proxy() call."""
+    model = get_model(StringIO(_PROXY_PAR))
+    model.add_component(SolarWindProxyRegression())
+    comp = model.components["SolarWindProxyRegression"]
+    comp.set_proxy(proxy_mjd, proxy_vals, smooth_days=smooth_days)
+    return comp._proxy_data[1]["vals"]
+
+
+def test_sw_proxy_smoothing_window_is_in_days_not_samples():
+    """An 81-day window keeps the 11-year cycle in a monthly series.
+
+    Regression test: uniform_filter1d's ``size`` is in samples, so without a
+    cadence conversion a monthly series smoothed with smooth_days=81 would be
+    averaged over 81 months (~6.75 yr) and the solar cycle would be erased.
+    """
+    mjd, vals = _rippled_proxy(cadence_days=30.0)  # monthly sampling
+    smoothed = _load_proxy(mjd, vals, smooth_days=81)
+
+    # The 11-year cycle must survive: peak-to-peak stays close to the 100 cm^-3
+    # of the underlying cycle rather than collapsing toward a constant.
+    assert np.ptp(smoothed) > 80.0, (
+        f"solar cycle was erased by smoothing (ptp={np.ptp(smoothed):.1f}); "
+        "smooth_days is probably being applied as a sample count"
+    )
+
+
+def test_sw_proxy_smoothing_is_cadence_independent():
+    """The same smooth_days gives the same physical window at any cadence.
+
+    Uses a pure 11-year cycle, which every cadence tested resolves; see
+    _rippled_proxy() for why the 27-day ripple cannot appear here.
+    """
+    results = {}
+    for cadence in (1.0, 5.0, 30.0):
+        mjd, vals = _rippled_proxy(cadence_days=cadence, ripple_amp=0.0)
+        smoothed = _load_proxy(mjd, vals, smooth_days=81)
+        # Compare on a common grid so different sample counts are comparable.
+        grid = np.arange(_TSTART + 500, _TSTART + 11 * 365.25 - 500, 10.0)
+        results[cadence] = np.interp(grid, mjd, smoothed)
+
+    ref = results[1.0]
+    for cadence, curve in results.items():
+        # Residual differences are boxcar quantisation only: the window is
+        # round(81/cadence) samples, so 90 d at monthly vs 81 d at daily.
+        # 1 cm^-3 against a 100 cm^-3 cycle amplitude.
+        assert np.allclose(curve, ref, atol=1.0), (
+            f"cadence {cadence} d disagrees with daily sampling by "
+            f"{np.abs(curve - ref).max():.2f}"
+        )
+
+
+def test_sw_proxy_smoothing_daily_series_unchanged():
+    """For a daily series, days == samples, so behaviour is backward compatible."""
+    from scipy.ndimage import uniform_filter1d
+
+    mjd, vals = _rippled_proxy(cadence_days=1.0)
+    got = _load_proxy(mjd, vals, smooth_days=81)
+    expected = uniform_filter1d(vals, size=81, mode="nearest")
+    assert np.allclose(got, expected)
+
+
+def test_sw_proxy_smoothing_noop_when_series_coarser_than_window():
+    """Requesting a window finer than the sampling leaves the series alone."""
+    mjd, vals = _rippled_proxy(cadence_days=30.0)
+    got = _load_proxy(mjd, vals, smooth_days=7)  # < one sample
+    assert np.allclose(got, vals)
+
+
+def test_sw_proxy_set_proxy_sorts_by_epoch():
+    """Unsorted input is sorted, so np.interp() downstream stays valid."""
+    mjd, vals = _rippled_proxy(cadence_days=30.0)
+    shuffled = np.random.default_rng(0).permutation(len(mjd))
+
+    model = get_model(StringIO(_PROXY_PAR))
+    model.add_component(SolarWindProxyRegression())
+    comp = model.components["SolarWindProxyRegression"]
+    comp.set_proxy(mjd[shuffled], vals[shuffled], smooth_days=0)
+
+    stored = comp._proxy_data[1]
+    assert np.all(np.diff(stored["mjd"]) > 0)
+    assert np.allclose(stored["mjd"], mjd)
+    assert np.allclose(stored["vals"], vals)
+
+
+def test_sw_proxy_set_proxy_rejects_mismatched_shapes():
+    """Mismatched input lengths are caught rather than silently misaligning."""
+    model = get_model(StringIO(_PROXY_PAR))
+    model.add_component(SolarWindProxyRegression())
+    comp = model.components["SolarWindProxyRegression"]
+    with pytest.raises(ValueError):
+        comp.set_proxy(np.arange(10.0), np.arange(9.0))
+
