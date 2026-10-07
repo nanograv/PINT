@@ -29,13 +29,113 @@ from pint.types import time_like
 from pint.utils import add_dummy_distance, remove_dummy_distance
 
 astropy_version = sys.modules["astropy"].__version__
-mas_yr = u.mas / u.yr
 
 __all__ = [
     "AstrometryEquatorial",
     "AstrometryEcliptic",
     "Astrometry",
 ]
+
+
+def _sky_pm_components(coord):
+    """Return ``(pm_lon_coslat, pm_lat, lat)`` for ICRS or PulsarEcliptic."""
+    if hasattr(coord, "pm_ra_cosdec"):
+        return coord.pm_ra_cosdec, coord.pm_dec, coord.dec
+    return coord.pm_lon_coslat, coord.pm_lat, coord.lat
+
+
+def _propagate_diagonal_sky_uncertainties(
+    make_skycoord,
+    out_frame,
+    sigma_lon,
+    sigma_lat,
+    *,
+    lat_in=None,
+    lon_includes_coslat: bool,
+    dt: u.Quantity = 1 * u.yr,
+):
+    """Propagate independent sky-plane uncertainties through a frame transform.
+
+    Astrometric uncertainties are treated as a diagonal 2×2 covariance in the
+    tangent plane (zero correlation, matching the previous helpers). The old
+    "fake proper motion" code transformed the vector ``(σ_lon, σ_lat)`` as a
+    single displacement, which can yield a signed — even negative — value and
+    the wrong marginal σ after a non-trivial rotation. Transforming each axis
+    separately and combining in quadrature gives the correct one-way marginal
+    uncertainties. Any covariance induced by the rotation is not retained,
+    because timing-model parameters store only marginal uncertainties.
+
+    Parameters
+    ----------
+    make_skycoord : callable
+        ``make_skycoord(pm_lon_coslat, pm_lat) -> SkyCoord`` in the source frame.
+    out_frame : coordinate frame
+        Destination frame.
+    sigma_lon, sigma_lat : Quantity or None
+        Input 1-σ uncertainties. Lon convention follows ``lon_includes_coslat``
+        (``False`` for RAJ/ELONG, ``True`` for PMRA/PMELONG).
+    lat_in : Quantity
+        Source-frame latitude; required when ``lon_includes_coslat`` is False.
+    lon_includes_coslat : bool
+        Whether ``sigma_lon`` already includes ``cos(lat)``.
+    dt : Quantity
+        Dummy interval used to encode a position uncertainty as a proper motion.
+
+    Returns
+    -------
+    sigma_lon_out, sigma_lat_out : Quantity
+        Non-negative marginal uncertainties in the destination frame, using the
+        same ``lon_includes_coslat`` convention as the inputs. Both are ``None``
+        if either input uncertainty is unavailable.
+    """
+    # A rotated marginal generally depends on both input axes. Treating an
+    # unavailable uncertainty as zero would assert that axis is known exactly
+    # and underestimate both outputs.
+    if sigma_lon is None or sigma_lat is None:
+        return None, None
+
+    if lon_includes_coslat:
+        unit = sigma_lon.unit
+        pm_lon = sigma_lon
+        pm_lat = sigma_lat
+        c1o = make_skycoord(pm_lon, 0 * unit).transform_to(out_frame)
+        c2o = make_skycoord(0 * unit, pm_lat).transform_to(out_frame)
+        lon_1, lat_1, _ = _sky_pm_components(c1o)
+        lon_2, lat_2, _ = _sky_pm_components(c2o)
+        return np.hypot(lon_1, lon_2), np.hypot(lat_1, lat_2)
+
+    if lat_in is None:
+        raise ValueError("lat_in is required when lon_includes_coslat is False")
+    # Position uncertainties: RAJ/ELONG do not include cos(lat).
+    sig_lon = sigma_lon
+    sig_lat = sigma_lat
+    pm_lon = sig_lon * np.cos(lat_in) / dt
+    pm_lat = sig_lat / dt
+    # Both PM components share a common angular/time unit after the encode.
+    pm_unit = pm_lon.unit
+    c1o = make_skycoord(pm_lon, 0 * pm_unit).transform_to(out_frame)
+    c2o = make_skycoord(0 * pm_unit, pm_lat.to(pm_unit)).transform_to(out_frame)
+    lon_1, lat_1, lat_out = _sky_pm_components(c1o)
+    lon_2, lat_2, _ = _sky_pm_components(c2o)
+    sigma_lon_out = np.hypot(lon_1, lon_2) * dt / np.cos(lat_out)
+    sigma_lat_out = np.hypot(lat_1, lat_2) * dt
+    return sigma_lon_out, sigma_lat_out
+
+
+def _scalar_or_none_epoch(epoch: Optional[time_like]) -> Optional[time_like]:
+    """Return ``epoch`` when it is a single instant, else ``None``.
+
+    ``as_ECL`` / ``as_ICRS`` accept an array of times for coordinate helpers,
+    but the uncertainty Jacobian is a 2×2 at one sky position. Broadcast
+    positions plus scalar proper-motion probes raise Astropy's
+    ``Shape of differentials must be the same as the shape of the
+    representation``.
+    """
+    if epoch is None:
+        return None
+    if isinstance(epoch, Time):
+        return epoch if epoch.isscalar or epoch.size == 1 else None
+    return epoch if np.size(epoch) == 1 else None
 
 
 def _epoch_fingerprint(epoch: Optional[time_like]) -> Tuple[Tuple, bytes]:
@@ -884,51 +984,42 @@ class AstrometryEquatorial(Astrometry):
         m_ecl.PMELAT.quantity = c.pm_lat
         m_ecl.ECL.value = ecl
 
-        # use fake proper motions to convert uncertainties on ELONG, ELAT
-        # assume that ELONG uncertainty does not include cos(ELAT)
-        # and that the RA uncertainty does not include cos(DEC)
-        # put it in here as pm_ra_cosdec since astropy complains otherwise
-        dt = 1 * u.yr
-        c = coords.SkyCoord(
-            ra=self.RAJ.quantity,
-            dec=self.DECJ.quantity,
-            obstime=self.POSEPOCH.quantity,
-            pm_ra_cosdec=(
-                self.RAJ.uncertainty * np.cos(self.DECJ.quantity) / dt
-                if self.RAJ.uncertainty is not None
-                else 0 * self.RAJ.units / dt
-            ),
-            pm_dec=(
-                self.DECJ.uncertainty / dt
-                if self.DECJ.uncertainty is not None
-                else 0 * self.DECJ.units / dt
-            ),
-            frame=coords.ICRS,
+        # Propagate diagonal uncertainties via covariance rotation (not a
+        # signed-vector "fake PM" transform). RAJ/ELONG uncertainties do not
+        # include cos(lat); PMRA/PMELONG do. A vector ``epoch`` is allowed for
+        # coordinate helpers; the Jacobian stays at one sky position.
+        source_c = self.coords_as_ICRS(epoch=_scalar_or_none_epoch(epoch))
+
+        def _icrs_sky(pm_ra_cosdec, pm_dec):
+            return coords.SkyCoord(
+                ra=source_c.ra,
+                dec=source_c.dec,
+                obstime=source_c.obstime,
+                pm_ra_cosdec=pm_ra_cosdec,
+                pm_dec=pm_dec,
+                frame=coords.ICRS,
+            )
+
+        out_ecl = PulsarEcliptic(ecl=ecl)
+        elong_unc, elat_unc = _propagate_diagonal_sky_uncertainties(
+            _icrs_sky,
+            out_ecl,
+            self.RAJ.uncertainty,
+            self.DECJ.uncertainty,
+            lat_in=source_c.dec,
+            lon_includes_coslat=False,
         )
-        c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
-        m_ecl.ELONG.uncertainty = c_ECL.pm_lon_coslat * dt / np.cos(c_ECL.lat)
-        m_ecl.ELAT.uncertainty = c_ECL.pm_lat * dt
-        # use fake proper motions to convert uncertainties on proper motion
-        # assume that the PM_RA _does_ include cos(DEC)
-        c = coords.SkyCoord(
-            ra=self.RAJ.quantity,
-            dec=self.DECJ.quantity,
-            obstime=self.POSEPOCH.quantity,
-            pm_ra_cosdec=(
-                self.PMRA.uncertainty
-                if self.PMRA.uncertainty is not None
-                else 0 * self.PMRA.units
-            ),
-            pm_dec=(
-                self.PMDEC.uncertainty
-                if self.PMDEC.uncertainty is not None
-                else 0 * self.PMDEC.units
-            ),
-            frame=coords.ICRS,
+        m_ecl.ELONG.uncertainty = elong_unc
+        m_ecl.ELAT.uncertainty = elat_unc
+        pmelong_unc, pmelat_unc = _propagate_diagonal_sky_uncertainties(
+            _icrs_sky,
+            out_ecl,
+            self.PMRA.uncertainty,
+            self.PMDEC.uncertainty,
+            lon_includes_coslat=True,
         )
-        c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
-        m_ecl.PMELONG.uncertainty = c_ECL.pm_lon_coslat
-        m_ecl.PMELAT.uncertainty = c_ECL.pm_lat
+        m_ecl.PMELONG.uncertainty = pmelong_unc
+        m_ecl.PMELAT.uncertainty = pmelat_unc
         # freeze comparable parameters
         m_ecl.ELONG.frozen = self.RAJ.frozen
         m_ecl.ELAT.frozen = self.DECJ.frozen
@@ -1481,53 +1572,41 @@ class AstrometryEcliptic(Astrometry):
         m_ecl.PMELAT.quantity = c.pm_lat
         m_ecl.ECL.value = ecl
 
-        # use fake proper motions to convert uncertainties on ELONG, ELAT
-        # assume that ELONG uncertainty does not include cos(ELAT)
-        # and that the RA uncertainty does not include cos(DEC)
-        # put it in here as pm_ra_cosdec since astropy complains otherwise
-        dt = 1 * u.yr
-        c = coords.SkyCoord(
-            lon=self.ELONG.quantity,
-            lat=self.ELAT.quantity,
-            obliquity=OBL[self.ECL.value],
-            obstime=self.POSEPOCH.quantity,
-            pm_lon_coslat=(
-                self.ELONG.uncertainty * np.cos(self.ELAT.quantity) / dt
-                if self.ELONG.uncertainty is not None
-                else 0 * self.ELONG.units / dt
-            ),
-            pm_lat=(
-                self.ELAT.uncertainty / dt
-                if self.ELAT.uncertainty is not None
-                else 0 * self.ELAT.units / dt
-            ),
-            frame=PulsarEcliptic,
+        source_c = self.coords_as_ECL(
+            epoch=_scalar_or_none_epoch(epoch), ecl=self.ECL.value
         )
-        c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
-        m_ecl.ELONG.uncertainty = c_ECL.pm_lon_coslat * dt / np.cos(c_ECL.lat)
-        m_ecl.ELAT.uncertainty = c_ECL.pm_lat * dt
-        # use fake proper motions to convert uncertainties on proper motion
-        # assume that PMELONG uncertainty includes cos(DEC)
-        c = coords.SkyCoord(
-            lon=self.ELONG.quantity,
-            lat=self.ELAT.quantity,
-            obliquity=OBL[self.ECL.value],
-            obstime=self.POSEPOCH.quantity,
-            pm_lon_coslat=(
-                self.PMELONG.uncertainty
-                if self.PMELONG.uncertainty is not None
-                else 0 * self.PMELONG.units
-            ),
-            pm_lat=(
-                self.PMELAT.uncertainty
-                if self.PMELAT.uncertainty is not None
-                else 0 * self.PMELAT.units
-            ),
-            frame=PulsarEcliptic,
+
+        def _ecl_sky(pm_lon_coslat, pm_lat):
+            return coords.SkyCoord(
+                lon=source_c.lon,
+                lat=source_c.lat,
+                obliquity=OBL[self.ECL.value],
+                obstime=source_c.obstime,
+                pm_lon_coslat=pm_lon_coslat,
+                pm_lat=pm_lat,
+                frame=PulsarEcliptic,
+            )
+
+        out_ecl = PulsarEcliptic(ecl=ecl)
+        elong_unc, elat_unc = _propagate_diagonal_sky_uncertainties(
+            _ecl_sky,
+            out_ecl,
+            self.ELONG.uncertainty,
+            self.ELAT.uncertainty,
+            lat_in=source_c.lat,
+            lon_includes_coslat=False,
         )
-        c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
-        m_ecl.PMELONG.uncertainty = c_ECL.pm_lon_coslat
-        m_ecl.PMELAT.uncertainty = c_ECL.pm_lat
+        m_ecl.ELONG.uncertainty = elong_unc
+        m_ecl.ELAT.uncertainty = elat_unc
+        pmelong_unc, pmelat_unc = _propagate_diagonal_sky_uncertainties(
+            _ecl_sky,
+            out_ecl,
+            self.PMELONG.uncertainty,
+            self.PMELAT.uncertainty,
+            lon_includes_coslat=True,
+        )
+        m_ecl.PMELONG.uncertainty = pmelong_unc
+        m_ecl.PMELAT.uncertainty = pmelat_unc
         # freeze comparable parameters
         m_ecl.ELONG.frozen = self.ELONG.frozen
         m_ecl.ELAT.frozen = self.ELAT.frozen
@@ -1560,54 +1639,40 @@ class AstrometryEcliptic(Astrometry):
         m_eq.PMRA.quantity = c.pm_ra_cosdec
         m_eq.PMDEC.quantity = c.pm_dec
 
-        # use fake proper motions to convert uncertainties on RA,Dec
-        # assume that RA uncertainty does not include cos(Dec)
-        # and neither does the ELONG uncertainty
-        # put it in as pm_lon_coslat since astropy complains otherwise
-        dt = 1 * u.yr
-        c = coords.SkyCoord(
-            lon=self.ELONG.quantity,
-            lat=self.ELAT.quantity,
-            obliquity=OBL[self.ECL.value],
-            obstime=self.POSEPOCH.quantity,
-            pm_lon_coslat=(
-                self.ELONG.uncertainty * np.cos(self.ELAT.quantity) / dt
-                if self.ELONG.uncertainty is not None
-                else 0 * self.ELONG.units / dt
-            ),
-            pm_lat=(
-                self.ELAT.uncertainty / dt
-                if self.ELAT.uncertainty is not None
-                else 0 * self.ELAT.units / dt
-            ),
-            frame=PulsarEcliptic,
+        source_c = self.coords_as_ECL(
+            epoch=_scalar_or_none_epoch(epoch), ecl=self.ECL.value
         )
-        c_ICRS = c.transform_to(coords.ICRS)
 
-        m_eq.RAJ.uncertainty = np.abs(c_ICRS.pm_ra_cosdec * dt / np.cos(c_ICRS.dec))
-        m_eq.DECJ.uncertainty = np.abs(c_ICRS.pm_dec * dt)
-        # use fake proper motions to convert uncertainties on proper motion
-        # assume that PMELONG uncertainty includes cos(DEC)
-        c = coords.SkyCoord(
-            lon=self.ELONG.quantity,
-            lat=self.ELAT.quantity,
-            obliquity=OBL[self.ECL.value],
-            obstime=self.POSEPOCH.quantity,
-            pm_lon_coslat=(
-                self.PMELONG.uncertainty
-                if self.PMELONG.uncertainty is not None
-                else 0 * self.PMELONG.units
-            ),
-            pm_lat=(
-                self.PMELAT.uncertainty
-                if self.PMELAT.uncertainty is not None
-                else 0 * self.PMELAT.units
-            ),
-            frame=PulsarEcliptic,
+        def _ecl_sky(pm_lon_coslat, pm_lat):
+            return coords.SkyCoord(
+                lon=source_c.lon,
+                lat=source_c.lat,
+                obliquity=OBL[self.ECL.value],
+                obstime=source_c.obstime,
+                pm_lon_coslat=pm_lon_coslat,
+                pm_lat=pm_lat,
+                frame=PulsarEcliptic,
+            )
+
+        raj_unc, decj_unc = _propagate_diagonal_sky_uncertainties(
+            _ecl_sky,
+            coords.ICRS(),
+            self.ELONG.uncertainty,
+            self.ELAT.uncertainty,
+            lat_in=source_c.lat,
+            lon_includes_coslat=False,
         )
-        c_ICRS = c.transform_to(coords.ICRS)
-        m_eq.PMRA.uncertainty = np.abs(c_ICRS.pm_ra_cosdec)
-        m_eq.PMDEC.uncertainty = np.abs(c_ICRS.pm_dec)
+        m_eq.RAJ.uncertainty = raj_unc
+        m_eq.DECJ.uncertainty = decj_unc
+        pmra_unc, pmdec_unc = _propagate_diagonal_sky_uncertainties(
+            _ecl_sky,
+            coords.ICRS(),
+            self.PMELONG.uncertainty,
+            self.PMELAT.uncertainty,
+            lon_includes_coslat=True,
+        )
+        m_eq.PMRA.uncertainty = pmra_unc
+        m_eq.PMDEC.uncertainty = pmdec_unc
         # freeze comparable parameters
         m_eq.RAJ.frozen = self.ELONG.frozen
         m_eq.DECJ.frozen = self.ELAT.frozen

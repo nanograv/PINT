@@ -81,8 +81,11 @@ def test_ICRS_to_ECL_nouncertainties():
         MJDStart, MJDStop, NTOA, model=model_ICRS, error=1 * u.us, add_noise=True
     )
     r_ICRS = pint.residuals.Residuals(toas, model_ICRS)
-    r_ECL = pint.residuals.Residuals(toas, model_ICRS.as_ECL())
+    converted = model_ICRS.as_ECL()
+    r_ECL = pint.residuals.Residuals(toas, converted)
     assert np.allclose(r_ECL.resids, r_ICRS.resids)
+    assert converted.PMELONG.uncertainty is None
+    assert converted.PMELAT.uncertainty is None
     # assert model_ICRS.as_ECL(ecl).ECL.value == ecl
 
 
@@ -97,8 +100,11 @@ def test_ECL_to_ICRS_nouncertainties():
         MJDStart, MJDStop, NTOA, model=model_ECL, error=1 * u.us, add_noise=True
     )
     r_ECL = pint.residuals.Residuals(toas, model_ECL)
-    r_ICRS = pint.residuals.Residuals(toas, model_ECL.as_ICRS())
+    converted = model_ECL.as_ICRS()
+    r_ICRS = pint.residuals.Residuals(toas, converted)
     assert np.allclose(r_ECL.resids, r_ICRS.resids)
+    assert converted.PMRA.uncertainty is None
+    assert converted.PMDEC.uncertainty is None
 
 
 def test_ECL_to_ECL():
@@ -197,3 +203,140 @@ def test_ECL_to_allECL(ecl):
     assert model_ECL2.ECL.value == ecl
     # note that coord.separation() will transform between frames when needed
     assert np.isclose(model_ECL.get_psr_coords().separation(coords_ECL2).arcsec, 0)
+
+
+# High-|ELAT| ecliptic astrometry: the old signed-vector uncertainty transform
+# returned a negative ELONG σ on the ICRS→ECL leg (PPTA J0711-6830 / J1017-7156).
+modelstring_ECL_high_lat = """
+PSR J0711-6830
+ELONG  204.06115135931555  1  5.698305032154e-08
+ELAT   -82.88863150271472  1  5.66560917129e-09
+PMELONG -12.03829529527527 1  0.003414889229688632
+PMELAT  -17.28185806109565 1  0.003068280695947412
+F0 182.11723462004737 1
+PEPOCH 55636
+POSEPOCH 55636
+ECL IERS2010
+"""
+
+
+def test_ecliptic_obliquity_uncertainty_roundtrip():
+    """ECL→ECL obliquity change must preserve diagonal uncertainties.
+
+    The IERS2003/IERS2010 obliquities differ by only 1e-4 arcsec, so the
+    tangent-frame rotation is tiny, so the induced correlation discarded by
+    the parameter-only representation is negligible and the input marginal
+    uncertainties return to numerical precision. This is not an assertion
+    that a general frame round trip preserves a full covariance matrix.
+    """
+    model = get_model(io.StringIO(modelstring_ECL_high_lat))
+    roundtrip = model.as_ECL(ecl="IERS2003").as_ECL(ecl="IERS2010")
+    for name in ("ELONG", "ELAT", "PMELONG", "PMELAT"):
+        assert np.isclose(
+            getattr(model, name).uncertainty.to_value(
+                getattr(roundtrip, name).uncertainty.unit
+            ),
+            getattr(roundtrip, name).uncertainty.value,
+            rtol=1e-12,
+            atol=0,
+        ), name
+
+
+def test_icrs_to_ecliptic_uncertainties_match_covariance_rotation():
+    """Check one-way marginals against an analytic tangent-plane rotation."""
+    model = get_model(
+        io.StringIO(
+            """
+PSR TEST
+RAJ 00:00:00
+DECJ +00:00:00
+PMRA 1
+PMDEC 1
+F0 100
+PEPOCH 55000
+POSEPOCH 55000
+"""
+        )
+    )
+    model.RAJ.uncertainty = 1 * u.mas
+    model.DECJ.uncertainty = 100 * u.mas
+    model.PMRA.uncertainty = 2 * u.mas / u.yr
+    model.PMDEC.uncertainty = 50 * u.mas / u.yr
+
+    converted = model.as_ECL(ecl="IERS2010")
+    obliquity = OBL["IERS2010"]
+
+    def expected(sigma_lon, sigma_lat):
+        return (
+            np.hypot(
+                np.cos(obliquity) * sigma_lon,
+                np.sin(obliquity) * sigma_lat,
+            ),
+            np.hypot(
+                np.sin(obliquity) * sigma_lon,
+                np.cos(obliquity) * sigma_lat,
+            ),
+        )
+
+    elong, elat = expected(1 * u.mas, 100 * u.mas)
+    pmelong, pmelat = expected(2 * u.mas / u.yr, 50 * u.mas / u.yr)
+    assert u.isclose(converted.ELONG.uncertainty, elong)
+    assert u.isclose(converted.ELAT.uncertainty, elat)
+    assert u.isclose(converted.PMELONG.uncertainty, pmelong)
+    assert u.isclose(converted.PMELAT.uncertainty, pmelat)
+
+
+def test_as_ecl_uncertainties_use_requested_epoch_frame():
+    """Rotate uncertainties in the tangent frame used for converted values."""
+    par = """
+PSR TEST
+RAJ 00:00:00 1 0.001
+DECJ +70:00:00 1 0.01
+PMRA 100000 1 10
+PMDEC -50000 1 20
+F0 100
+PEPOCH 55000
+POSEPOCH 55000
+"""
+    model = get_model(io.StringIO(par))
+    target_epoch = 65000
+    propagated = model.coords_as_ICRS(epoch=target_epoch)
+
+    # Construct the equivalent source model directly at the requested epoch.
+    at_epoch = get_model(io.StringIO(par))
+    at_epoch.RAJ.quantity = propagated.ra
+    at_epoch.DECJ.quantity = propagated.dec
+    at_epoch.PMRA.quantity = propagated.pm_ra_cosdec
+    at_epoch.PMDEC.quantity = propagated.pm_dec
+    at_epoch.POSEPOCH.value = target_epoch
+
+    converted = model.as_ECL(epoch=target_epoch)
+    expected = at_epoch.as_ECL()
+    for name in ("ELONG", "ELAT", "PMELONG", "PMELAT"):
+        assert u.allclose(
+            getattr(converted, name).uncertainty,
+            getattr(expected, name).uncertainty,
+        ), name
+
+
+def test_as_ecl_uncertainties_are_nonnegative():
+    """ICRS→ECL must not assign a signed/negative uncertainty.
+
+    High-|ELAT| sources (e.g. PPTA J0711-6830) previously failed here with
+    ``Uncertainties cannot be negative`` because ``as_ECL`` transformed
+    ``(σ_lon, σ_lat)`` as a signed vector while ``as_ICRS`` wrapped the
+    reverse transform in ``np.abs``.
+    """
+    model = get_model(io.StringIO(modelstring_ECL_high_lat))
+    ecl = model.as_ICRS().as_ECL(ecl="IERS2010")
+    for name in ("ELONG", "ELAT", "PMELONG", "PMELAT"):
+        unc = getattr(ecl, name).uncertainty
+        assert unc is not None
+        assert unc.value >= 0, name
+    # The old signed-vector path produced |σ_ELONG| ≈ 6.68e-8 deg here;
+    # covariance rotation must stay near the input 5.70e-8 deg.
+    assert np.isclose(
+        model.ELONG.uncertainty.to_value(u.deg),
+        ecl.ELONG.uncertainty.to_value(u.deg),
+        rtol=0.02,
+    )
