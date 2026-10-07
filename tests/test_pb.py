@@ -50,3 +50,35 @@ def test_pb():
 def test_pb(t):
     m = get_model(os.path.join(datadir, "J0437-4715.par"))
     pb, pberr = m.pb(t)
+
+
+def test_every_binary_component_declares_an_epoch_it_has():
+    """``pb()`` reads ``binary_epoch_name``; each family must mean it.
+
+    This replaces a ``binary_model_name.startswith("ELL1")`` test, which had to
+    be edited centrally for every new family and silently asked a TASC-based
+    ``BinaryDDR`` for a ``T0`` it does not have. Declaring the epoch per family
+    only helps if the declaration is true, so check it for every registered
+    component -- including the suffixed outer-orbit ones, via the component's
+    own suffix-aware accessor rather than ``hasattr``.
+    """
+    from pint.models.pulsar_binary import PulsarBinary
+    from pint.models.timing_model import Component
+
+    components = {
+        name: cls
+        for name, cls in Component.component_types.items()
+        if isinstance(cls, type) and issubclass(cls, PulsarBinary)
+    }
+    assert components, "no binary components are registered"
+
+    undeclared = []
+    for name, cls in sorted(components.items()):
+        instance = cls()
+        epoch = instance.binary_epoch_name
+        assert epoch in ("T0", "TASC"), (name, epoch)
+        if not instance._hasbp(epoch):
+            undeclared.append(f"{name} declares {epoch}")
+    assert (
+        not undeclared
+    ), f"binary components declaring an epoch they do not carry: {undeclared}"

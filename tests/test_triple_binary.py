@@ -21,6 +21,7 @@ import pint.simulation as sim
 from pint.models.binary_bt import BinaryBT2
 from pint.models.binary_dd import BinaryDD, BinaryDD2
 from pint.models.binary_ell1 import BinaryELL12
+from pint.models.parameter import funcParameter
 from pint.residuals import Residuals
 
 TRIPLE_PAR = os.path.join(datadir, "B1855+09_triple_DD.par")
@@ -398,7 +399,8 @@ def test_inner_orbit_fb_parameterization(triple_model, toas, fb1):
     outer = m_fb.components["BinaryDD2"]
     assert "FB0" in inner.params
     assert inner.FB0.value is not None
-    assert m_fb.PB.value is None
+    # FBX canonicalization exposes PB as a read-only derived view of FB0.
+    assert isinstance(inner.PB, funcParameter)
     assert not any(p.startswith("FB") for p in outer.params)
     assert "PB_2" in outer.params
     assert m_fb.PB_2.quantity == triple_model.PB_2.quantity

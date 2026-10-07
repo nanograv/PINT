@@ -3532,7 +3532,10 @@ class TimingModel:
 
         Notes
         -----
-        For the ``DDK`` model, the ``KOM`` vector is also transformed
+        For the ``DDK`` and ``DDR`` models, the ``KOM`` vector is also transformed.
+        DDR uses its fixed ``TGEO`` sky position. Unset DDR ``KOM`` stays unset.
+        The ``ecl`` argument is the obliquity of the ``PulsarEcliptic`` frame
+        used for the DDR rotation.
 
         """
         if "AstrometryEquatorial" in self.components:
@@ -3561,6 +3564,24 @@ class TimingModel:
             new_model.KOM.quantity = (
                 np.arctan2(c_ICRS.pm_ra_cosdec.value, c_ICRS.pm_dec.value) * u.rad
             ).to(self.KOM.units)
+        elif (
+            "BinaryDDR" in self.components and "AstrometryEquatorial" in self.components
+        ):
+            if self.KOM.quantity is not None:
+                source = astrometry_model_component.get_psr_coords(
+                    epoch=self.TGEO.quantity
+                )
+                node = coords.SkyCoord(
+                    ra=source.ra,
+                    dec=source.dec,
+                    obstime=self.TGEO.quantity,
+                    pm_ra_cosdec=np.cos(self.KOM.quantity) * u.mas / u.yr,
+                    pm_dec=np.sin(self.KOM.quantity) * u.mas / u.yr,
+                    frame=coords.ICRS,
+                ).transform_to(PulsarEcliptic(ecl=ecl))
+                new_model.KOM.quantity = (
+                    np.arctan2(node.pm_lat.value, node.pm_lon_coslat.value) * u.rad
+                ).to(self.KOM.units) % (360.0 * u.deg)
 
         return new_model
 
@@ -3580,7 +3601,8 @@ class TimingModel:
 
         Notes
         -----
-        For the ``DDK`` model, the ``KOM`` vector is also transformed
+        For the ``DDK`` and ``DDR`` models, the ``KOM`` vector is also transformed.
+        DDR uses its fixed ``TGEO`` sky position. Unset DDR ``KOM`` stays unset.
         """
         if "AstrometryEquatorial" in self.components:
             astrometry_model_type = "AstrometryEquatorial"
@@ -3605,6 +3627,22 @@ class TimingModel:
             new_model.KOM.quantity = (
                 np.arctan2(c_ECL.pm_lon_coslat.value, c_ECL.pm_lat.value) * u.rad
             ).to(self.KOM.units)
+        elif "BinaryDDR" in self.components and "AstrometryEcliptic" in self.components:
+            if self.KOM.quantity is not None:
+                source = astrometry_model_component.get_psr_coords(
+                    epoch=self.TGEO.quantity
+                )
+                node = coords.SkyCoord(
+                    lon=source.lon,
+                    lat=source.lat,
+                    obstime=self.TGEO.quantity,
+                    pm_lon_coslat=np.cos(self.KOM.quantity) * u.mas / u.yr,
+                    pm_lat=np.sin(self.KOM.quantity) * u.mas / u.yr,
+                    frame=PulsarEcliptic(ecl=self.ECL.value),
+                ).transform_to(coords.ICRS)
+                new_model.KOM.quantity = (
+                    np.arctan2(node.pm_dec.value, node.pm_ra_cosdec.value) * u.rad
+                ).to(self.KOM.units) % (360.0 * u.deg)
 
         return new_model
 

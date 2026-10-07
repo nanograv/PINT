@@ -106,6 +106,7 @@ class BinaryELL1(PulsarBinary):
     def __init__(self):
         super().__init__()
         self.binary_model_name = "ELL1"
+        self.binary_epoch_name = "TASC"
         self.binary_model_class = ELL1model
 
         self.add_param(

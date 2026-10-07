@@ -53,6 +53,7 @@ _binary_model_priority = [
     "DDH",
     "BT",
     "BT_piecewise",
+    "DDR",
 ]
 
 

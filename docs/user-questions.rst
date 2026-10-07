@@ -189,6 +189,13 @@ For DDK, you can set OM (known as ``KOM``)::
 
     m2 = binaryconvert.convert_binary(mDD, "DDK", KOM=12 * u.deg)
 
+Default ``convert_binary(..., "DDR")`` is a phenomenological coordinate
+import (``DDRPK N``, ``DDRPBDOT absorb_gw``, geometry off unless the
+source supplies both ``KOM`` and ``PX>0``). Opt in to GR / kinematics
+with ``ddrpk=True`` / ``ddrpbdot="kinematic"``. The list-valued report
+is ``m2.binary_conversion_report``. ``convert_binary(ddr, "DD")``
+returns DD, never DDK. ELL1k, DDGR, and FBX are refused.
+
 Parameter values and uncertainties will be converted.  It will also make a best-guess as to which parameters should be frozen, but 
 it can still be useful to refit with the new model and check which parameters are fit.
 
