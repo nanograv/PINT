@@ -94,6 +94,45 @@ toa_commands = (
     "END",
 )
 
+#: Ways of scoping ``.tim`` file command state across ``INCLUDE``; see :func:`read_toa_file`.
+include_semantics_options = ("tempo", "tempo2")
+
+# State that tempo2 keeps per file: an INCLUDEd file starts from the defaults
+# and the including file's values are restored when it returns.
+_tempo2_file_local_commands = (
+    "EFAC",
+    "EQUAD",
+    "EMIN",
+    "EMAX",
+    "FMIN",
+    "FMAX",
+    "TIME",
+    "END",
+)
+
+
+def _default_toa_commands() -> dict:
+    """Initial state of the ``.tim`` file commands."""
+    return {
+        "EFAC": 1.0,
+        "EQUAD": 0.0 * u.us,
+        "EMIN": 0.0 * u.us,
+        "EMAX": np.inf * u.us,
+        "FMIN": 0.0 * u.MHz,
+        "FMAX": np.inf * u.MHz,
+        "INFO": None,
+        "SKIP": False,
+        "TIME": 0.0,
+        "PHASE": 0,
+        "PHA1": None,
+        "PHA2": None,
+        "MODE": 1,
+        "JUMP": [False, 0],
+        "FORMAT": "Unknown",
+        "END": False,
+    }
+
+
 all_planets = ("jupiter", "saturn", "venus", "uranus", "neptune", "earth")
 
 tempo_aliases = {
@@ -119,6 +158,7 @@ def get_TOAs(
     tdb_method: str = "default",
     picklefilename: Optional[str] = None,
     limits: str = "warn",
+    include_semantics: str = "tempo",
 ) -> "TOAs":
     """Load and prepare TOAs for PINT use.
 
@@ -183,6 +223,10 @@ def get_TOAs(
         or multiple filenames are provided, a specific filename must be provided.
     limits : "warn" or "error"
         What to do when encountering TOAs for which clock corrections are not available.
+    include_semantics : {"tempo", "tempo2"}
+        How ``.tim`` file commands (``TIME``, ``EFAC``, ``END``, ...) are scoped
+        across ``INCLUDE``: shared with included files as in TEMPO (default), or
+        local to each file as in TEMPO2. See :func:`pint.toa.read_toa_file`.
 
     Returns
     -------
@@ -271,11 +315,18 @@ def get_TOAs(
             if t.clock_corr_info.get("include_gps", None):
                 log.info("Old pickle (contains include_gps)")
                 updatepickle = True
+            if getattr(t, "include_semantics", None) != include_semantics:
+                # Also re-reads pickles written before include_semantics existed,
+                # since SKIP handling changed at the same time
+                log.info("Pickle was read with different include_semantics")
+                updatepickle = True
     if not usepickle or updatepickle:
         if isinstance(timfile, (str, Path)) or hasattr(timfile, "readlines"):
-            t = TOAs(timfile)
+            t = TOAs(timfile, include_semantics=include_semantics)
         else:
-            t = merge_TOAs([TOAs(t) for t in timfile])
+            t = merge_TOAs(
+                [TOAs(t, include_semantics=include_semantics) for t in timfile]
+            )
 
         files = [t.filename] if isinstance(t.filename, (str, Path)) else t.filename
         if files is not None:
@@ -699,11 +750,43 @@ def format_toa_line(
     return out
 
 
+def _first_word(line: str) -> str:
+    words = line.split(maxsplit=1)
+    return words[0].upper() if words else ""
+
+
+def _more_input(lines: List[str], fmt: str = "Unknown") -> bool:
+    """Whether a .tim file has further TOAs or INCLUDEs in ``lines``.
+
+    Honours SKIP/NOSKIP, END and FORMAT in ``lines``.
+    """
+    skip = False
+    for line in lines:
+        word = _first_word(line)
+        if skip:
+            skip = word != "NOSKIP"
+            continue
+        line_fmt = _toa_format(line, fmt=fmt)
+        if line_fmt == "Command":
+            if word == "FORMAT" and line.split()[1:2] == ["1"]:
+                fmt = "Tempo2"
+            elif word == "SKIP":
+                skip = True
+            elif word == "END":
+                return False
+            elif word == "INCLUDE":
+                return True
+        elif line_fmt not in ("Blank", "Comment", "Unknown"):
+            return True
+    return False
+
+
 def read_toa_file(
     filename: str,
     process_includes: bool = True,
     cdict: Optional[dict] = None,
     dir: Optional[dir_like] = None,
+    include_semantics: str = "tempo",
 ) -> "TOAs":
     """Read TOAs from the given filename into a list.
 
@@ -728,13 +811,39 @@ def read_toa_file(
         is a path rather than a file-like object. If None and ``filename``
         is a file-like object, the directory is assumed to be the
         current directory.
+    include_semantics : {"tempo", "tempo2"}, optional
+        How the state of ``.tim`` file commands is scoped across ``INCLUDE``.
+        With ``"tempo"`` (the default), the state is shared between a file
+        and the files it includes, as in TEMPO: for example, a ``TIME`` offset
+        or ``EFAC`` set before an ``INCLUDE`` applies to the included file,
+        one set inside an included file continues to apply after it, and
+        ``END`` in an included file stops reading all files. With
+        ``"tempo2"``, ``EFAC``, ``EQUAD``, ``EMIN``, ``EMAX``, ``FMIN``,
+        ``FMAX``, ``TIME`` and ``END`` apply only to the file in which they
+        appear, as in TEMPO2: an included file starts from the default values
+        and the including file's values are restored after it, and ``END``
+        stops reading only the current file. Of the commands PINT supports,
+        ``JUMP``, ``PHASE`` and ``INFO`` are shared in both cases, as in both
+        programs. In both cases, everything between ``SKIP`` and ``NOSKIP`` is
+        ignored, as in both programs, and ``FORMAT`` and ``SKIP`` are local to
+        a file (a ``SKIP`` without ``NOSKIP`` ends with its file; TEMPO stops
+        with an error there).
     """
+    if include_semantics not in include_semantics_options:
+        raise ValueError(
+            f"include_semantics must be one of {include_semantics_options}, "
+            f"not {include_semantics!r}"
+        )
     if isinstance(filename, (str, Path)):
         if dir is None:
             dir = Path(filename).parent
         with open(filename, "r") as f:
             return read_toa_file(
-                f, process_includes=process_includes, cdict=cdict, dir=dir
+                f,
+                process_includes=process_includes,
+                cdict=cdict,
+                dir=dir,
+                include_semantics=include_semantics,
             )
     else:
         f = filename
@@ -745,28 +854,20 @@ def read_toa_file(
     toas = []
     commands = []
     if cdict is None:
-        cdict = {
-            "EFAC": 1.0,
-            "EQUAD": 0.0 * u.us,
-            "EMIN": 0.0 * u.us,
-            "EMAX": np.inf * u.us,
-            "FMIN": 0.0 * u.MHz,
-            "FMAX": np.inf * u.MHz,
-            "INFO": None,
-            "SKIP": False,
-            "TIME": 0.0,
-            "PHASE": 0,
-            "PHA1": None,
-            "PHA2": None,
-            "MODE": 1,
-            "JUMP": [False, 0],
-            "FORMAT": "Unknown",
-            "END": False,
-        }
+        cdict = _default_toa_commands()
         top = True
     else:
         top = False
-    for line in f.readlines():
+    # Command state that an INCLUDEd file starts afresh and that is restored
+    # in the including file afterwards.
+    file_local = ("FORMAT", "SKIP")
+    if include_semantics == "tempo2":
+        file_local += _tempo2_file_local_commands
+    lines = f.readlines()
+    for iline, line in enumerate(lines):
+        if cdict["SKIP"] and _first_word(line) != "NOSKIP":
+            # TEMPO and TEMPO2 ignore everything up to NOSKIP, unparsed
+            continue
         MJD, d = _parse_TOA_line(line, fmt=cdict["FORMAT"])
         if d["format"] == "Command":
             cmd = d["Command"][0].upper()
@@ -803,18 +904,30 @@ def read_toa_file(
                 else:
                     cdict[cmd][0] = True
             elif cmd == "INCLUDE" and process_includes:
-                # Save FORMAT in a tmp
-                fmt = cdict["FORMAT"]
-                cdict["FORMAT"] = "Unknown"
+                saved = {k: cdict[k] for k in file_local}
+                defaults = _default_toa_commands()
+                cdict.update({k: defaults[k] for k in file_local})
                 include_filename = Path(dir) / d["Command"][1]
                 d["Command"][1] = str(include_filename)
                 # Make filename relative to directory the parent file is in
                 log.info(f"Processing included TOA file {include_filename}")
-                new_toas, new_commands = read_toa_file(include_filename, cdict=cdict)
+                new_toas, new_commands = read_toa_file(
+                    include_filename,
+                    cdict=cdict,
+                    include_semantics=include_semantics,
+                )
                 toas.extend(new_toas)
                 commands.extend(new_commands)
-                # re-set FORMAT
-                cdict["FORMAT"] = fmt
+                cdict.update(saved)
+                if cdict["END"] and _more_input(lines[iline + 1 :], cdict["FORMAT"]):
+                    log.warning(
+                        f"END in {include_filename} (or a file it includes) "
+                        "stops reading of all TOA files, so TOAs or INCLUDEs that "
+                        f"follow in {getattr(f, 'name', 'the including file')} "
+                        "are not read (TEMPO behaviour). TEMPO2 stops reading only "
+                        "the file containing END; use include_semantics='tempo2' "
+                        "for that."
+                    )
             elif cmd == "MODE":
                 if d["Command"][1] == "0":
                     log.warning(
@@ -1286,8 +1399,11 @@ class TOAs:
         An existing TOA table
     tzr : bool
         Whether the TOAs object corresponds to a TZR TOA
+    include_semantics : {"tempo", "tempo2"}
+        How ``.tim`` file commands are scoped across ``INCLUDE`` when reading
+        ``toafile``; see :func:`pint.toa.read_toa_file`.
 
-    Exactly one of these three parameters must be provided.
+    Exactly one of ``toafile``, ``toalist`` and ``toatable`` must be provided.
 
     Attributes
     ----------
@@ -1324,6 +1440,9 @@ class TOAs:
         Whether the TOAs also have wideband DM information
     tzr : bool
         Whether the TOAs object corresponds to a TZR TOA
+    include_semantics : str
+        How ``.tim`` file commands were scoped across ``INCLUDE`` when reading;
+        "mixed" for merged TOAs read in different ways.
     """
 
     def __init__(
@@ -1332,6 +1451,7 @@ class TOAs:
         toalist: Optional[List[TOA]] = None,
         toatable: Optional[table.Table] = None,
         tzr: bool = False,
+        include_semantics: str = "tempo",
     ):
         # First, just make an empty container
         self.commands = []
@@ -1345,6 +1465,7 @@ class TOAs:
         self.was_pickled = False
         self.alias_translation = None
         self.tzr = tzr
+        self.include_semantics = include_semantics
 
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
@@ -1355,14 +1476,18 @@ class TOAs:
 
         if toatable is None:
             if isinstance(toafile, (str, Path)):
-                toalist, self.commands = read_toa_file(toafile)
+                toalist, self.commands = read_toa_file(
+                    toafile, include_semantics=include_semantics
+                )
                 # Check to see if there were any INCLUDEs:
                 inc_fns = [
                     x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"
                 ]
                 self.filename = [toafile] + inc_fns if inc_fns else toafile
             elif toafile is not None:
-                toalist, self.commands = read_toa_file(toafile)
+                toalist, self.commands = read_toa_file(
+                    toafile, include_semantics=include_semantics
+                )
                 self.filename = None
 
             if toalist is None:
@@ -2648,6 +2773,9 @@ class TOAs:
             raise TypeError(
                 f"merge_TOAs() cannot merge. Inconsistent obliquity: {obliquity}"
             )
+        # "mixed" never matches a requested value, so a pickle of it is re-read
+        semantics = {getattr(tt, "include_semantics", None) for tt in TOAs_list}
+        include_semantics = semantics.pop() if len(semantics) == 1 else "mixed"
 
         # check for the presence of various computable columns
         #   pulse_number
@@ -2737,6 +2865,7 @@ class TOAs:
                 nt.filename.append(xx)
         # We do not ensure that the command list is flat
         nt.commands = [tt.commands for tt in TOAs_list]
+        nt.include_semantics = include_semantics
         # Now do the actual table stacking
         start_index = 0
         tables = []
