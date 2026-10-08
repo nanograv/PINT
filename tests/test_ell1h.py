@@ -13,6 +13,7 @@ import pint.toa as toa
 import test_derivative_utils as tdu
 from pint.residuals import Residuals
 from pinttestdata import datadir
+from pint.simulation import make_fake_toas_uniform
 from io import StringIO
 
 
@@ -229,3 +230,69 @@ def test_zero_H3_H4_fit_H3(toasJ0613):
     # This should work
     f.fit_toas()
     assert f.model.H3.value > 0.0
+
+
+ELL1H_H3H4 = """
+PSR J1234+5678
+ELAT 0
+ELONG 0
+F0 100
+PEPOCH 57000
+BINARY ELL1H
+PB 1.0
+A1 10.0
+TASC 57000
+EPS1 1.0e-6
+EPS2 1.0e-6
+H3 1.0e-6 1
+H4 7.0e-7 1
+"""
+
+
+def _tempo2_h3h4_shapiro(h3, h4, nharm, phi):
+    """Shapiro delay of tempo2's ELL1H model with H3, H4 and NHARM (calcDH).
+
+    https://bitbucket.org/psrsoft/tempo2/src/b74248f78eca189b5a9373c78454644fabab1cc9/ELL1Hmodel.C#lines-330
+    """
+    s = h4 / h3
+    ds = -4.0 / 3.0 * h3 * np.sin(3 * phi) + h4 * np.cos(4 * phi)
+    if nharm > 4:
+        fs = s * np.sin(5 * phi) / 5
+        for k in range(6, nharm + 1):
+            trig = np.cos if k % 2 == 0 else np.sin
+            fs += (-1) ** (k // 2) / k * s ** (k - 4) * trig(k * phi)
+        ds += 4 * h4 * fs
+    return ds
+
+
+@pytest.fixture(scope="module")
+def toas_ell1h_h3h4():
+    m = get_model(StringIO(ELL1H_H3H4))
+    return make_fake_toas_uniform(57000, 57010, 100, m, obs="@")
+
+
+@pytest.mark.parametrize("nharms", [None, 3, 4, 5, 6, 7, 8])
+def test_NHARMS_with_H4(toas_ell1h_h3h4, nharms):
+    par = ELL1H_H3H4 + ("" if nharms is None else f"NHARMS {nharms}\n")
+    m = get_model(StringIO(par))
+    # explicit values are honoured (but H4 needs at least 4); PINT default is 7
+    expected = 7 if nharms is None else max(nharms, 4)
+    assert m.NHARMS.value == expected
+
+    comp = m.components["BinaryELL1H"]
+    comp.update_binary_object(toas_ell1h_h3h4)
+    bi = comp.binary_instance
+    ds = bi.delayS().to_value(u.s)
+    ref = _tempo2_h3h4_shapiro(
+        m.H3.value, m.H4.value, expected, bi.Phi().to_value(u.rad)
+    )
+    assert np.allclose(ds, ref, rtol=0, atol=1e-15)
+
+
+@pytest.mark.parametrize("nharms", [4, 5, 7])
+@pytest.mark.parametrize("param", ["H3", "H4"])
+def test_NHARMS_derivatives(toas_ell1h_h3h4, nharms, param):
+    m = get_model(StringIO(ELL1H_H3H4 + f"NHARMS {nharms}\n"))
+    analytic = m.d_delay_d_param(toas_ell1h_h3h4, param)
+    numeric = m.d_delay_d_param_num(toas_ell1h_h3h4, param, step=1e-3)
+    assert np.allclose(analytic, numeric, rtol=0, atol=1e-5 * np.abs(numeric).max())
