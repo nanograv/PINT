@@ -356,7 +356,8 @@ class BinaryELL1H(BinaryELL1):
     -----
     When `H3` only is supplied, `NHARMS` is ignored, and the approximate version is used (Eqn. 19) appropriate for medium inclinations.
 
-    When `H3` and `H4` are supplied, `NHARMS` is taken to be `max(7,NHARMS)`, and the approximate version is used (Eqn. 19) appropriate for medium inclinations.
+    When `H3` and `H4` are supplied, the approximate version is used (Eqn. 19) appropriate for medium inclinations, with harmonics 3 to `NHARMS`.
+    `NHARMS` must be at least 4 (the harmonic of `H4`); smaller values are raised to 4, as in `tempo2`.
     Note that the default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
 
     When `H3` and `STIGMA` are supplied, `NHARMS` is ignored and an exact Freire & Wex form is used. PINT's default is Eqn. (29) (``ell1h_shapiro="full"``), which keeps all harmonics inside the Shapiro term. Tempo2's ELL1H / T2 mode 1 uses Eqn. (28) (``ell1h_shapiro="absorbed"``), which leaves harmonics 1–2 to be absorbed into the ELL1 Roemer delay. Select the Tempo2-compatible form via ``get_model(..., ell1h_shapiro="absorbed")``. The default is unchanged for compatibility with existing PINT solutions.
@@ -430,14 +431,15 @@ class BinaryELL1H(BinaryELL1):
         super().setup()
         if self.H4.quantity is not None:
             self.binary_instance.fit_params = ["H3", "H4"]
-            # If have H4 or STIGMA, choose 7th order harmonics
-            if (self.NHARMS.value is not None) and (self.NHARMS.value < 7):
+            if self.NHARMS.value is None:
+                # PINT's default; tempo2's is 4
+                self.NHARMS.value = 7
+            elif self.NHARMS.value < 4:
+                # H4 is the amplitude of the 4th harmonic, which tempo2 always includes
                 log.warning(
-                    f"Requested NHARMS={self.NHARMS.value}, but setting it to 7 since H4 is also specified"
+                    f"Requested NHARMS={self.NHARMS.value}, but setting it to 4 since H4 is also specified"
                 )
-            self.NHARMS.value = (
-                max(self.NHARMS.value, 7) if self.NHARMS.value is not None else 7
-            )
+                self.NHARMS.value = 4
             if self.STIGMA.quantity is not None:
                 raise ValueError("ELL1H can use H4 or STIGMA but not both")
 
