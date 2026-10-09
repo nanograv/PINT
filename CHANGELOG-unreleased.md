@@ -10,5 +10,6 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Warning when TOAs read from a `.tim` file repeat a flag with different values (e.g. `-j A -j B`): PINT stores only one value per flag, so masks (JUMPs, noise parameters) selecting the other values silently miss these TOAs, whereas TEMPO2 matches every value
 ### Fixed
 ### Removed

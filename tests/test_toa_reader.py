@@ -677,3 +677,68 @@ def test_parse_toa_line_exceptions():
     garbage = "asdg skfgs dj"
     with pytest.raises(RuntimeError):
         toa._parse_TOA_line(garbage)
+
+
+def test_parse_toa_line_repeated_flags():
+    line = "t1 1400 55000.1 1 @ -j A -be X -j B -fe L -fe L"
+    repeated = []
+    _, d = toa._parse_TOA_line(line, fmt="Tempo2", repeated_flags=repeated)
+    # one value per flag; repeats with different values are reported
+    assert d["j"] == "B"
+    assert repeated == [("j", ["A", "B"])]
+
+
+def _repeat_warnings(files, tmp_path):
+    from loguru import logger
+
+    for name, text in files.items():
+        (tmp_path / name).write_text(text)
+    messages = []
+    handler = logger.add(lambda m: messages.append(str(m)), level="WARNING")
+    try:
+        toas, _ = toa.read_toa_file(tmp_path / "main.tim")
+    finally:
+        logger.remove(handler)
+    return toas, [m for m in messages if "repeat a flag" in m]
+
+
+@pytest.mark.parametrize(
+    "lines, n_warnings",
+    [
+        (["t1 1400 55000.1 1 @ -j A -j B"], 1),
+        (["t1 1400 55000.1 1 @ -j A -j B", "t2 1400 55000.2 1 @ -j A -j B"], 1),
+        (["t1 1400 55000.1 1 @ -j A -j A"], 0),
+        (["t1 1400 55000.1 1 @ -j A -be B"], 0),
+        # repeats on TOAs that are not read are not reported
+        (["SKIP", "t1 1400 55000.1 1 @ -j A -j B", "NOSKIP"], 0),
+        (["FMIN 2000", "t1 1400 55000.1 1 @ -j A -j B"], 0),
+    ],
+)
+def test_repeated_flags_warning(tmp_path, lines, n_warnings):
+    files = {"main.tim": "FORMAT 1\n" + "\n".join(lines) + "\n"}
+    toas, warnings = _repeat_warnings(files, tmp_path)
+    assert len(warnings) == n_warnings
+    if n_warnings:
+        n_toas = sum(1 for l in lines if "-j A -j B" in l)
+        assert f"{n_toas} TOA(s) read from" in warnings[0]
+        assert "main.tim" in warnings[0] and "-j A B" in warnings[0]
+    for t in toas:
+        assert t.flags["j"] in ("A", "B")
+
+
+def test_repeated_flags_warning_per_file(tmp_path):
+    files = {
+        "main.tim": (
+            "FORMAT 1\nt1 1400 55000.1 1 @ -j A -j B\nINCLUDE inc.tim\n"
+            "t2 1400 55000.2 1 @ -f X\n"
+        ),
+        "inc.tim": "FORMAT 1\ni1 1400 55001.1 1 @ -f X -f Y\n",
+    }
+    toas, warnings = _repeat_warnings(files, tmp_path)
+    assert len(warnings) == 2
+    (inc,) = [w for w in warnings if "inc.tim" in w]
+    (main,) = [w for w in warnings if "main.tim" in w]
+    assert "-f X Y" in inc and "-j" not in inc
+    assert "-j A B" in main and "-f" not in main
+    assert [t.flags.get("j") for t in toas] == ["B", None, None]
+    assert [t.flags.get("f") for t in toas] == [None, "Y", "X"]
