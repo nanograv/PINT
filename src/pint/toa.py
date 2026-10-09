@@ -469,12 +469,18 @@ def _toa_format(line: str, fmt: str = "Unknown") -> str:
         return "Unknown"
 
 
-def _parse_TOA_line(line: str, fmt: str = "Unknown") -> Tuple[Tuple[int, float], dict]:
+def _parse_TOA_line(
+    line: str, fmt: str = "Unknown", repeated_flags: Optional[list] = None
+) -> Tuple[Tuple[int, float], dict]:
     """Parse a one-line ASCII time-of-arrival.
 
     Return an MJD tuple and a dictionary of other TOA information.
     The format can be one of: Comment, Command, Blank, Tempo2,
     Princeton, ITOA, Parkes, or Unknown.
+
+    A flag can only have one value. If a flag (compared case-insensitively)
+    is repeated with different values and ``repeated_flags`` is a list,
+    ``(flag, values)`` is appended to it.
     """
     MJD = None
     fmt = _toa_format(line, fmt)
@@ -524,13 +530,19 @@ def _parse_TOA_line(line: str, fmt: str = "Unknown") -> Tuple[Tuple[int, float],
                 f"Flags and flag-values should be given in pairs. The given flags are {' '.join(flags)}"
             )
 
+        seen = {}
         for i in range(0, len(flags), 2):
             k, v = flags[i].lstrip("-"), flags[i + 1]
             if k in ["error", "freq", "scale", "MJD", "flags", "obs", "name"]:
                 raise ValueError(f"TOA flag ({k}) will overwrite TOA parameter!")
             if not k:
                 raise ValueError(f"The string {repr(flags[i])} is not a valid flag")
+            values = seen.setdefault(k.lower(), [])
+            if v not in values:
+                values.append(v)
             d[k] = v
+        if repeated_flags is not None:
+            repeated_flags.extend((k, v) for k, v in seen.items() if len(v) > 1)
     elif fmt == "Command":
         d[fmt] = line.split()
     elif fmt == "Parkes":
@@ -766,8 +778,11 @@ def read_toa_file(
         top = True
     else:
         top = False
+    # repeated flags of each TOA that is read
+    repeated_flags = []
     for line in f.readlines():
-        MJD, d = _parse_TOA_line(line, fmt=cdict["FORMAT"])
+        line_repeats = []
+        MJD, d = _parse_TOA_line(line, fmt=cdict["FORMAT"], repeated_flags=line_repeats)
         if d["format"] == "Command":
             cmd = d["Command"][0].upper()
             commands.append((d["Command"], ntoas))
@@ -853,6 +868,23 @@ def read_toa_file(
                 newtoa.flags["to"] = str(cdict["TIME"])
             toas.append(newtoa)
             ntoas += 1
+            if line_repeats:
+                repeated_flags.append(line_repeats)
+
+    if repeated_flags:
+        examples = {}
+        for line_repeats in repeated_flags:
+            for k, v in line_repeats:
+                examples.setdefault(k, v)
+        log.warning(
+            f"{len(repeated_flags)} TOA(s) read from "
+            f"{getattr(f, 'name', 'the TOA file')} repeat a flag (case-insensitive) "
+            "with different values. PINT stores only one value per flag, so the "
+            "other values are lost: JUMPs, noise parameters and selections using "
+            "them do not apply to these TOAs (TEMPO2 matches every value). "
+            "Flags and example values: "
+            + "; ".join(f"-{k} {' '.join(v)}" for k, v in examples.items())
+        )
 
     return toas, commands
 
