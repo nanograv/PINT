@@ -1116,10 +1116,15 @@ def dmxparse(
 
         ``avg_dm_err`` : uncertainty in average dmx
 
+    Frozen DMX bins are excluded from the mean and its uncertainty when the
+    fitter has a covariance matrix; their variance errors are NaN.
+
     Raises
     ------
     RuntimeError
         If the model has no DMX parameters, or if there is a parsing problem
+    ValueError
+        If the fitter has a covariance matrix but no DMX bin was fitted
 
     """
     # We get the DMX values, errors, and mjds (same as in getting the DMX values for DMX v. time)
@@ -1155,15 +1160,17 @@ def dmxparse(
 
     # Make sure that the fitter has a covariance matrix, otherwise return the initial values
     if hasattr(fitter, "parameter_covariance_matrix"):
-        # now get the full parameter covariance matrix from pint
-        # access by label name to make sure we get the right values
-        # make sure they are sorted in ascending order
+        fitted = ~mask_idxs
+        n = np.sum(fitted)
+        if n == 0:
+            raise ValueError("dmxparse needs at least one fitted DMX bin")
+        # now get the covariance matrix of the fitted bins from pint,
+        # by label name and in the order of dmx_epochs
         cc = fitter.parameter_covariance_matrix.get_label_matrix(
-            sorted([f"DMX_{x}" for x in dmx_epochs])
+            [f"DMX_{x}" for x, m in zip(dmx_epochs, mask_idxs) if not m]
         )
-        n = len(DMX_Errs) - np.sum(mask_idxs)
-        # Find error in mean DM
-        DMX_mean = np.mean(DMXs)
+        # Find the mean of the fitted bins and its error
+        DMX_mean = np.mean(DMXs[fitted])
         DMX_mean_err = np.sqrt(cc.matrix.sum()) / float(n)
         # Do the correction for varying DM
         m = np.identity(n) - np.ones((n, n)) / float(n)
@@ -1175,7 +1182,9 @@ def dmxparse(
         # If array was masked, we need to add values back in where they were masked
         if DMX_keys_ma is not None:
             # Only need to add value to DMX_vErrs
-            DMX_vErrs = np.insert(DMX_vErrs, np.where(mask_idxs)[0], None)
+            all_vErrs = np.full(len(mask_idxs), np.nan)
+            all_vErrs[~mask_idxs] = DMX_vErrs
+            DMX_vErrs = all_vErrs
     else:
         log.warning(
             "Fitter does not have covariance matrix, returning values from model"
