@@ -2,6 +2,8 @@
 
 from warnings import warn
 
+from loguru import logger as log
+
 import astropy.constants as const
 import astropy.time
 import astropy.units as u
@@ -1252,36 +1254,68 @@ class SolarWindDispersionX(SolarWindDispersionBase):
             ).to(u.pc / u.cm**3)
 
 
-class SolarWindProxyRegression(SolarWindDispersion):
-    """Solar-wind dispersion model with a proxy time-series regression term.
+class SolarWindProxyRegression(SolarWindDispersionBase):
+    r"""Solar wind dispersion modelled as a regression on a solar-activity proxy.
 
-    Subclasses :class:`SolarWindDispersion` and adds a linear regression term
-    on an external proxy observable (e.g. F10.7 cm radio flux or sunspot
-    number) to capture the long-term solar-cycle amplitude modulation. The
-    effective electron density used to compute the DM is:
+    The electron density at 1 AU is a linear regression on an external proxy
+    observable such as the F10.7 cm radio flux or the sunspot number,
 
     .. math::
 
-        n_E(t) = \\mathrm{NE\\_SW}(t) + \\sum_k \\mathrm{BETA1}_k \\cdot x_k(t - \\mathrm{LAG1}_k)
+        n_E(t) = \beta_0 + \beta_1 \,
+                 \frac{P(t - \tau)}{P_0},
 
-    where :math:`x_k(t)` is the k-th proxy normalised to zero mean and unit
-    variance, and the solar-wind DM follows as usual:
+    with :math:`\beta_0` = ``SWPRBETA0``, :math:`\beta_1` = ``SWPRBETA1``,
+    :math:`\tau` = ``SWPRLAG`` and :math:`P_0` = ``SWPRNORM``. The solar wind DM
+    follows from the usual geometry,
 
     .. math::
 
-        \\mathrm{DM}_{\\mathrm{SW}}(t) = n_E(t) \\cdot S(t)
+        \mathrm{DM}_{\mathrm{SW}}(t) = n_E(t) \, S(t).
 
-    with :math:`S(t)` the path-length geometry factor inherited from the
-    parent class. ``NE_SW`` retains its physical meaning as the time-averaged
-    electron density at 1 AU; the proxy slope ``BETA1`` captures the
-    solar-cycle amplitude in the same cm^-3 units.
+    ``SWPRNORM`` is a **frozen constant**, not a statistic of the data. This is the
+    property that makes the model portable: the coefficients mean the same thing for
+    every pulsar whatever its observing span, they do not move when the proxy series
+    is extended, and a par file plus a resolvable proxy series fully determines the
+    model. An earlier version of this component normalised the proxy to zero mean and
+    unit variance using statistics computed inside :meth:`set_proxy` from whatever
+    file was passed, which recorded nothing in the par file and silently redefined
+    ``SWPRBETA1`` whenever the proxy file was updated.
 
-    The proxy centring (zero mean) ensures the proxy column is orthogonal to
-    :math:`S(t)` in the design matrix, preventing degeneracy between ``NE_SW``
-    and ``BETA1``.
+    One proxy series
+    ----------------
+    Exactly one proxy is supported, so ``SWPRBETA0`` and ``SWPRBETA1`` are the
+    intercept and slope of a single regression and the digit in each name is the
+    order of the coefficient. An earlier version used prefix parameters indexed by
+    proxy number, which read confusingly against that convention and bought
+    flexibility nobody wanted: fitting two solar activity proxies at once is not a
+    model anyone has asked for, and two highly correlated covariates would be a poor
+    one.
 
-    Proxy data must be loaded at runtime via :meth:`set_proxy` before any
-    model evaluation.
+    No ``NE_SW``
+    ------------
+    This component does not inherit ``NE_SW``. It subclasses
+    :class:`SolarWindDispersionBase` directly and supplies the whole mean density
+    itself, with ``SWPRBETA0`` as the intercept. ``NE_SW`` means the time-averaged
+    density at 1 AU, whereas ``SWPRBETA0`` is the density at zero proxy flux, which
+    is a different quantity; naming it ``NE_SW`` in a par file would be wrong. It
+    shares ``category = "solar_wind"`` with :class:`SolarWindDispersion`, so the two
+    are mutually exclusive alternatives, as they must be: ``SWPRBETA0`` and
+    ``NE_SW`` are exactly degenerate, both constants multiplying the same geometry.
+
+    Interpreting the coefficients
+    -----------------------------
+    ``SWPRBETA0`` and ``SWPRBETA1`` are strongly anticorrelated, measured at -0.91 to
+    -0.94 on NANOGrav pulsars, because the normalised proxy does not have zero mean.
+    That is geometry rather than bias, and the derived mean density is recovered at
+    full precision. Quote :meth:`get_mean_ne` rather than either coefficient alone.
+
+    Positivity of the density is **not** enforced. It is the joint condition
+    :math:`\beta_0 + \beta_1 u(t) > 0`, which no bound on a single coefficient
+    delivers.
+
+    Proxy data must be loaded at runtime with :meth:`set_proxy` before any model
+    evaluation.
 
     Parameters supported:
 
@@ -1290,17 +1324,14 @@ class SolarWindProxyRegression(SolarWindDispersion):
 
     Notes
     -----
-    Multiple proxy series are supported by adding further
-    ``SWPRBETA1_k`` / ``SWPRLAG1_k`` parameter pairs (k = 2, 3,
-    ...) and calling ``set_proxy(..., index=k)``.
-
-    The proxy lag derivative is computed by central finite differences with a
-    step of 0.1 days.
+    The lag derivative is computed by central finite differences with a step of
+    0.1 days.
 
     References
     ----------
     - Edwards et al. 2006, MNRAS, 372, 1549
     - Hazboun et al. 2022, ApJ, 929, 39
+    - Larsen, Baier et al. 2026
     """
 
     register = False
@@ -1309,78 +1340,110 @@ class SolarWindProxyRegression(SolarWindDispersion):
     def __init__(self):
         super().__init__()
 
-        # Proxy slope: modulation amplitude in cm^-3 per unit of normalised proxy k.
-        # NE_SW (inherited) serves as the physical intercept; no separate BETA0 is
-        # needed, and adding one would be perfectly degenerate with NE_SW.
+        # Regression intercept. Not NE_SW: this is the density at zero proxy flux,
+        # which is not the time-averaged density. See get_mean_ne() for that.
         self.add_param(
-            prefixParameter(
-                name="SWPRBETA1",
+            floatParameter(
+                name="SWPRBETA0",
                 units="cm^-3",
                 value=0.0,
-                description="Solar wind proxy regression slope for normalised proxy 1",
-                unit_template=lambda n: "cm^-3",
-                description_template=lambda n: (
-                    f"Solar wind proxy regression slope for normalised proxy {n}"
-                ),
-                type_match="float",
+                description="Solar wind proxy regression intercept "
+                "(electron density at zero proxy flux)",
                 tcb2tdb_scale_factor=(const.c * DMconst),
             )
         )
-        # Optional time lag applied to proxy k before interpolation to TOA epochs.
+        # Regression slope, per unit of proxy normalised by SWPRNORM.
         self.add_param(
-            prefixParameter(
-                name="SWPRLAG1",
+            floatParameter(
+                name="SWPRBETA1",
+                units="cm^-3",
+                value=0.0,
+                description="Solar wind proxy regression slope, "
+                "per unit of proxy/SWPRNORM",
+                tcb2tdb_scale_factor=(const.c * DMconst),
+            )
+        )
+        # Optional time lag applied to the proxy before interpolation to TOA epochs.
+        self.add_param(
+            floatParameter(
+                name="SWPRLAG",
                 units="day",
                 value=0.0,
-                description="Time lag for proxy time series 1 [days]",
-                unit_template=lambda n: "day",
-                description_template=lambda n: (
-                    f"Time lag for proxy time series {n} [days]"
-                ),
-                type_match="float",
+                description="Time lag applied to the proxy time series [days]",
                 tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
+        # The frozen normalisation, in the proxy's own units, e.g. sfu for F10.7.
+        # It sets only the units of SWPRBETA1; a round default makes it plain that
+        # nothing in the parameterization is derived from the observing span.
+        self.add_param(
+            floatParameter(
+                name="SWPRNORM",
+                units="",
+                value=100.0,
+                description="Frozen proxy normalisation P0, in the proxy's own units",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+        # Smoothing is part of the model, not a call argument: two people loading the
+        # same par file must get the same n_E(t).
+        self.add_param(
+            floatParameter(
+                name="SWPRSMOOTH",
+                units="day",
+                value=0.0,
+                description="Boxcar smoothing width applied to the proxy [days]; "
+                "81 is conventional for F10.7",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+        # Geometry, same meaning as in SolarWindDispersion.
+        self.add_param(
+            floatParameter(
+                name="SWP",
+                value=2.0,
+                units="",
+                description="Solar Wind Model radial power-law index (only for SWM=1)",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+        self.add_param(
+            intParameter(
+                name="SWM",
+                value=0,
+                description="Solar Wind Model (0 is from Edwards+ 2006, "
+                "1 is from You+2007,2012/Hazboun+ 2022)",
+            )
+        )
 
-        # Internal proxy storage: int index -> dict with keys mjd, vals,
-        # raw_mean, raw_std.
-        self._proxy_data = {}
+        # The raw series as supplied.  Smoothing is applied on demand from
+        # SWPRSMOOTH and cached, so changing the parameter changes the model without
+        # reloading the data.
+        self.proxy_mjd = None
+        self.proxy_vals = None
+        self.proxy_smoothed_cache = None
 
-    def set_proxy(self, proxy_mjd, proxy_vals, index=1, smooth_days=0, normalize=True):
-        """Load a proxy time series into the model.
+        self.dm_value_funcs += [self.solar_wind_dm]
+        self.delay_funcs_component += [self.solar_wind_delay]
+        self.set_special_params(["SWPRBETA0", "SWPRBETA1", "SWPRNORM", "SWM", "SWP"])
 
-        The proxy is optionally smoothed with a boxcar filter. If
-        ``normalize=True``, the mean and std are computed and stored for
-        later normalization of the interpolated proxy to zero mean / unit
-        variance, so that ``NE_SW`` retains its physical meaning as the mean
-        n_E over the time span and ``BETA1`` quantifies the modulation
-        amplitude in cm^-3.
+    # ── proxy data ────────────────────────────────────────────────────────────
+
+    def set_proxy(self, proxy_mjd, proxy_vals):
+        """Load the proxy time series into the model.
+
+        The series is stored raw. Smoothing and normalisation are applied at
+        evaluation time from ``SWPRSMOOTH`` and ``SWPRNORM``, so the par file alone
+        determines them and updating the series cannot silently redefine
+        ``SWPRBETA1``.
 
         Parameters
         ----------
         proxy_mjd : array_like
             MJD of proxy sample times.
         proxy_vals : array_like
-            Proxy values (e.g. F10.7 cm flux in sfu, sunspot number).
-        index : int
-            Which proxy slot to populate. Must match the index of the
-            corresponding ``SWPRBETA1`` parameter.
-        smooth_days : int
-            Boxcar filter width in days applied before normalization. Zero
-            means no smoothing; 81 is standard for the F10.7 cm 81-day mean.
-            The width is converted from days to samples using the median
-            cadence of ``proxy_mjd``, so the same value means the same
-            physical window whether the series is sampled daily or monthly.
-            It becomes a no-op when the series is already coarser than the
-            requested window.
-        normalize : bool
-            If True (default), the proxy is normalized to zero mean and unit
-            variance at interpolation time using statistics computed from
-            all proxy samples. The mean and std are stored for potential
-            conversion back to physical coupling units.
+            Proxy values, e.g. F10.7 cm flux in sfu or sunspot number.
         """
-        from scipy.ndimage import uniform_filter1d
-
         proxy_mjd = np.asarray(proxy_mjd, dtype=float)
         proxy_vals = np.asarray(proxy_vals, dtype=float)
 
@@ -1390,305 +1453,293 @@ class SolarWindProxyRegression(SolarWindDispersion):
                 f"{proxy_mjd.shape} and {proxy_vals.shape}."
             )
 
-        # Sort by epoch: the median cadence below and the np.interp() in
-        # _get_proxy_at_toas() both require monotonically increasing MJDs.
+        # Sort by epoch: the median cadence used for smoothing and the np.interp()
+        # in get_proxy_at_toas() both require monotonically increasing MJDs.
         order = np.argsort(proxy_mjd)
-        proxy_mjd, proxy_vals = proxy_mjd[order], proxy_vals[order]
+        self.proxy_mjd = proxy_mjd[order]
+        self.proxy_vals = proxy_vals[order]
+        self.proxy_smoothed_cache = None
 
-        # Boxcar smoothing.  uniform_filter1d's ``size`` is in *samples*, but
-        # smooth_days is specified in days, so convert using the median cadence
-        # of the series.  Without this a monthly F10.7 series smoothed with
-        # smooth_days=81 would be averaged over 81 months (~6.75 yr), erasing
-        # the solar cycle the proxy is meant to carry.  For a daily series the
-        # cadence is 1 d and the behaviour is unchanged.
-        if smooth_days > 0 and len(proxy_mjd) > 1:
-            cadence_days = float(np.median(np.diff(proxy_mjd)))
-            window = int(round(smooth_days / cadence_days)) if cadence_days > 0 else 0
-            if window > len(proxy_vals):
+    def smoothed_proxy(self):
+        """Return (mjd, vals) for the proxy with ``SWPRSMOOTH`` applied.
+
+        The smoothing width is in days, converted to samples using the median cadence
+        of the series, so the same ``SWPRSMOOTH`` means the same physical window
+        whether the proxy is sampled daily or monthly.  Without that conversion a
+        monthly F10.7 series smoothed with 81 would be averaged over 81 months, which
+        erases the solar cycle the proxy exists to carry.  The result is cached
+        against the width actually used, so changing ``SWPRSMOOTH`` takes effect
+        without reloading the series.
+        """
+        from scipy.ndimage import uniform_filter1d
+
+        if self.proxy_mjd is None:
+            raise ValueError("No proxy data loaded. Call set_proxy() first.")
+        width = float(self.SWPRSMOOTH.value or 0.0)
+
+        if self.proxy_smoothed_cache is not None and self.proxy_smoothed_cache[0] == width:
+            return self.proxy_mjd, self.proxy_smoothed_cache[1]
+
+        vals = self.proxy_vals
+        if width > 0 and len(self.proxy_mjd) > 1:
+            cadence_days = float(np.median(np.diff(self.proxy_mjd)))
+            window = int(round(width / cadence_days)) if cadence_days > 0 else 0
+            if window > len(vals):
                 log.warning(
-                    f"smooth_days={smooth_days} spans {window} samples at the "
-                    f"proxy's {cadence_days:.3g} d cadence, but the series has "
-                    f"only {len(proxy_vals)} samples; the result will be nearly "
-                    f"constant."
+                    f"SWPRSMOOTH={width} spans {window} samples at the proxy's "
+                    f"{cadence_days:.3g} d cadence, but the series has only "
+                    f"{len(vals)} samples; the result will be nearly constant."
                 )
             if window > 1:
-                proxy_vals = uniform_filter1d(
-                    proxy_vals, size=window, mode="nearest"
-                )
+                vals = uniform_filter1d(vals, size=window, mode="nearest")
 
-        if normalize:
-            raw_mean = float(np.mean(proxy_vals))
-            raw_std = float(np.std(proxy_vals))
-            if raw_std == 0.0:
-                raw_std = 1.0
-        else:
-            raw_mean, raw_std = 0.0, 1.0
+        self.proxy_smoothed_cache = (width, vals)
+        return self.proxy_mjd, vals
 
-        # Store the RAW (pre-normalized) proxy for interpolation.
-        # Normalization is applied at interpolation time (in _get_proxy_at_toas).
-        self._proxy_data[index] = {
-            "mjd": proxy_mjd,
-            "vals": proxy_vals,  # <-- stored raw, not normalized
-            "raw_mean": raw_mean,
-            "raw_std": raw_std,
-        }
-
-    def _get_proxy_at_toas(self, toas, index, lag_days=0.0):
-        """Interpolate and normalize stored proxy *index* to TOA epochs.
-
-        The raw proxy is interpolated to TOA times, then normalized using the
-        mean and std computed when set_proxy() was called.
+    def get_proxy_at_toas(self, toas, lag_days=None):
+        """Normalised proxy ``P(t - lag)/SWPRNORM`` at the TOA epochs.
 
         Parameters
         ----------
         toas : pint.toa.TOAs
-        index : int
-        lag_days : float
-            Shift the proxy backward by this many days, i.e. evaluate
-            x(t - lag).
+        lag_days : float, optional
+            Shift the proxy backward by this many days, i.e. evaluate x(t - lag).
+            Defaults to ``SWPRLAG``; pass a value explicitly for finite differences.
 
         Returns
         -------
         numpy.ndarray
-            Shape (n_toa,), dimensionless normalised proxy values.
+            Shape (n_toa,), dimensionless.
         """
-        if index not in self._proxy_data:
-            raise ValueError(
-                f"Proxy index {index} not loaded. "
-                f"Call set_proxy(index={index}) first."
-            )
-        data = self._proxy_data[index]
+        if lag_days is None:
+            lag_days = self.SWPRLAG.quantity.to_value(u.day)
+        mjd, vals = self.smoothed_proxy()
         toas_mjd = np.asarray(toas.table["tdbld"].data, dtype=float)
+        shifted = toas_mjd - lag_days
 
-        # Interpolate raw proxy to TOA times.
-        proxy_at_toas = np.interp(
-            toas_mjd - lag_days,
-            data["mjd"],
-            data["vals"],
-            left=data["vals"][0],
-            right=data["vals"][-1],
-        )
-
-        # Normalize using stored mean/std.
-        raw_mean = data["raw_mean"]
-        raw_std = data["raw_std"]
-        if raw_std != 0.0:
-            return (proxy_at_toas - raw_mean) / raw_std
-        else:
-            return proxy_at_toas
-
-    def _proxy_ne(self, toas):
-        """Return the total proxy contribution to n_E [cm^-3].
-
-        Computes the sum over all proxy slots:
-        sum_k BETA1_k * x_k(t - LAG1_k).
-        """
-        BETA1_mapping = self.get_prefix_mapping_component("SWPRBETA1")
-        LAG1_mapping = self.get_prefix_mapping_component("SWPRLAG1")
-        ne_proxy = np.zeros(len(toas)) * u.cm**-3
-        for k in sorted(BETA1_mapping.keys()):
-            beta1 = getattr(self, BETA1_mapping[k]).quantity
-            lag_days = (
-                getattr(self, LAG1_mapping[k]).quantity.to_value(u.day)
-                if k in LAG1_mapping
-                else 0.0
+        # Held at the endpoints outside the series, but say so: an epoch outside the
+        # proxy coverage is modelled with a constant density, which is a modelling
+        # choice the user should be making knowingly rather than discovering later.
+        n_out = int(np.count_nonzero((shifted < mjd[0]) | (shifted > mjd[-1])))
+        if n_out:
+            warn(
+                f"{n_out} of {len(shifted)} TOAs fall outside the coverage of the "
+                f"proxy (MJD {mjd[0]:.1f} to {mjd[-1]:.1f}) once the "
+                f"{lag_days:g} d lag is applied; the proxy is held at its endpoint "
+                f"value there. Extend the proxy series to cover the TOAs."
             )
-            xp = self._get_proxy_at_toas(toas, index=k, lag_days=lag_days)
-            ne_proxy = ne_proxy + beta1 * xp
-        return ne_proxy
+
+        norm = float(self.SWPRNORM.value)
+        proxy_at_toas = np.interp(shifted, mjd, vals, left=vals[0], right=vals[-1])
+        return proxy_at_toas / norm
+
+    def proxy_ne(self, toas):
+        """The proxy contribution to n_E [cm^-3], ``SWPRBETA1 * u(t - SWPRLAG)``."""
+        return self.SWPRBETA1.quantity * self.get_proxy_at_toas(toas)
+
+    def total_ne(self, toas):
+        """The full modelled density ``SWPRBETA0 + SWPRBETA1 * u(t)`` [cm^-3]."""
+        return self.SWPRBETA0.quantity * np.ones(len(toas)) + self.proxy_ne(toas)
+
+    # ── model ─────────────────────────────────────────────────────────────────
+
+    def solar_wind_geometry(self, toas):
+        """Return the geometry of solar wind dispersion.
+
+        Identical to :meth:`SolarWindDispersion.solar_wind_geometry`: for ``SWM==0``
+        the geometry of equations 29, 30 of Edwards et al. 2006, and for ``SWM==1``
+        Eqn. 11 of Hazboun et al. (2022). The physics lives in the module-level
+        :func:`_solar_wind_geometry`; this is the assembly around it, duplicated for
+        the same reason :class:`SolarWindDispersionX` duplicates it, namely that the
+        component owns its own power-law parameters.
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+
+        Returns
+        -------
+        astropy.quantity.Quantity
+        """
+        swm = self.SWM.value
+        p = self.SWP.value
+
+        if swm == 0:
+            angle, r = self._parent.sun_angle(toas, also_distance=True)
+            rho = np.pi - angle.to_value(u.rad)
+            solar_wind_geometry = const.au**2.0 * rho / (r * np.sin(rho))
+            return solar_wind_geometry.to(u.pc)
+        elif swm == 1:
+            theta, r = self._parent.sun_angle(toas, also_distance=True)
+            return _solar_wind_geometry(r, theta, p).to(u.pc)
+        else:
+            raise NotImplementedError(
+                "Solar Dispersion Delay not implemented for SWM %d" % swm
+            )
 
     def solar_wind_dm(self, toas):
-        """Return the solar-wind DM [pc cm^-3] including the proxy regression term.
-
-        Overrides the parent implementation to add the proxy contribution:
+        r"""Return the solar-wind DM [pc cm^-3] from the proxy regression.
 
         .. math::
 
-            n_E(t) = \\mathrm{NE\\_SW}(t) + \\sum_k \\mathrm{BETA1}_k \\cdot x_k(t - \\mathrm{LAG1}_k)
-
-        ``NE_SW(t)`` is the same Taylor-expanded electron density as in
-        :meth:`SolarWindDispersion.solar_wind_dm`.
+            n_E(t) = \mathrm{SWPRBETA0} + \mathrm{SWPRBETA1} \,
+                     P(t - \mathrm{SWPRLAG}) / \mathrm{SWPRNORM}
         """
-        ne_sw_terms = self.get_NE_SW_terms()
-
-        if len(ne_sw_terms) == 1:
-            ne_sw = self.NE_SW.quantity * np.ones(len(toas))
-        else:
-            if any(t.value != 0 for t in ne_sw_terms[1:]):
-                SWEPOCH = self.SWEPOCH.value
-                if SWEPOCH is None:
-                    raise ValueError(
-                        f"SWEPOCH not set but some NE_SW derivatives are not zero: {ne_sw_terms}"
-                    )
-                dt = (toas["tdbld"] - SWEPOCH) * u.day
-                dt_value = dt.to_value(u.yr)
-            else:
-                dt_value = np.zeros(len(toas), dtype=np.longdouble)
-            ne_sw = (
-                pint.utils.taylor_horner(dt_value, [d.value for d in ne_sw_terms])
-                * self.NE_SW.units
-            )
-
-        ne_total = ne_sw + self._proxy_ne(toas)
-
-        if np.all(ne_total.value == 0):
+        if self.SWPRBETA1.value == 0.0 and self.SWPRBETA0.value == 0.0:
             return np.zeros(len(toas)) * u.pc / u.cm**3
 
-        return (ne_total * self.solar_wind_geometry(toas)).to(u.pc / u.cm**3)
+        if self.SWM.value not in [0, 1]:
+            raise NotImplementedError(
+                f"Solar Dispersion Delay not implemented for SWM {self.SWM.value}"
+            )
 
-    def d_dm_d_swprbeta(self, toas, param_name, acc_delay=None):
-        """Derivative of DM_SW with respect to BETA1_k.
-
-        dDM/dBETA1_k = x_k(t - LAG1_k) * S(t)
-        """
-        par = getattr(self, param_name)
-        k = par.index
-        LAG1_mapping = self.get_prefix_mapping_component("SWPRLAG1")
-        lag_days = (
-            getattr(self, LAG1_mapping[k]).quantity.to_value(u.day)
-            if k in LAG1_mapping
-            else 0.0
+        return (self.total_ne(toas) * self.solar_wind_geometry(toas)).to(
+            u.pc / u.cm**3
         )
-        xp = self._get_proxy_at_toas(toas, index=k, lag_days=lag_days)
-        return (self.solar_wind_geometry(toas) * xp).to(u.pc / u.cm**3 / par.units)
 
-    def d_delay_d_swprbeta(self, toas, param_name, acc_delay=None):
-        """Derivative of delay with respect to BETA1_k.
+    def solar_wind_delay(self, toas, acc_delay=None):
+        """This is a wrapper function to compute solar wind dispersion delay."""
+        return self.dispersion_type_delay(toas)
 
-        Uses the chain rule: d(delay)/d(BETA1) = (DMconst/freq^2) * d(DM)/d(BETA1)
+    def get_mean_ne(self, toas):
+        r"""Mean electron density at 1 AU over the TOAs [cm^-3].
+
+        .. math::
+
+            \bar{n}_E = \mathrm{SWPRBETA0}
+                        + \mathrm{SWPRBETA1} \, \langle u \rangle
+
+        This is the quantity to quote. ``SWPRBETA0`` and ``SWPRBETA1`` are
+        anticorrelated at about -0.93, so their individual uncertainties are inflated
+        relative to the precision on the density itself, while this combination is
+        recovered at full precision. It is also the quantity that corresponds to
+        ``NE_SW`` in :class:`SolarWindDispersion`, so it is what to compare against a
+        constant-density fit.
         """
-        try:
-            bfreq = self._parent.barycentric_radio_freq(toas)
-        except AttributeError:
-            from astropy import log
-            log.warning("Using topocentric frequency for dedispersion!")
-            bfreq = toas.table["freq"].quantity
-        
-        # Get the DM derivative directly
-        d_dm_d_beta = self.d_dm_d_swprbeta(toas, param_name)
-        
-        # Apply chain rule: delay = DMconst * DM / freq^2
-        return DMconst * d_dm_d_beta / bfreq**2.0
+        return self.SWPRBETA0.quantity + self.SWPRBETA1.quantity * np.mean(
+            self.get_proxy_at_toas(toas)
+        )
+
+    # ── derivatives ───────────────────────────────────────────────────────────
+
+    def d_dm_d_swprbeta0(self, toas, param_name, acc_delay=None):
+        """dDM/dSWPRBETA0 = S(t)."""
+        par = getattr(self, param_name)
+        return self.solar_wind_geometry(toas).to(u.pc / u.cm**3 / par.units)
+
+    def d_delay_d_swprbeta0(self, toas, param_name, acc_delay=None):
+        return self.d_delay_d_dmparam(toas, param_name)
+
+    def d_dm_d_swprbeta1(self, toas, param_name, acc_delay=None):
+        """dDM/dSWPRBETA1 = u(t - SWPRLAG) * S(t)."""
+        par = getattr(self, param_name)
+        u_toas = self.get_proxy_at_toas(toas)
+        return (self.solar_wind_geometry(toas) * u_toas).to(
+            u.pc / u.cm**3 / par.units
+        )
+
+    def d_delay_d_swprbeta1(self, toas, param_name, acc_delay=None):
+        return self.d_delay_d_dmparam(toas, param_name)
 
     def d_dm_d_swprlag(self, toas, param_name, acc_delay=None):
-        """Derivative of DM_SW with respect to LAG1_k via central finite differences.
-
-        The chain rule gives:
+        r"""dDM/dSWPRLAG by central finite differences.
 
         .. math::
 
-            \\frac{\\partial \\mathrm{DM}}{\\partial \\mathrm{LAG}_k} =
-            \\mathrm{BETA1}_k \\cdot \\frac{\\partial x_k(t - \\mathrm{LAG}_k)}{\\partial \\mathrm{LAG}_k}
-            \\cdot S(t)
+            \frac{\partial \mathrm{DM}}{\partial \tau} =
+            \mathrm{SWPRBETA1} \,
+            \frac{\partial u(t - \tau)}{\partial \tau} \, S(t)
 
-        The proxy derivative is approximated as:
-
-        .. math::
-
-            \\frac{\\partial x_k}{\\partial \\mathrm{LAG}} \\approx
-            \\frac{x_k(t - \\mathrm{LAG} - h) - x_k(t - \\mathrm{LAG} + h)}{2h}
-
-        with h = 0.1 days.
+        with the proxy derivative approximated at a step of h = 0.1 days.
         """
         par = getattr(self, param_name)
-        k = par.index
-        BETA1_mapping = self.get_prefix_mapping_component("SWPRBETA1")
-        beta1 = (
-            getattr(self, BETA1_mapping[k]).quantity
-            if k in BETA1_mapping
-            else 0.0 * u.cm**-3
-        )
         lag_days = par.quantity.to_value(u.day)
 
         h = 0.1  # finite-difference step in days
-        xp_hi = self._get_proxy_at_toas(toas, index=k, lag_days=lag_days + h)
-        xp_lo = self._get_proxy_at_toas(toas, index=k, lag_days=lag_days - h)
-        dxp_dlag = (xp_hi - xp_lo) / (2.0 * h)
+        u_hi = self.get_proxy_at_toas(toas, lag_days=lag_days + h)
+        u_lo = self.get_proxy_at_toas(toas, lag_days=lag_days - h)
+        du_dlag = (u_hi - u_lo) / (2.0 * h)
 
         return (
-            beta1 * dxp_dlag / u.day * self.solar_wind_geometry(toas)
+            self.SWPRBETA1.quantity
+            * du_dlag
+            / u.day
+            * self.solar_wind_geometry(toas)
         ).to(u.pc / u.cm**3 / par.units)
 
     def d_delay_d_swprlag(self, toas, param_name, acc_delay=None):
-        """Derivative of delay with respect to LAG1_k.
+        return self.d_delay_d_dmparam(toas, param_name)
 
-        Uses the chain rule: d(delay)/d(LAG1) = (DMconst/freq^2) * d(DM)/d(LAG1)
+    def d_solar_wind_geometry_d_swp(self, toas, param_name, acc_delay=None):
+        """Derivative of the path length wrt the power-law index p.
+
+        Eqn. 12 of Hazboun et al. (2022), as in
+        :meth:`SolarWindDispersion.d_solar_wind_geometry_d_swp`.
         """
-        try:
-            bfreq = self._parent.barycentric_radio_freq(toas)
-        except AttributeError:
-            from astropy import log
-            log.warning("Using topocentric frequency for dedispersion!")
-            bfreq = toas.table["freq"].quantity
-        
-        # Get the DM derivative directly
-        d_dm_d_lag = self.d_dm_d_swprlag(toas, param_name)
-        
-        # Apply chain rule: delay = DMconst * DM / freq^2
-        return DMconst * d_dm_d_lag / bfreq**2.0
+        if self.SWM.value == 0:
+            raise ValueError(
+                "Solar Wind power-law index not valid for SWM %d" % self.SWM.value
+            )
+        elif self.SWM.value == 1:
+            theta, r = self._parent.sun_angle(toas, also_distance=True)
+            return _d_solar_wind_geometry_d_p(r, theta, self.SWP.value)
+        else:
+            raise NotImplementedError(
+                "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
+            )
 
     def d_dm_d_swp(self, toas, param_name, acc_delay=None):
-        """Derivative of DM_SW with respect to SWP.
+        """dDM/dSWP = n_E(t) * dS(t)/dSWP, with n_E the full regression."""
+        d_geom_dp = self.d_solar_wind_geometry_d_swp(
+            toas, param_name, acc_delay=acc_delay
+        )
+        return (self.total_ne(toas) * d_geom_dp).to(u.pc / u.cm**3)
 
-        Overrides the parent to include the proxy contribution in n_E:
+    def d_delay_d_swp(self, toas, param_name, acc_delay=None):
+        return self.d_delay_d_dmparam(toas, param_name)
 
-        dDM/dSWP = [NE_SW(t) + proxy_ne(t)] * dS(t)/dSWP
-        """
-        d_geom_dp = self.d_solar_wind_geometry_d_swp(toas, param_name)
-        ne_sw_terms = self.get_NE_SW_terms()
-        if len(ne_sw_terms) == 1:
-            ne_sw = self.NE_SW.quantity * np.ones(len(toas))
-        else:
-            if any(t.value != 0 for t in ne_sw_terms[1:]):
-                SWEPOCH = self.SWEPOCH.value or 0
-                dt_value = ((toas["tdbld"] - SWEPOCH) * u.day).to_value(u.yr)
-            else:
-                dt_value = np.zeros(len(toas), dtype=np.longdouble)
-            ne_sw = (
-                pint.utils.taylor_horner(dt_value, [d.value for d in ne_sw_terms])
-                * self.NE_SW.units
-            )
-        ne_total = ne_sw + self._proxy_ne(toas)
-        return (ne_total * d_geom_dp).to(u.pc / u.cm**3)
+    # ── bookkeeping ───────────────────────────────────────────────────────────
 
     def setup(self):
         super().setup()
 
-        # Register derivatives for the proxy slope and lag parameters.
-        # Directly check for SWPRBETA1, SWPRBETA2, ... parameters
-        for param_name in self.params:
-            if param_name.startswith("SWPRBETA"):
-                self.register_dm_deriv_funcs(self.d_dm_d_swprbeta, param_name)
-                self.register_deriv_funcs(self.d_delay_d_swprbeta, param_name)
-            elif param_name.startswith("SWPRLAG"):
-                self.register_dm_deriv_funcs(self.d_dm_d_swprlag, param_name)
-                self.register_deriv_funcs(self.d_delay_d_swprlag, param_name)
-
-        # Override the inherited SWP derivative registration so that it uses
-        # the overridden d_dm_d_swp that accounts for the proxy contribution.
+        self.register_dm_deriv_funcs(self.d_dm_d_swprbeta0, "SWPRBETA0")
+        self.register_deriv_funcs(self.d_delay_d_swprbeta0, "SWPRBETA0")
+        self.register_dm_deriv_funcs(self.d_dm_d_swprbeta1, "SWPRBETA1")
+        self.register_deriv_funcs(self.d_delay_d_swprbeta1, "SWPRBETA1")
+        self.register_dm_deriv_funcs(self.d_dm_d_swprlag, "SWPRLAG")
+        self.register_deriv_funcs(self.d_delay_d_swprlag, "SWPRLAG")
         self.register_dm_deriv_funcs(self.d_dm_d_swp, "SWP")
+        self.register_deriv_funcs(self.d_delay_d_swp, "SWP")
 
     def validate(self):
         super().validate()
-        BETA1_mapping = self.get_prefix_mapping_component("SWPRBETA1")
-        for k in sorted(BETA1_mapping.keys()):
-            if (
-                getattr(self, BETA1_mapping[k]).quantity.value != 0.0
-                and k not in self._proxy_data
-            ):
-                warn(
-                    f"SWPRBETA1 index {k} is non-zero but no proxy data has "
-                    f"been loaded for that index. Call set_proxy(index={k}) before "
-                    "evaluating the model."
-                )
+
+        if self.SWPRNORM.value is None or self.SWPRNORM.value <= 0:
+            raise ValueError(
+                f"SWPRNORM must be positive, got {self.SWPRNORM.value}. It is the "
+                "frozen constant the proxy is divided by, not a fitted quantity."
+            )
+        if self.SWM.value not in [0, 1]:
+            raise ValueError(
+                f"Solar Dispersion Delay not implemented for SWM {self.SWM.value}"
+            )
+        if self.SWPRBETA1.value != 0.0 and self.proxy_mjd is None:
+            warn(
+                "SWPRBETA1 is non-zero but no proxy data has been loaded. "
+                "Call set_proxy() before evaluating the model."
+            )
 
     def print_par(self, format="pint"):
-        result = super().print_par(format=format)
-        BETA1_mapping = self.get_prefix_mapping_component("SWPRBETA1")
-        LAG1_mapping = self.get_prefix_mapping_component("SWPRLAG1")
-        for k in sorted(BETA1_mapping.keys()):
-            result += getattr(self, BETA1_mapping[k]).as_parfile_line(format=format)
-            if k in LAG1_mapping:
-                result += getattr(self, LAG1_mapping[k]).as_parfile_line(format=format)
+        result = ""
+        for par in [
+            "SWPRBETA0",
+            "SWPRBETA1",
+            "SWPRLAG",
+            "SWPRNORM",
+            "SWPRSMOOTH",
+            "SWM",
+            "SWP",
+        ]:
+            result += getattr(self, par).as_parfile_line(format=format)
         return result
-
