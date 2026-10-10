@@ -1116,8 +1116,9 @@ def dmxparse(
 
         ``avg_dm_err`` : uncertainty in average dmx
 
-    Frozen DMX bins are excluded from the mean and its uncertainty when the
-    fitter has a covariance matrix; their variance errors are NaN.
+    Frozen DMX bins are treated as constants: they are included in the mean
+    with zero variance, so their variance errors equal the uncertainty of the
+    mean.
 
     Raises
     ------
@@ -1150,41 +1151,29 @@ def dmxparse(
     DMX_center_MJD = (DMX_R1 + DMX_R2) / 2
     # If any value need to be masked, do it
     if True in mask_idxs:
-        log.warning(
-            "Some DMX bins were not fit for, masking these bins for computation."
-        )
+        log.warning("Some DMX bins were not fit for, treating them as fixed values.")
         DMX_Errs = np.ma.array(DMX_Errs, mask=mask_idxs)
-        DMX_keys_ma = np.ma.array(DMX_keys, mask=mask_idxs)
-    else:
-        DMX_keys_ma = None
 
     # Make sure that the fitter has a covariance matrix, otherwise return the initial values
     if hasattr(fitter, "parameter_covariance_matrix"):
         fitted = ~mask_idxs
-        n = np.sum(fitted)
-        if n == 0:
+        if not fitted.any():
             raise ValueError("dmxparse needs at least one fitted DMX bin")
         # now get the covariance matrix of the fitted bins from pint,
-        # by label name and in the order of dmx_epochs
-        cc = fitter.parameter_covariance_matrix.get_label_matrix(
-            [f"DMX_{x}" for x, m in zip(dmx_epochs, mask_idxs) if not m]
+        # by label name and in the order of dmx_epochs; frozen bins are
+        # constants, so their rows and columns are zero
+        cc_fitted = fitter.parameter_covariance_matrix.get_label_matrix(
+            [f"DMX_{x}" for x, fit in zip(dmx_epochs, fitted) if fit]
         )
-        # Find the mean of the fitted bins and its error
-        DMX_mean = np.mean(DMXs[fitted])
-        DMX_mean_err = np.sqrt(cc.matrix.sum()) / float(n)
-        # Do the correction for varying DM
+        n = len(dmx_epochs)
+        cc = np.zeros((n, n))
+        cc[np.ix_(fitted, fitted)] = cc_fitted.matrix
+        # Find the mean of all bins and its error
+        DMX_mean = np.mean(DMXs)
+        DMX_mean_err = np.sqrt(cc.sum()) / float(n)
+        # Do the correction for varying DM: errors of DMXs - DMX_mean
         m = np.identity(n) - np.ones((n, n)) / float(n)
-        cc = np.dot(np.dot(m, cc.matrix), m)
-        DMX_vErrs = np.zeros(n)
-        # We also need to correct for the units here
-        for i in range(n):
-            DMX_vErrs[i] = np.sqrt(cc[i, i])
-        # If array was masked, we need to add values back in where they were masked
-        if DMX_keys_ma is not None:
-            # Only need to add value to DMX_vErrs
-            all_vErrs = np.full(len(mask_idxs), np.nan)
-            all_vErrs[~mask_idxs] = DMX_vErrs
-            DMX_vErrs = all_vErrs
+        DMX_vErrs = np.sqrt(np.diag(m @ cc @ m))
     else:
         log.warning(
             "Fitter does not have covariance matrix, returning values from model"

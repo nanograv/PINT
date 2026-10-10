@@ -635,10 +635,11 @@ def test_dmxparse():
     f = fitter.WLSFitter(toas=t, model=m)
     f.fit_toas()
     dmx = dmxparse(f, save=False)
-    # DMX_0001 has no fit flag, so it is frozen and masked
+    # DMX_0001 has no fit flag, so it is frozen and only carries the
+    # uncertainty of the mean
     assert m.DMX_0001.frozen
-    assert np.isnan(dmx["dmx_verrs"][0])
-    assert np.all(np.isfinite(dmx["dmx_verrs"][1:]))
+    assert dmx["dmx_verrs"][0].value == pytest.approx(dmx["avg_dm_err"].value)
+    assert np.all(np.isfinite(dmx["dmx_verrs"]))
 
 
 _dmx_par = """
@@ -673,22 +674,28 @@ def _dmx_fit(frozen):
     return f
 
 
-@pytest.mark.parametrize("frozen", [{1}, {2}, {3, 4}])
+@pytest.mark.parametrize("frozen", [set(), {1}, {2}, {2, 3}, {3, 4}])
 def test_dmxparse_frozen_bins(frozen):
     f = _dmx_fit(frozen)
     dmx = dmxparse(f, save=False)
-    fitted = [i not in frozen for i in range(1, len(_dmx_values) + 1)]
+    n = len(_dmx_values)
+    fitted = np.array([i not in frozen for i in range(1, n + 1)])
     values = np.array([getattr(f.model, f"DMX_{i:04d}").value for i in range(1, 5)])
-    # the mean and its error use the fitted bins only
-    mean = values[fitted].mean()
+    # the mean uses all bins, with the frozen ones as constants
+    mean = values.mean()
     assert dmx["mean_dmx"].value == pytest.approx(mean)
     labels = [f"DMX_{i:04d}" for i, fit in zip(range(1, 5), fitted) if fit]
     cov = f.parameter_covariance_matrix.get_label_matrix(labels).matrix
-    assert dmx["avg_dm_err"].value == pytest.approx(np.sqrt(cov.sum()) / len(labels))
+    mean_err = np.sqrt(cov.sum()) / n
+    assert dmx["avg_dm_err"].value == pytest.approx(mean_err)
     assert_allclose(dmx["dmxs"].value, values - mean)
-    verrs = dmx["dmx_verrs"].value
-    assert np.all(np.isnan(verrs[~np.array(fitted)]))
-    assert np.all(np.isfinite(verrs[fitted]))
+    # var(DMX_i - mean) = C_ii - 2/n sum_j C_ij + sum(C)/n^2, with C_ij = 0
+    # for frozen bins
+    expected = np.full(n, mean_err)
+    expected[fitted] = np.sqrt(
+        np.diag(cov) - 2 * cov.sum(axis=1) / n + cov.sum() / n**2
+    )
+    assert_allclose(dmx["dmx_verrs"].value, expected, rtol=1e-10)
 
 
 def test_dmxparse_all_frozen():
