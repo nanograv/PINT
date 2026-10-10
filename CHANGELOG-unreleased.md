@@ -11,4 +11,6 @@ the released changes.
 ### Changed
 ### Added
 ### Fixed
+- A par-file line without a fit flag (`NAME value` or `NAME value uncertainty`) now always gives a frozen parameter (TEMPO2 also defaults missing fit flags to zero). Previously the parameter kept its default, which is unfrozen for the first parameter of some families (e.g. `DMX_0001`, `WXSIN_0001`, `CMX_0001`)
+- `dmxparse` with frozen DMX bins no longer fails looking up their covariance (broken since 0.8.3): frozen bins enter the mean as constants with zero variance, so their variance errors equal the uncertainty of the mean, and a model with no fitted DMX bin raises a clear `ValueError`
 ### Removed
