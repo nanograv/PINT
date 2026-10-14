@@ -1262,25 +1262,32 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
 
     .. math::
 
-        n_E(t) = \beta_0 + \beta_1 \,
-                 \frac{P(t - \tau)}{P_0},
+        n_E(t) = \beta_0 + \beta_1 \, P(t - \tau),
 
-    with :math:`\beta_0` = ``SWPRBETA0``, :math:`\beta_1` = ``SWPRBETA1``,
-    :math:`\tau` = ``SWPRLAG`` and :math:`P_0` = ``SWPRNORM``. The solar wind DM
-    follows from the usual geometry,
+    with :math:`\beta_0` = ``SWPRBETA0`` in cm^-3, :math:`\beta_1` = ``SWPRBETA1`` in
+    cm^-3 per proxy unit (per sfu for F10.7), and :math:`\tau` = ``SWPRLAG``. The
+    solar wind DM follows from the usual geometry,
 
     .. math::
 
         \mathrm{DM}_{\mathrm{SW}}(t) = n_E(t) \, S(t).
 
-    ``SWPRNORM`` is a **frozen constant**, not a statistic of the data. This is the
-    property that makes the model portable: the coefficients mean the same thing for
-    every pulsar whatever its observing span, they do not move when the proxy series
-    is extended, and a par file plus a resolvable proxy series fully determines the
-    model. An earlier version of this component normalised the proxy to zero mean and
+The proxy enters in its own units, with no scaling constant
+    at all. The coefficients therefore mean the same thing for every pulsar whatever
+    its observing span, they do not move when the proxy series is extended, and a par
+    file plus a resolvable proxy series fully determines the model.
+
+    Two earlier versions did normalise. The first scaled the proxy to zero mean and
     unit variance using statistics computed inside :meth:`set_proxy` from whatever
     file was passed, which recorded nothing in the par file and silently redefined
-    ``SWPRBETA1`` whenever the proxy file was updated.
+    ``SWPRBETA1`` whenever the proxy file was updated. The second replaced that with a
+    frozen ``SWPRNORM`` constant, which fixed the span dependence but carried no
+    information: scaling ``SWPRNORM`` and ``SWPRBETA1`` together left the model
+    bit-identical, so it only set ``SWPRBETA1``'s units while adding a constant that
+    had to agree with the analysis code. It was removed on 2026-10-14.
+
+    What the proxy series *is* still matters, and no constant protects that: swapping
+    a series in sfu for one in different units rescales ``SWPRBETA1`` silently.
 
     One proxy series
     ----------------
@@ -1311,7 +1318,7 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
     full precision. Quote :meth:`get_mean_ne` rather than either coefficient alone.
 
     Positivity of the density is **not** enforced. It is the joint condition
-    :math:`\beta_0 + \beta_1 u(t) > 0`, which no bound on a single coefficient
+    :math:`\beta_0 + \beta_1 P(t) > 0`, which no bound on a single coefficient
     delivers.
 
     Proxy data must be loaded at runtime with :meth:`set_proxy` before any model
@@ -1352,14 +1359,14 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
                 tcb2tdb_scale_factor=(const.c * DMconst),
             )
         )
-        # Regression slope, per unit of proxy normalised by SWPRNORM.
+        # Regression slope, in cm^-3 per unit of the proxy (per sfu for F10.7).
         self.add_param(
             floatParameter(
                 name="SWPRBETA1",
                 units="cm^-3",
                 value=0.0,
                 description="Solar wind proxy regression slope, "
-                "per unit of proxy/SWPRNORM",
+                "in cm^-3 per proxy unit",
                 tcb2tdb_scale_factor=(const.c * DMconst),
             )
         )
@@ -1370,18 +1377,6 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
                 units="day",
                 value=0.0,
                 description="Time lag applied to the proxy time series [days]",
-                tcb2tdb_scale_factor=u.Quantity(1),
-            )
-        )
-        # The frozen normalisation, in the proxy's own units, e.g. sfu for F10.7.
-        # It sets only the units of SWPRBETA1; a round default makes it plain that
-        # nothing in the parameterization is derived from the observing span.
-        self.add_param(
-            floatParameter(
-                name="SWPRNORM",
-                units="",
-                value=100.0,
-                description="Frozen proxy normalisation P0, in the proxy's own units",
                 tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
@@ -1425,17 +1420,16 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
 
         self.dm_value_funcs += [self.solar_wind_dm]
         self.delay_funcs_component += [self.solar_wind_delay]
-        self.set_special_params(["SWPRBETA0", "SWPRBETA1", "SWPRNORM", "SWM", "SWP"])
+        self.set_special_params(["SWPRBETA0", "SWPRBETA1", "SWM", "SWP"])
 
     # ── proxy data ────────────────────────────────────────────────────────────
 
     def set_proxy(self, proxy_mjd, proxy_vals):
         """Load the proxy time series into the model.
 
-        The series is stored raw. Smoothing and normalisation are applied at
-        evaluation time from ``SWPRSMOOTH`` and ``SWPRNORM``, so the par file alone
-        determines them and updating the series cannot silently redefine
-        ``SWPRBETA1``.
+        The series is stored raw. Smoothing is applied at evaluation time from
+        ``SWPRSMOOTH``, so the par file alone determines it and updating the series
+        cannot silently redefine ``SWPRBETA1``.
 
         Parameters
         ----------
@@ -1497,7 +1491,7 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
         return self.proxy_mjd, vals
 
     def get_proxy_at_toas(self, toas, lag_days=None):
-        """Normalised proxy ``P(t - lag)/SWPRNORM`` at the TOA epochs.
+        """The proxy ``P(t - lag)`` at the TOA epochs, in its own units.
 
         Parameters
         ----------
@@ -1509,7 +1503,7 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
         Returns
         -------
         numpy.ndarray
-            Shape (n_toa,), dimensionless.
+            Shape (n_toa,), in the proxy's own units.
         """
         if lag_days is None:
             lag_days = self.SWPRLAG.quantity.to_value(u.day)
@@ -1529,16 +1523,14 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
                 f"value there. Extend the proxy series to cover the TOAs."
             )
 
-        norm = float(self.SWPRNORM.value)
-        proxy_at_toas = np.interp(shifted, mjd, vals, left=vals[0], right=vals[-1])
-        return proxy_at_toas / norm
+        return np.interp(shifted, mjd, vals, left=vals[0], right=vals[-1])
 
     def proxy_ne(self, toas):
-        """The proxy contribution to n_E [cm^-3], ``SWPRBETA1 * u(t - SWPRLAG)``."""
+        """The proxy contribution to n_E [cm^-3], ``SWPRBETA1 * P(t - SWPRLAG)``."""
         return self.SWPRBETA1.quantity * self.get_proxy_at_toas(toas)
 
     def total_ne(self, toas):
-        """The full modelled density ``SWPRBETA0 + SWPRBETA1 * u(t)`` [cm^-3]."""
+        """The full modelled density ``SWPRBETA0 + SWPRBETA1 * P(t)`` [cm^-3]."""
         return self.SWPRBETA0.quantity * np.ones(len(toas)) + self.proxy_ne(toas)
 
     # ── model ─────────────────────────────────────────────────────────────────
@@ -1583,7 +1575,7 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
         .. math::
 
             n_E(t) = \mathrm{SWPRBETA0} + \mathrm{SWPRBETA1} \,
-                     P(t - \mathrm{SWPRLAG}) / \mathrm{SWPRNORM}
+                     P(t - \mathrm{SWPRLAG})
         """
         if self.SWPRBETA1.value == 0.0 and self.SWPRBETA0.value == 0.0:
             return np.zeros(len(toas)) * u.pc / u.cm**3
@@ -1607,7 +1599,7 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
         .. math::
 
             \bar{n}_E = \mathrm{SWPRBETA0}
-                        + \mathrm{SWPRBETA1} \, \langle u \rangle
+                        + \mathrm{SWPRBETA1} \, \langle P \rangle
 
         This is the quantity to quote. ``SWPRBETA0`` and ``SWPRBETA1`` are
         anticorrelated at about -0.93, so their individual uncertainties are inflated
@@ -1631,10 +1623,10 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
         return self.d_delay_d_dmparam(toas, param_name)
 
     def d_dm_d_swprbeta1(self, toas, param_name, acc_delay=None):
-        """dDM/dSWPRBETA1 = u(t - SWPRLAG) * S(t)."""
+        """dDM/dSWPRBETA1 = P(t - SWPRLAG) * S(t)."""
         par = getattr(self, param_name)
-        u_toas = self.get_proxy_at_toas(toas)
-        return (self.solar_wind_geometry(toas) * u_toas).to(
+        p_toas = self.get_proxy_at_toas(toas)
+        return (self.solar_wind_geometry(toas) * p_toas).to(
             u.pc / u.cm**3 / par.units
         )
 
@@ -1648,7 +1640,7 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
 
             \frac{\partial \mathrm{DM}}{\partial \tau} =
             \mathrm{SWPRBETA1} \,
-            \frac{\partial u(t - \tau)}{\partial \tau} \, S(t)
+            \frac{\partial P(t - \tau)}{\partial \tau} \, S(t)
 
         with the proxy derivative approximated at a step of h = 0.1 days.
         """
@@ -1656,13 +1648,13 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
         lag_days = par.quantity.to_value(u.day)
 
         h = 0.1  # finite-difference step in days
-        u_hi = self.get_proxy_at_toas(toas, lag_days=lag_days + h)
-        u_lo = self.get_proxy_at_toas(toas, lag_days=lag_days - h)
-        du_dlag = (u_hi - u_lo) / (2.0 * h)
+        p_hi = self.get_proxy_at_toas(toas, lag_days=lag_days + h)
+        p_lo = self.get_proxy_at_toas(toas, lag_days=lag_days - h)
+        dp_dlag = (p_hi - p_lo) / (2.0 * h)
 
         return (
             self.SWPRBETA1.quantity
-            * du_dlag
+            * dp_dlag
             / u.day
             * self.solar_wind_geometry(toas)
         ).to(u.pc / u.cm**3 / par.units)
@@ -1715,11 +1707,6 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
     def validate(self):
         super().validate()
 
-        if self.SWPRNORM.value is None or self.SWPRNORM.value <= 0:
-            raise ValueError(
-                f"SWPRNORM must be positive, got {self.SWPRNORM.value}. It is the "
-                "frozen constant the proxy is divided by, not a fitted quantity."
-            )
         if self.SWM.value not in [0, 1]:
             raise ValueError(
                 f"Solar Dispersion Delay not implemented for SWM {self.SWM.value}"
@@ -1736,7 +1723,6 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
             "SWPRBETA0",
             "SWPRBETA1",
             "SWPRLAG",
-            "SWPRNORM",
             "SWPRSMOOTH",
             "SWM",
             "SWP",

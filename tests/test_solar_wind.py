@@ -476,8 +476,7 @@ _TSTART = 54000
 _TEND = 54000 + 365.25 * 2  # two years
 
 _BETA0_TRUE = 7.9  # cm^-3, the regression intercept (density at zero proxy flux)
-_BETA1_TRUE = 2.1  # cm^-3 per unit of P/SWPRNORM
-_NORM_TRUE = 5.0   # SWPRNORM, matched to the toy proxy below so u is of order unity
+_BETA1_TRUE = 0.42  # cm^-3 per proxy unit; the toy proxy below averages 5.0
 
 
 def _make_proxy(toas=None):
@@ -487,7 +486,7 @@ def _make_proxy(toas=None):
     return mjds, vals
 
 
-def _proxy_model(beta0=_BETA0_TRUE, beta1=_BETA1_TRUE, swm=0, norm=_NORM_TRUE):
+def _proxy_model(beta0=_BETA0_TRUE, beta1=_BETA1_TRUE, swm=0):
     """Build a SolarWindProxyRegression model with one proxy loaded.
 
     The proxy is loaded before the TOAs are made, since evaluating the model with a
@@ -498,7 +497,6 @@ def _proxy_model(beta0=_BETA0_TRUE, beta1=_BETA1_TRUE, swm=0, norm=_NORM_TRUE):
     base.add_component(comp)
     base.SWPRBETA0.value = beta0
     base.SWPRBETA1.value = beta1
-    base.SWPRNORM.value = norm
     base.SWM.value = swm
     proxy_mjd, proxy_vals = _make_proxy()
     base.components["SolarWindProxyRegression"].set_proxy(proxy_mjd, proxy_vals)
@@ -511,7 +509,7 @@ def test_sw_proxy_instantiation():
     model = get_model(StringIO(_PROXY_PAR))
     model.add_component(SolarWindProxyRegression())
     assert "SolarWindProxyRegression" in model.components
-    for par in ("SWPRBETA0", "SWPRBETA1", "SWPRLAG", "SWPRNORM", "SWPRSMOOTH"):
+    for par in ("SWPRBETA0", "SWPRBETA1", "SWPRLAG", "SWPRSMOOTH"):
         assert hasattr(model, par), par
 
 
@@ -581,32 +579,37 @@ def test_sw_proxy_is_linear_in_the_coefficients():
     m2, _, _, _ = _proxy_model(beta0=0.0, beta1=1.0)
     ne_b1 = (m2.components["SolarWindProxyRegression"].solar_wind_dm(toas) / geom).to_value(u.cm**-3)
     mjd, vals = _make_proxy()
-    u_expected = np.interp(
+    p_expected = np.interp(
         np.asarray(toas.table["tdbld"].data, dtype=float), mjd, vals
-    ) / _NORM_TRUE
-    assert_allclose(ne_b1, u_expected, rtol=1e-10)
+    )
+    assert_allclose(ne_b1, p_expected, rtol=1e-10)
 
 
-def test_sw_proxy_swprnorm_only_rescales_beta1():
-    """Doubling SWPRNORM and SWPRBETA1 together leaves the model unchanged.
+def test_sw_proxy_beta1_is_per_proxy_unit():
+    """SWPRBETA1 is cm^-3 per unit of the proxy, with no normalisation anywhere.
 
-    SWPRNORM carries no physics; it sets the units of SWPRBETA1. This is what makes
-    the choice of constant free, and what makes a shared coefficient meaningful
-    across pulsars with different spans.
+    Scaling the proxy values by k and SWPRBETA1 by 1/k leaves the model unchanged,
+    which is what it means for the slope to be per proxy unit. An earlier version
+    carried an SWPRNORM constant to set these units; it was removed because scaling
+    it against SWPRBETA1 was likewise a no-op, so it held no information while still
+    having to agree with the analysis code.
     """
-    m1, toas, _, _ = _proxy_model(norm=_NORM_TRUE, beta1=_BETA1_TRUE)
-    m2, _, _, _ = _proxy_model(norm=2 * _NORM_TRUE, beta1=2 * _BETA1_TRUE)
-    dm1 = m1.components["SolarWindProxyRegression"].solar_wind_dm(toas)
-    dm2 = m2.components["SolarWindProxyRegression"].solar_wind_dm(toas)
-    assert_allclose(dm1.value, dm2.value, rtol=1e-12)
+    model, toas, mjd, vals = _proxy_model()
+    comp = model.components["SolarWindProxyRegression"]
+    before = comp.solar_wind_dm(toas).value.copy()
+
+    k = 7.0
+    comp.set_proxy(mjd, k * vals)
+    comp.SWPRBETA1.value = _BETA1_TRUE / k
+    assert_allclose(before, comp.solar_wind_dm(toas).value, rtol=1e-12)
 
 
 def test_sw_proxy_extending_the_series_does_not_redefine_beta1():
     """Appending later rows leaves n_E unchanged over the original epochs.
 
-    This is the whole point of a frozen SWPRNORM. Under the superseded zero-mean,
-    unit-variance normalisation the statistics were recomputed from whatever file was
-    passed, so adding data silently changed what SWPRBETA1 meant.
+    This is the whole point of leaving the proxy unnormalised. Under the superseded
+    zero-mean, unit-variance scheme the statistics were recomputed from whatever file
+    was passed, so adding data silently changed what SWPRBETA1 meant.
     """
     model, toas, mjd, vals = _proxy_model()
     comp = model.components["SolarWindProxyRegression"]
@@ -634,26 +637,25 @@ def test_sw_proxy_normalisation_is_span_independent():
         base.add_component(SolarWindProxyRegression())
         base.SWPRBETA0.value = _BETA0_TRUE
         base.SWPRBETA1.value = _BETA1_TRUE
-        base.SWPRNORM.value = _NORM_TRUE
         comp = base.components["SolarWindProxyRegression"]
         comp.set_proxy(mjd, vals)
         make_fake_toas_uniform(_TSTART, tend, 20, base, obs="gbt")
         comps.append(comp)
 
     shared = make_fake_toas_uniform(_TSTART, _TEND, 20, comps[1]._parent, obs="gbt")
-    u_short = comps[0].get_proxy_at_toas(shared)
-    u_long = comps[1].get_proxy_at_toas(shared)
-    assert_allclose(u_short, u_long, rtol=1e-12)
+    p_short = comps[0].get_proxy_at_toas(shared)
+    p_long = comps[1].get_proxy_at_toas(shared)
+    assert_allclose(p_short, p_long, rtol=1e-12)
 
 
 def test_sw_proxy_get_mean_ne():
     """get_mean_ne returns beta0 + beta1 * <u>, the quantity to quote."""
     model, toas, mjd, vals = _proxy_model()
     comp = model.components["SolarWindProxyRegression"]
-    u_toas = np.interp(
+    p_toas = np.interp(
         np.asarray(toas.table["tdbld"].data, dtype=float), mjd, vals
-    ) / _NORM_TRUE
-    expected = _BETA0_TRUE + _BETA1_TRUE * u_toas.mean()
+    )
+    expected = _BETA0_TRUE + _BETA1_TRUE * p_toas.mean()
     assert_allclose(comp.get_mean_ne(toas).to_value(u.cm**-3), expected, rtol=1e-8)
 
 
@@ -703,8 +705,9 @@ def test_sw_proxy_print_par_round_trips():
     before = src.solar_wind_dm(toas).value.copy()
 
     par_text = src.print_par()
-    for par in ("SWPRBETA0", "SWPRBETA1", "SWPRNORM", "SWPRSMOOTH"):
+    for par in ("SWPRBETA0", "SWPRBETA1", "SWPRSMOOTH"):
         assert par in par_text, par
+    assert "SWPRNORM" not in par_text
     assert "NE_SW" not in par_text
 
     rebuilt = get_model(StringIO(_PROXY_PAR))
@@ -723,14 +726,6 @@ def test_sw_proxy_delay_positive():
     model, toas, _, _ = _proxy_model()
     delay = model.components["SolarWindProxyRegression"].solar_wind_delay(toas)
     assert np.all(delay.to_value(u.s) > 0)
-
-
-def test_sw_proxy_rejects_nonpositive_norm():
-    """SWPRNORM is a divisor, so validate() refuses zero or negative."""
-    model, _, _, _ = _proxy_model()
-    model.SWPRNORM.value = 0.0
-    with pytest.raises(ValueError):
-        model.components["SolarWindProxyRegression"].validate()
 
 
 def test_sw_proxy_warns_on_toas_outside_proxy_coverage():
