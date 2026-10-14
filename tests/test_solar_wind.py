@@ -499,7 +499,11 @@ def _proxy_model(beta0=_BETA0_TRUE, beta1=_BETA1_TRUE, swm=0):
     base.SWPRBETA1.value = beta1
     base.SWM.value = swm
     proxy_mjd, proxy_vals = _make_proxy()
-    base.components["SolarWindProxyRegression"].set_proxy(proxy_mjd, proxy_vals)
+    with warnings.catch_warnings():
+        # Arrays really are non-serialisable; the warning is asserted on its own in
+        # test_sw_proxy_set_proxy_warns_model_is_not_serialisable.
+        warnings.simplefilter("ignore", UserWarning)
+        base.components["SolarWindProxyRegression"].set_proxy(proxy_mjd, proxy_vals)
     toas = make_fake_toas_uniform(_TSTART, _TEND, 50, base, obs="gbt")
     return base, toas, proxy_mjd, proxy_vals
 
@@ -570,14 +574,19 @@ def test_sw_proxy_is_linear_in_the_coefficients():
     """n_E = beta0 + beta1 * u, so the DM is affine in both coefficients."""
     m0, toas, _, _ = _proxy_model(beta0=0.0, beta1=0.0)
     c0 = m0.components["SolarWindProxyRegression"]
+    c0.SWPRSMOOTH.value = 0.0  # isolate linearity from the default 81 d smoothing
     geom = c0.solar_wind_geometry(toas)
 
     m1, _, _, _ = _proxy_model(beta0=1.0, beta1=0.0)
-    ne_b0 = (m1.components["SolarWindProxyRegression"].solar_wind_dm(toas) / geom).to_value(u.cm**-3)
+    c1 = m1.components["SolarWindProxyRegression"]
+    c1.SWPRSMOOTH.value = 0.0
+    ne_b0 = (c1.solar_wind_dm(toas) / geom).to_value(u.cm**-3)
     assert_allclose(ne_b0, 1.0, rtol=1e-10)
 
     m2, _, _, _ = _proxy_model(beta0=0.0, beta1=1.0)
-    ne_b1 = (m2.components["SolarWindProxyRegression"].solar_wind_dm(toas) / geom).to_value(u.cm**-3)
+    c2 = m2.components["SolarWindProxyRegression"]
+    c2.SWPRSMOOTH.value = 0.0
+    ne_b1 = (c2.solar_wind_dm(toas) / geom).to_value(u.cm**-3)
     mjd, vals = _make_proxy()
     p_expected = np.interp(
         np.asarray(toas.table["tdbld"].data, dtype=float), mjd, vals
@@ -652,6 +661,7 @@ def test_sw_proxy_get_mean_ne():
     """get_mean_ne returns beta0 + beta1 * <u>, the quantity to quote."""
     model, toas, mjd, vals = _proxy_model()
     comp = model.components["SolarWindProxyRegression"]
+    comp.SWPRSMOOTH.value = 0.0  # compare against the raw series, not the smoothed one
     p_toas = np.interp(
         np.asarray(toas.table["tdbld"].data, dtype=float), mjd, vals
     )
@@ -704,8 +714,10 @@ def test_sw_proxy_print_par_round_trips():
     src = model.components["SolarWindProxyRegression"]
     before = src.solar_wind_dm(toas).value.copy()
 
-    par_text = src.print_par()
-    for par in ("SWPRBETA0", "SWPRBETA1", "SWPRSMOOTH"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        par_text = src.print_par()
+    for par in ("SWPRBETA0", "SWPRBETA1", "SWPRSMOOTH", "SWPRSOURCE"):
         assert par in par_text, par
     assert "SWPRNORM" not in par_text
     assert "NE_SW" not in par_text
@@ -714,11 +726,59 @@ def test_sw_proxy_print_par_round_trips():
     rebuilt.add_component(SolarWindProxyRegression())
     for line in par_text.strip().splitlines():
         name, value = line.split()[0], line.split()[1]
-        getattr(rebuilt, name).value = float(value)
+        par = getattr(rebuilt, name)
+        par.value = value if name == "SWPRSOURCE" else float(value)
     dst = rebuilt.components["SolarWindProxyRegression"]
-    dst.set_proxy(mjd, vals)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        dst.set_proxy(mjd, vals)
 
     assert_allclose(before, dst.solar_wind_dm(toas).value, rtol=1e-12)
+
+
+def test_sw_proxy_set_proxy_warns_model_is_not_serialisable():
+    """Loading arrays at runtime warns that the model cannot round-trip.
+
+    A par file can name a series through SWPRSOURCE but has nowhere to put several
+    thousand numbers, so a model built from arrays is deliberately a dead end for
+    serialisation and must say so rather than silently writing a par file that
+    rebuilds into something else.
+    """
+    base = get_model(StringIO(_PROXY_PAR))
+    base.add_component(SolarWindProxyRegression())
+    comp = base.components["SolarWindProxyRegression"]
+    mjd, vals = _make_proxy()
+
+    with pytest.warns(UserWarning, match="CANNOT be written to a par file"):
+        comp.set_proxy(mjd, vals)
+    assert comp.proxy_is_ephemeral
+
+    with pytest.warns(UserWarning, match="will NOT reproduce the model"):
+        comp.print_par()
+
+
+def test_sw_proxy_smoothing_defaults_to_the_f107a_window():
+    """SWPRSMOOTH defaults to 81 d, three solar rotations.
+
+    That is the conventional F10.7A window, and it is what keeps a proxy-driven
+    mean function slow: on a daily series the unsmoothed proxy carries day-scale
+    structure comparable to the stochastic term it is meant to be separable from.
+    """
+    base = get_model(StringIO(_PROXY_PAR))
+    base.add_component(SolarWindProxyRegression())
+    assert base.SWPRSMOOTH.value == 81.0
+
+
+def test_sw_proxy_source_defaults_and_is_validated():
+    """SWPRSOURCE names the series, defaults to f107, and rejects nonsense."""
+    base = get_model(StringIO(_PROXY_PAR))
+    base.add_component(SolarWindProxyRegression())
+    comp = base.components["SolarWindProxyRegression"]
+    assert comp.SWPRSOURCE.value == "f107"
+
+    comp.SWPRSOURCE.value = "not_a_series"
+    with pytest.raises(ValueError, match="not a known series"):
+        comp.validate()
 
 
 def test_sw_proxy_delay_positive():
@@ -733,8 +793,10 @@ def test_sw_proxy_warns_on_toas_outside_proxy_coverage():
     model, toas, mjd, vals = _proxy_model()
     comp = model.components["SolarWindProxyRegression"]
     keep = mjd < (_TSTART + _TEND) / 2
-    comp.set_proxy(mjd[keep], vals[keep])
-    with pytest.warns(UserWarning, match="outside the coverage"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        comp.set_proxy(mjd[keep], vals[keep])
+    with pytest.warns(UserWarning, match="does not cover every epoch"):
         comp.get_proxy_at_toas(toas)
 
 

@@ -19,6 +19,7 @@ from pint.models.parameter import (
     floatParameter,
     intParameter,
     prefixParameter,
+    strParameter,
 )
 from pint.toa_select import TOASelect
 
@@ -1386,10 +1387,21 @@ The proxy enters in its own units, with no scaling constant
             floatParameter(
                 name="SWPRSMOOTH",
                 units="day",
-                value=0.0,
+                value=81.0,
                 description="Boxcar smoothing width applied to the proxy [days]; "
-                "81 is conventional for F10.7",
+                "81, three solar rotations, is the conventional F10.7A window",
                 tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+        # Names the external series, so the par file determines the model. A named
+        # source round-trips; a series handed to set_proxy() as raw arrays cannot,
+        # which is why that path warns.
+        self.add_param(
+            strParameter(
+                name="SWPRSOURCE",
+                value="f107",
+                description="Solar activity series to use, a key of "
+                "pint.solar_indices.SOURCES (e.g. f107, f107_noaa, ssn)",
             )
         )
         # Geometry, same meaning as in SolarWindDispersion.
@@ -1417,15 +1429,32 @@ The proxy enters in its own units, with no scaling constant
         self.proxy_mjd = None
         self.proxy_vals = None
         self.proxy_smoothed_cache = None
+        # True when the series came from raw arrays rather than a named source, in
+        # which case the model cannot be serialised. See set_proxy().
+        self.proxy_is_ephemeral = False
 
         self.dm_value_funcs += [self.solar_wind_dm]
         self.delay_funcs_component += [self.solar_wind_delay]
-        self.set_special_params(["SWPRBETA0", "SWPRBETA1", "SWM", "SWP"])
+        self.set_special_params(
+            ["SWPRBETA0", "SWPRBETA1", "SWPRSOURCE", "SWM", "SWP"]
+        )
 
     # ── proxy data ────────────────────────────────────────────────────────────
 
-    def set_proxy(self, proxy_mjd, proxy_vals):
-        """Load the proxy time series into the model.
+    def set_proxy(self, proxy_mjd, proxy_vals, ephemeral=True):
+        """Load a proxy time series from arrays held in memory.
+
+        .. warning::
+
+           **A model loaded this way cannot be written to a par file or rebuilt
+           from one.** A par file can name a series through ``SWPRSOURCE``, but it
+           has nowhere to put several thousand numbers, so arrays passed here are
+           invisible to :meth:`print_par`. Writing the model out and reading it
+           back gives a *different* model: the reader resolves ``SWPRSOURCE``
+           instead and silently gets whatever that currently returns. Use this for
+           exploration and testing; for anything whose results are to be kept, set
+           ``SWPRSOURCE`` to a named series, or point ``$PINT_SOLAR_INDICES`` at a
+           pinned file.
 
         The series is stored raw. Smoothing is applied at evaluation time from
         ``SWPRSMOOTH``, so the par file alone determines it and updating the series
@@ -1437,6 +1466,10 @@ The proxy enters in its own units, with no scaling constant
             MJD of proxy sample times.
         proxy_vals : array_like
             Proxy values, e.g. F10.7 cm flux in sfu or sunspot number.
+        ephemeral : bool, optional
+            Whether to mark the model as non-serialisable and warn. Default True.
+            :meth:`load_proxy_from_source` passes False, because there the series
+            is reproducible from ``SWPRSOURCE`` alone.
         """
         proxy_mjd = np.asarray(proxy_mjd, dtype=float)
         proxy_vals = np.asarray(proxy_vals, dtype=float)
@@ -1453,6 +1486,41 @@ The proxy enters in its own units, with no scaling constant
         self.proxy_mjd = proxy_mjd[order]
         self.proxy_vals = proxy_vals[order]
         self.proxy_smoothed_cache = None
+        self.proxy_is_ephemeral = bool(ephemeral)
+
+        if self.proxy_is_ephemeral:
+            warn(
+                "Proxy data was supplied as arrays, so this model CANNOT be "
+                "written to a par file or reconstructed from one. print_par() will "
+                "emit SWPRSOURCE, and reading that par file back will resolve the "
+                "named series instead of these arrays, giving a different model "
+                "without saying so. For results you intend to keep, set SWPRSOURCE "
+                "to a named series or pin a file with $PINT_SOLAR_INDICES."
+            )
+
+    def load_proxy_from_source(self, download_policy="if_expired", path=None):
+        """Load the series named by ``SWPRSOURCE`` via :mod:`pint.solar_indices`.
+
+        Unlike :meth:`set_proxy`, this leaves the model serialisable, because
+        ``SWPRSOURCE`` records in the par file which series was used.
+
+        Parameters
+        ----------
+        download_policy : str
+            Passed through to :func:`pint.solar_indices.get_series`. Use
+            ``"never"`` to stay offline.
+        path : str or pathlib.Path, optional
+            Read this file instead of resolving the source. Note that a path is
+            machine-specific and is not recorded in the par file.
+        """
+        from pint import solar_indices
+
+        name = self.SWPRSOURCE.value
+        mjd, vals = solar_indices.get_series(
+            name, download_policy=download_policy, path=path
+        )
+        self.set_proxy(mjd, vals, ephemeral=path is not None)
+        log.info(f"Loaded {len(mjd)} samples of solar index {name!r}")
 
     def smoothed_proxy(self):
         """Return (mjd, vals) for the proxy with ``SWPRSMOOTH`` applied.
@@ -1468,7 +1536,9 @@ The proxy enters in its own units, with no scaling constant
         from scipy.ndimage import uniform_filter1d
 
         if self.proxy_mjd is None:
-            raise ValueError("No proxy data loaded. Call set_proxy() first.")
+            # Resolve SWPRSOURCE on first use rather than in setup(), which PINT
+            # calls on every parameter change and must stay free of network I/O.
+            self.load_proxy_from_source()
         width = float(self.SWPRSMOOTH.value or 0.0)
 
         if self.proxy_smoothed_cache is not None and self.proxy_smoothed_cache[0] == width:
@@ -1514,14 +1584,11 @@ The proxy enters in its own units, with no scaling constant
         # Held at the endpoints outside the series, but say so: an epoch outside the
         # proxy coverage is modelled with a constant density, which is a modelling
         # choice the user should be making knowingly rather than discovering later.
-        n_out = int(np.count_nonzero((shifted < mjd[0]) | (shifted > mjd[-1])))
-        if n_out:
-            warn(
-                f"{n_out} of {len(shifted)} TOAs fall outside the coverage of the "
-                f"proxy (MJD {mjd[0]:.1f} to {mjd[-1]:.1f}) once the "
-                f"{lag_days:g} d lag is applied; the proxy is held at its endpoint "
-                f"value there. Extend the proxy series to cover the TOAs."
-            )
+        from pint.solar_indices import check_coverage
+
+        check_coverage(
+            mjd, shifted, name=f"{self.SWPRSOURCE.value} proxy"
+        )
 
         return np.interp(shifted, mjd, vals, left=vals[0], right=vals[-1])
 
@@ -1711,19 +1778,31 @@ The proxy enters in its own units, with no scaling constant
             raise ValueError(
                 f"Solar Dispersion Delay not implemented for SWM {self.SWM.value}"
             )
-        if self.SWPRBETA1.value != 0.0 and self.proxy_mjd is None:
-            warn(
-                "SWPRBETA1 is non-zero but no proxy data has been loaded. "
-                "Call set_proxy() before evaluating the model."
+        from pint.solar_indices import SOURCES
+
+        if self.SWPRSOURCE.value not in SOURCES:
+            raise ValueError(
+                f"SWPRSOURCE={self.SWPRSOURCE.value!r} is not a known series; "
+                f"known: {sorted(SOURCES)}"
             )
 
     def print_par(self, format="pint"):
+        if self.proxy_is_ephemeral:
+            warn(
+                "This model's proxy was supplied as arrays through set_proxy(), "
+                "which a par file cannot hold. The line written below names "
+                f"SWPRSOURCE={self.SWPRSOURCE.value!r}, so reading this par file "
+                "back will resolve that series instead and will NOT reproduce the "
+                "model being written. Pin the series before writing anything you "
+                "intend to rely on."
+            )
         result = ""
         for par in [
             "SWPRBETA0",
             "SWPRBETA1",
             "SWPRLAG",
             "SWPRSMOOTH",
+            "SWPRSOURCE",
             "SWM",
             "SWP",
         ]:
