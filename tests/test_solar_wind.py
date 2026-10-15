@@ -933,3 +933,28 @@ def test_sw_proxy_set_proxy_rejects_mismatched_shapes():
     comp = model.components["SolarWindProxyRegression"]
     with pytest.raises(ValueError):
         comp.set_proxy(np.arange(10.0), np.arange(9.0))
+
+
+def test_sw_proxy_is_selected_by_the_model_builder():
+    """A par file carrying SWPRBETA0/SWPRBETA1 builds the component on its own.
+
+    The component is registered, so no manual add_component is needed; this is what
+    makes a published par file reproducible. The series itself is resolved lazily on
+    first evaluation, so building the model touches no data and no network.
+    """
+    par = _PROXY_PAR + "SWPRBETA0 0.0307\nSWPRBETA1 0.0695\nSWPRSOURCE f107\n"
+    model = get_model(StringIO(par))
+    assert "SolarWindProxyRegression" in model.components
+    assert model.SWPRBETA0.value == 0.0307
+    assert model.SWPRBETA1.value == 0.0695
+    assert model.SWPRSOURCE.value == "f107"
+    # Lazily: nothing is loaded by building the model.
+    assert model.components["SolarWindProxyRegression"].proxy_mjd is None
+
+    # Registering it must not change what a conventional par file builds.
+    const = get_model(StringIO(_PROXY_PAR + "NE_SW 7.0\n"))
+    assert "SolarWindDispersion" in const.components
+    assert "SolarWindProxyRegression" not in const.components
+
+    bare = get_model(StringIO(_PROXY_PAR))
+    assert not [c for c in bare.components if c.startswith("SolarWind")]

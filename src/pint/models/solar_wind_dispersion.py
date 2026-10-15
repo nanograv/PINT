@@ -1322,8 +1322,12 @@ The proxy enters in its own units, with no scaling constant
     :math:`\beta_0 + \beta_1 P(t) > 0`, which no bound on a single coefficient
     delivers.
 
-    Proxy data must be loaded at runtime with :meth:`set_proxy` before any model
-    evaluation.
+    Resolving the proxy series
+    --------------------------
+    The series named by ``SWPRSOURCE`` is resolved lazily, on first evaluation, by
+    :func:`pint.solar_indices.get_series`, so a bare ``get_model(par)`` gives a model
+    that evaluates with no further setup. :meth:`set_proxy` overrides that with arrays
+    held in memory, at the cost of serialisability.
 
     Parameters supported:
 
@@ -1401,7 +1405,7 @@ The proxy enters in its own units, with no scaling constant
                 name="SWPRSOURCE",
                 value="f107",
                 description="Solar activity series to use, a key of "
-                "pint.solar_indices.SOURCES (e.g. f107, f107_noaa, ssn)",
+                "pint.solar_indices.SOURCES (e.g. f107, ssn)",
             )
         )
         # Geometry, same meaning as in SolarWindDispersion.
