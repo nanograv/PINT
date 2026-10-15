@@ -1342,7 +1342,7 @@ The proxy enters in its own units, with no scaling constant
     - Larsen, Baier et al. 2026
     """
 
-    register = False
+    register = True
     category = "solar_wind"
 
     def __init__(self):
