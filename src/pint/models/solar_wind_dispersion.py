@@ -2,6 +2,8 @@
 
 from warnings import warn
 
+from loguru import logger as log
+
 import astropy.constants as const
 import astropy.time
 import astropy.units as u
@@ -17,6 +19,7 @@ from pint.models.parameter import (
     floatParameter,
     intParameter,
     prefixParameter,
+    strParameter,
 )
 from pint.toa_select import TOASelect
 
@@ -1250,3 +1253,554 @@ class SolarWindDispersionX(SolarWindDispersionBase):
             getattr(self, SWXDM_mapping[ii]).quantity = (
                 self.conjunction_solar_wind_geometry(p) * ne_sws[j]
             ).to(u.pc / u.cm**3)
+
+
+class SolarWindProxyRegression(SolarWindDispersionBase):
+    r"""Solar wind dispersion modelled as a regression on a solar-activity proxy.
+
+    The electron density at 1 AU is a linear regression on an external proxy
+    observable such as the F10.7 cm radio flux or the sunspot number,
+
+    .. math::
+
+        n_E(t) = \beta_0 + \beta_1 \, P(t - \tau),
+
+    with :math:`\beta_0` = ``SWPRBETA0`` in cm^-3, :math:`\beta_1` = ``SWPRBETA1`` in
+    cm^-3 per proxy unit (per sfu for F10.7), and :math:`\tau` = ``SWPRLAG``. The
+    solar wind DM follows from the usual geometry,
+
+    .. math::
+
+        \mathrm{DM}_{\mathrm{SW}}(t) = n_E(t) \, S(t).
+
+    The proxy enters in its own units, with no scaling constant at all. The
+    coefficients therefore mean the same thing for every pulsar whatever its
+    observing span, they do not move when the proxy series is extended, and a par
+    file plus a resolvable proxy series fully determines the model.
+
+    Two earlier versions did normalise. The first scaled the proxy to zero mean and
+    unit variance using statistics computed inside :meth:`set_proxy` from whatever
+    file was passed, which recorded nothing in the par file and silently redefined
+    ``SWPRBETA1`` whenever the proxy file was updated. The second replaced that with a
+    frozen ``SWPRNORM`` constant, which fixed the span dependence but carried no
+    information: scaling ``SWPRNORM`` and ``SWPRBETA1`` together left the model
+    bit-identical, so it only set ``SWPRBETA1``'s units while adding a constant that
+    had to agree with the analysis code. It was removed on 2026-10-14.
+
+    What the proxy series *is* still matters, and no constant protects that: swapping
+    a series in sfu for one in different units rescales ``SWPRBETA1`` silently.
+
+    One proxy series
+    ----------------
+    Exactly one proxy is supported, so ``SWPRBETA0`` and ``SWPRBETA1`` are the
+    intercept and slope of a single regression and the digit in each name is the
+    order of the coefficient. An earlier version used prefix parameters indexed by
+    proxy number, which read confusingly against that convention and bought
+    flexibility nobody wanted: fitting two solar activity proxies at once is not a
+    model anyone has asked for, and two highly correlated covariates would be a poor
+    one.
+
+    No ``NE_SW``
+    ------------
+    This component does not inherit ``NE_SW``. It subclasses
+    :class:`SolarWindDispersionBase` directly and supplies the whole mean density
+    itself, with ``SWPRBETA0`` as the intercept. ``NE_SW`` means the time-averaged
+    density at 1 AU, whereas ``SWPRBETA0`` is the density at zero proxy flux, which
+    is a different quantity; naming it ``NE_SW`` in a par file would be wrong. It
+    shares ``category = "solar_wind"`` with :class:`SolarWindDispersion`, so the two
+    are mutually exclusive alternatives, as they must be: ``SWPRBETA0`` and
+    ``NE_SW`` are exactly degenerate, both constants multiplying the same geometry.
+
+    Interpreting the coefficients
+    -----------------------------
+    ``SWPRBETA0`` and ``SWPRBETA1`` are strongly anticorrelated, measured at -0.91 to
+    -0.94 on NANOGrav pulsars, because the normalised proxy does not have zero mean.
+    That is geometry rather than bias, and the derived mean density is recovered at
+    full precision. Quote :meth:`get_mean_ne` rather than either coefficient alone.
+
+    Positivity of the density is **not** enforced. It is the joint condition
+    :math:`\beta_0 + \beta_1 P(t) > 0`, which no bound on a single coefficient
+    delivers.
+
+    Resolving the proxy series
+    --------------------------
+    The series named by ``SWPRSOURCE`` is resolved lazily, on first evaluation, by
+    :func:`pint.solar_indices.get_series`, so a bare ``get_model(par)`` gives a model
+    that evaluates with no further setup. :meth:`set_proxy` overrides that with arrays
+    held in memory, at the cost of serialisability.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.solar_wind_dispersion.SolarWindProxyRegression
+
+    Notes
+    -----
+    The lag derivative is computed by central finite differences with a step of
+    0.1 days.
+
+    References
+    ----------
+    - Edwards et al. 2006, MNRAS, 372, 1549
+    - Hazboun et al. 2022, ApJ, 929, 39
+    - Larsen, Baier et al. 2026
+    """
+
+    register = True
+    category = "solar_wind"
+
+    def __init__(self):
+        super().__init__()
+
+        # Regression intercept. Not NE_SW: this is the density at zero proxy flux,
+        # which is not the time-averaged density. See get_mean_ne() for that.
+        self.add_param(
+            floatParameter(
+                name="SWPRBETA0",
+                units="cm^-3",
+                value=0.0,
+                description="Solar wind proxy regression intercept "
+                "(electron density at zero proxy flux)",
+                tcb2tdb_scale_factor=(const.c * DMconst),
+            )
+        )
+        # Regression slope, in cm^-3 per unit of the proxy (per sfu for F10.7).
+        self.add_param(
+            floatParameter(
+                name="SWPRBETA1",
+                units="cm^-3",
+                value=0.0,
+                description="Solar wind proxy regression slope, "
+                "in cm^-3 per proxy unit",
+                tcb2tdb_scale_factor=(const.c * DMconst),
+            )
+        )
+        # Optional time lag applied to the proxy before interpolation to TOA epochs.
+        self.add_param(
+            floatParameter(
+                name="SWPRLAG",
+                units="day",
+                value=0.0,
+                description="Time lag applied to the proxy time series [days]",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+        # Smoothing is part of the model, not a call argument: two people loading the
+        # same par file must get the same n_E(t).
+        self.add_param(
+            floatParameter(
+                name="SWPRSMOOTH",
+                units="day",
+                value=81.0,
+                description="Boxcar smoothing width applied to the proxy [days]; "
+                "81, three solar rotations, is the conventional F10.7A window",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+        # Names the external series, so the par file determines the model. A named
+        # source round-trips; a series handed to set_proxy() as raw arrays cannot,
+        # which is why that path warns.
+        self.add_param(
+            strParameter(
+                name="SWPRSOURCE",
+                value="f107",
+                description="Solar activity series to use, a key of "
+                "pint.solar_indices.SOURCES (e.g. f107, ssn)",
+            )
+        )
+        # Geometry, same meaning as in SolarWindDispersion.
+        self.add_param(
+            floatParameter(
+                name="SWP",
+                value=2.0,
+                units="",
+                description="Solar Wind Model radial power-law index (only for SWM=1)",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+        self.add_param(
+            intParameter(
+                name="SWM",
+                value=0,
+                description="Solar Wind Model (0 is from Edwards+ 2006, "
+                "1 is from You+2007,2012/Hazboun+ 2022)",
+            )
+        )
+
+        # The raw series as supplied.  Smoothing is applied on demand from
+        # SWPRSMOOTH and cached, so changing the parameter changes the model without
+        # reloading the data.
+        self.proxy_mjd = None
+        self.proxy_vals = None
+        self.proxy_smoothed_cache = None
+        # True when the series came from raw arrays rather than a named source, in
+        # which case the model cannot be serialised. See set_proxy().
+        self.proxy_is_ephemeral = False
+
+        self.dm_value_funcs += [self.solar_wind_dm]
+        self.delay_funcs_component += [self.solar_wind_delay]
+        self.set_special_params(["SWPRBETA0", "SWPRBETA1", "SWPRSOURCE", "SWM", "SWP"])
+
+    # ── proxy data ────────────────────────────────────────────────────────────
+
+    def set_proxy(self, proxy_mjd, proxy_vals, ephemeral=True):
+        """Load a proxy time series from arrays held in memory.
+
+        .. warning::
+
+           **A model loaded this way cannot be written to a par file or rebuilt
+           from one.** A par file can name a series through ``SWPRSOURCE``, but it
+           has nowhere to put several thousand numbers, so arrays passed here are
+           invisible to :meth:`print_par`. Writing the model out and reading it
+           back gives a *different* model: the reader resolves ``SWPRSOURCE``
+           instead and silently gets whatever that currently returns. Use this for
+           exploration and testing; for anything whose results are to be kept, set
+           ``SWPRSOURCE`` to a named series, or point ``$PINT_SOLAR_INDICES`` at a
+           pinned file.
+
+        The series is stored raw. Smoothing is applied at evaluation time from
+        ``SWPRSMOOTH``, so the par file alone determines it and updating the series
+        cannot silently redefine ``SWPRBETA1``.
+
+        Parameters
+        ----------
+        proxy_mjd : array_like
+            MJD of proxy sample times.
+        proxy_vals : array_like
+            Proxy values, e.g. F10.7 cm flux in sfu or sunspot number.
+        ephemeral : bool, optional
+            Whether to mark the model as non-serialisable and warn. Default True.
+            :meth:`load_proxy_from_source` passes False, because there the series
+            is reproducible from ``SWPRSOURCE`` alone.
+        """
+        proxy_mjd = np.asarray(proxy_mjd, dtype=float)
+        proxy_vals = np.asarray(proxy_vals, dtype=float)
+
+        if proxy_mjd.shape != proxy_vals.shape:
+            raise ValueError(
+                f"proxy_mjd and proxy_vals must have the same shape, got "
+                f"{proxy_mjd.shape} and {proxy_vals.shape}."
+            )
+
+        # Sort by epoch: the median cadence used for smoothing and the np.interp()
+        # in get_proxy_at_toas() both require monotonically increasing MJDs.
+        order = np.argsort(proxy_mjd)
+        self.proxy_mjd = proxy_mjd[order]
+        self.proxy_vals = proxy_vals[order]
+        self.proxy_smoothed_cache = None
+        self.proxy_is_ephemeral = bool(ephemeral)
+
+        if self.proxy_is_ephemeral:
+            warn(
+                "Proxy data was supplied as arrays, so this model CANNOT be "
+                "written to a par file or reconstructed from one. print_par() will "
+                "emit SWPRSOURCE, and reading that par file back will resolve the "
+                "named series instead of these arrays, giving a different model "
+                "without saying so. For results you intend to keep, set SWPRSOURCE "
+                "to a named series or pin a file with $PINT_SOLAR_INDICES."
+            )
+
+    def load_proxy_from_source(self, download_policy="if_expired", path=None):
+        """Load the series named by ``SWPRSOURCE`` via :mod:`pint.solar_indices`.
+
+        Unlike :meth:`set_proxy`, this leaves the model serialisable, because
+        ``SWPRSOURCE`` records in the par file which series was used.
+
+        Parameters
+        ----------
+        download_policy : str
+            Passed through to :func:`pint.solar_indices.get_series`. Use
+            ``"never"`` to stay offline.
+        path : str or pathlib.Path, optional
+            Read this file instead of resolving the source. Note that a path is
+            machine-specific and is not recorded in the par file.
+        """
+        from pint import solar_indices
+
+        name = self.SWPRSOURCE.value
+        mjd, vals = solar_indices.get_series(
+            name, download_policy=download_policy, path=path
+        )
+        self.set_proxy(mjd, vals, ephemeral=path is not None)
+        log.info(f"Loaded {len(mjd)} samples of solar index {name!r}")
+
+    def smoothed_proxy(self):
+        """Return (mjd, vals) for the proxy with ``SWPRSMOOTH`` applied.
+
+        The smoothing width is in days, converted to samples using the median cadence
+        of the series, so the same ``SWPRSMOOTH`` means the same physical window
+        whether the proxy is sampled daily or monthly.  Without that conversion a
+        monthly F10.7 series smoothed with 81 would be averaged over 81 months, which
+        erases the solar cycle the proxy exists to carry.  The result is cached
+        against the width actually used, so changing ``SWPRSMOOTH`` takes effect
+        without reloading the series.
+        """
+        from scipy.ndimage import uniform_filter1d
+
+        if self.proxy_mjd is None:
+            # Resolve SWPRSOURCE on first use rather than in setup(), which PINT
+            # calls on every parameter change and must stay free of network I/O.
+            self.load_proxy_from_source()
+        width = float(self.SWPRSMOOTH.value or 0.0)
+
+        if (
+            self.proxy_smoothed_cache is not None
+            and self.proxy_smoothed_cache[0] == width
+        ):
+            return self.proxy_mjd, self.proxy_smoothed_cache[1]
+
+        vals = self.proxy_vals
+        if width > 0 and len(self.proxy_mjd) > 1:
+            cadence_days = float(np.median(np.diff(self.proxy_mjd)))
+            window = int(round(width / cadence_days)) if cadence_days > 0 else 0
+            if window > len(vals):
+                log.warning(
+                    f"SWPRSMOOTH={width} spans {window} samples at the proxy's "
+                    f"{cadence_days:.3g} d cadence, but the series has only "
+                    f"{len(vals)} samples; the result will be nearly constant."
+                )
+            if window > 1:
+                vals = uniform_filter1d(vals, size=window, mode="nearest")
+
+        self.proxy_smoothed_cache = (width, vals)
+        return self.proxy_mjd, vals
+
+    def get_proxy_at_toas(self, toas, lag_days=None):
+        """The proxy ``P(t - lag)`` at the TOA epochs, in its own units.
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+        lag_days : float, optional
+            Shift the proxy backward by this many days, i.e. evaluate x(t - lag).
+            Defaults to ``SWPRLAG``; pass a value explicitly for finite differences.
+
+        Returns
+        -------
+        numpy.ndarray
+            Shape (n_toa,), in the proxy's own units.
+        """
+        if lag_days is None:
+            lag_days = self.SWPRLAG.quantity.to_value(u.day)
+        mjd, vals = self.smoothed_proxy()
+        toas_mjd = np.asarray(toas.table["tdbld"].data, dtype=float)
+        shifted = toas_mjd - lag_days
+
+        # Held at the endpoints outside the series, but say so: an epoch outside the
+        # proxy coverage is modelled with a constant density, which is a modelling
+        # choice the user should be making knowingly rather than discovering later.
+        from pint.solar_indices import check_coverage
+
+        check_coverage(mjd, shifted, name=f"{self.SWPRSOURCE.value} proxy")
+
+        return np.interp(shifted, mjd, vals, left=vals[0], right=vals[-1])
+
+    def proxy_ne(self, toas):
+        """The proxy contribution to n_E [cm^-3], ``SWPRBETA1 * P(t - SWPRLAG)``."""
+        return self.SWPRBETA1.quantity * self.get_proxy_at_toas(toas)
+
+    def total_ne(self, toas):
+        """The full modelled density ``SWPRBETA0 + SWPRBETA1 * P(t)`` [cm^-3]."""
+        return self.SWPRBETA0.quantity * np.ones(len(toas)) + self.proxy_ne(toas)
+
+    # ── model ─────────────────────────────────────────────────────────────────
+
+    def solar_wind_geometry(self, toas):
+        """Return the geometry of solar wind dispersion.
+
+        Identical to :meth:`SolarWindDispersion.solar_wind_geometry`: for ``SWM==0``
+        the geometry of equations 29, 30 of Edwards et al. 2006, and for ``SWM==1``
+        Eqn. 11 of Hazboun et al. (2022). The physics lives in the module-level
+        :func:`_solar_wind_geometry`; this is the assembly around it, duplicated for
+        the same reason :class:`SolarWindDispersionX` duplicates it, namely that the
+        component owns its own power-law parameters.
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+
+        Returns
+        -------
+        astropy.quantity.Quantity
+        """
+        swm = self.SWM.value
+        p = self.SWP.value
+
+        if swm == 0:
+            angle, r = self._parent.sun_angle(toas, also_distance=True)
+            rho = np.pi - angle.to_value(u.rad)
+            solar_wind_geometry = const.au**2.0 * rho / (r * np.sin(rho))
+            return solar_wind_geometry.to(u.pc)
+        elif swm == 1:
+            theta, r = self._parent.sun_angle(toas, also_distance=True)
+            return _solar_wind_geometry(r, theta, p).to(u.pc)
+        else:
+            raise NotImplementedError(
+                "Solar Dispersion Delay not implemented for SWM %d" % swm
+            )
+
+    def solar_wind_dm(self, toas):
+        r"""Return the solar-wind DM [pc cm^-3] from the proxy regression.
+
+        .. math::
+
+            n_E(t) = \mathrm{SWPRBETA0} + \mathrm{SWPRBETA1} \,
+                     P(t - \mathrm{SWPRLAG})
+        """
+        if self.SWPRBETA1.value == 0.0 and self.SWPRBETA0.value == 0.0:
+            return np.zeros(len(toas)) * u.pc / u.cm**3
+
+        if self.SWM.value not in [0, 1]:
+            raise NotImplementedError(
+                f"Solar Dispersion Delay not implemented for SWM {self.SWM.value}"
+            )
+
+        return (self.total_ne(toas) * self.solar_wind_geometry(toas)).to(u.pc / u.cm**3)
+
+    def solar_wind_delay(self, toas, acc_delay=None):
+        """This is a wrapper function to compute solar wind dispersion delay."""
+        return self.dispersion_type_delay(toas)
+
+    def get_mean_ne(self, toas):
+        r"""Mean electron density at 1 AU over the TOAs [cm^-3].
+
+        .. math::
+
+            \bar{n}_E = \mathrm{SWPRBETA0}
+                        + \mathrm{SWPRBETA1} \, \langle P \rangle
+
+        This is the quantity to quote. ``SWPRBETA0`` and ``SWPRBETA1`` are
+        anticorrelated at about -0.93, so their individual uncertainties are inflated
+        relative to the precision on the density itself, while this combination is
+        recovered at full precision. It is also the quantity that corresponds to
+        ``NE_SW`` in :class:`SolarWindDispersion`, so it is what to compare against a
+        constant-density fit.
+        """
+        return self.SWPRBETA0.quantity + self.SWPRBETA1.quantity * np.mean(
+            self.get_proxy_at_toas(toas)
+        )
+
+    # ── derivatives ───────────────────────────────────────────────────────────
+
+    def d_dm_d_swprbeta0(self, toas, param_name, acc_delay=None):
+        """dDM/dSWPRBETA0 = S(t)."""
+        par = getattr(self, param_name)
+        return self.solar_wind_geometry(toas).to(u.pc / u.cm**3 / par.units)
+
+    def d_delay_d_swprbeta0(self, toas, param_name, acc_delay=None):
+        return self.d_delay_d_dmparam(toas, param_name)
+
+    def d_dm_d_swprbeta1(self, toas, param_name, acc_delay=None):
+        """dDM/dSWPRBETA1 = P(t - SWPRLAG) * S(t)."""
+        par = getattr(self, param_name)
+        p_toas = self.get_proxy_at_toas(toas)
+        return (self.solar_wind_geometry(toas) * p_toas).to(u.pc / u.cm**3 / par.units)
+
+    def d_delay_d_swprbeta1(self, toas, param_name, acc_delay=None):
+        return self.d_delay_d_dmparam(toas, param_name)
+
+    def d_dm_d_swprlag(self, toas, param_name, acc_delay=None):
+        r"""dDM/dSWPRLAG by central finite differences.
+
+        .. math::
+
+            \frac{\partial \mathrm{DM}}{\partial \tau} =
+            \mathrm{SWPRBETA1} \,
+            \frac{\partial P(t - \tau)}{\partial \tau} \, S(t)
+
+        with the proxy derivative approximated at a step of h = 0.1 days.
+        """
+        par = getattr(self, param_name)
+        lag_days = par.quantity.to_value(u.day)
+
+        h = 0.1  # finite-difference step in days
+        p_hi = self.get_proxy_at_toas(toas, lag_days=lag_days + h)
+        p_lo = self.get_proxy_at_toas(toas, lag_days=lag_days - h)
+        dp_dlag = (p_hi - p_lo) / (2.0 * h)
+
+        return (
+            self.SWPRBETA1.quantity * dp_dlag / u.day * self.solar_wind_geometry(toas)
+        ).to(u.pc / u.cm**3 / par.units)
+
+    def d_delay_d_swprlag(self, toas, param_name, acc_delay=None):
+        return self.d_delay_d_dmparam(toas, param_name)
+
+    def d_solar_wind_geometry_d_swp(self, toas, param_name, acc_delay=None):
+        """Derivative of the path length wrt the power-law index p.
+
+        Eqn. 12 of Hazboun et al. (2022), as in
+        :meth:`SolarWindDispersion.d_solar_wind_geometry_d_swp`.
+        """
+        if self.SWM.value == 0:
+            raise ValueError(
+                "Solar Wind power-law index not valid for SWM %d" % self.SWM.value
+            )
+        elif self.SWM.value == 1:
+            theta, r = self._parent.sun_angle(toas, also_distance=True)
+            return _d_solar_wind_geometry_d_p(r, theta, self.SWP.value)
+        else:
+            raise NotImplementedError(
+                "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
+            )
+
+    def d_dm_d_swp(self, toas, param_name, acc_delay=None):
+        """dDM/dSWP = n_E(t) * dS(t)/dSWP, with n_E the full regression."""
+        d_geom_dp = self.d_solar_wind_geometry_d_swp(
+            toas, param_name, acc_delay=acc_delay
+        )
+        return (self.total_ne(toas) * d_geom_dp).to(u.pc / u.cm**3)
+
+    def d_delay_d_swp(self, toas, param_name, acc_delay=None):
+        return self.d_delay_d_dmparam(toas, param_name)
+
+    # ── bookkeeping ───────────────────────────────────────────────────────────
+
+    def setup(self):
+        super().setup()
+
+        self.register_dm_deriv_funcs(self.d_dm_d_swprbeta0, "SWPRBETA0")
+        self.register_deriv_funcs(self.d_delay_d_swprbeta0, "SWPRBETA0")
+        self.register_dm_deriv_funcs(self.d_dm_d_swprbeta1, "SWPRBETA1")
+        self.register_deriv_funcs(self.d_delay_d_swprbeta1, "SWPRBETA1")
+        self.register_dm_deriv_funcs(self.d_dm_d_swprlag, "SWPRLAG")
+        self.register_deriv_funcs(self.d_delay_d_swprlag, "SWPRLAG")
+        self.register_dm_deriv_funcs(self.d_dm_d_swp, "SWP")
+        self.register_deriv_funcs(self.d_delay_d_swp, "SWP")
+
+    def validate(self):
+        super().validate()
+
+        if self.SWM.value not in [0, 1]:
+            raise ValueError(
+                f"Solar Dispersion Delay not implemented for SWM {self.SWM.value}"
+            )
+        from pint.solar_indices import SOURCES
+
+        if self.SWPRSOURCE.value not in SOURCES:
+            raise ValueError(
+                f"SWPRSOURCE={self.SWPRSOURCE.value!r} is not a known series; "
+                f"known: {sorted(SOURCES)}"
+            )
+
+    def print_par(self, format="pint"):
+        if self.proxy_is_ephemeral:
+            warn(
+                "This model's proxy was supplied as arrays through set_proxy(), "
+                "which a par file cannot hold. The line written below names "
+                f"SWPRSOURCE={self.SWPRSOURCE.value!r}, so reading this par file "
+                "back will resolve that series instead and will NOT reproduce the "
+                "model being written. Pin the series before writing anything you "
+                "intend to rely on."
+            )
+        result = ""
+        for par in [
+            "SWPRBETA0",
+            "SWPRBETA1",
+            "SWPRLAG",
+            "SWPRSMOOTH",
+            "SWPRSOURCE",
+            "SWM",
+            "SWP",
+        ]:
+            result += getattr(self, par).as_parfile_line(format=format)
+        return result
