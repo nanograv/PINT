@@ -265,11 +265,11 @@ print(
 # tracks the solar cycle, and so do several published activity indices, so
 # `SolarWindProxyRegression` makes the density at 1 AU a linear regression on one of them:
 #
-# $$n_E(t) = \mathrm{SWPRBETA0} + \mathrm{SWPRBETA1} \, P(t - \mathrm{SWPRLAG})$$
+# $$n_E(t) = \mathrm{SWPRBETA0} + \mathrm{SWPRBETA1} \times P(t - \mathrm{SWPRLAG})$$
 #
 # with the usual geometry on top, $\mathrm{DM}_\mathrm{SW}(t) = n_E(t) S(t)$. Two free
-# parameters buy a density that moves over a 20 year data set, against one for `NE_SW` and
-# one per segment for `SWX`.
+# parameters buy a density that moves with the solar cycle over a long data set, against one
+# for `NE_SW` and one per segment for `SWX`.
 #
 # | parameter | units | meaning |
 # |---|---|---|
@@ -290,6 +290,9 @@ print(
 # This component shares `category = "solar_wind"` with the standard model, so a model
 # holds one or the other, never both: `SWPRBETA0` and `NE_SW` are exactly degenerate,
 # being constants multiplying the same geometry.
+#
+# Deviations of the solar wind dispersive delay from the inferred proxy regression can be
+# handled by a correlated noise component such as `PLSWNoise` or `TimeDomainSWNoise`.
 
 # %%
 import warnings
@@ -309,9 +312,9 @@ print(
 # %% [markdown]
 # ### Where the proxy series comes from
 #
-# `SWPRSOURCE` is resolved lazily, on first evaluation, by `pint.solar_indices`, so a bare
-# `get_model(par)` gives a model that evaluates with no further setup and nothing has to be
-# shipped alongside the par file. The series are downloaded and cached rather than bundled:
+# `SWPRSOURCE` is resolved on first evaluation, by `pint.solar_indices`, so a bare
+# `get_model(par)` gives a model that evaluates with no further setup: the par file on its
+# own still specifies the model completely. The series are downloaded and cached:
 #
 # | key | series | cadence |
 # |---|---|---|
@@ -320,18 +323,19 @@ print(
 # | `ace_density` | in-situ proton density, [ACE SWEPAM](https://izw1.caltech.edu/ACE/ASC/level2/) | daily, manual export |
 #
 # Resolution goes through three tiers, the same way clock files do: an explicit `path=` or
-# a directory in `$PINT_SOLAR_INDICES`, then the cached download, then a bundled fallback.
+# a directory in `$PINT_SOLAR_INDICES`, then the cached download, and finally a bundled
+# fallback.
 # The first tier is what pins an analysis, since the content at a fixed URL changes as new
-# data arrive. Downloading, caching, expiry and failure handling are all delegated to
+# data arrive. Downloading, caching, expiration and failure handling are all done through
 # `pint.observatory.global_clock_corrections.get_file`, so `download_policy="never"` is
 # offline and deterministic, and a network error during a long run warns and falls back to
-# the cached copy rather than raising.
+# the cached copy rather than raising an error.
 #
 # `SWPRSMOOTH` is in days and is converted to samples using the series' median cadence, so
 # 81 days means 81 samples of daily F10.7 and 3 samples of the monthly sunspot number. The
 # default of 81 is the conventional F10.7A window, three synodic solar rotations, which
-# averages over the rotation of active regions across the disc while leaving the cycle
-# intact.
+# averages over the rotation of active regions across the disc while leaving the solar
+# cycle in the data.
 
 # %%
 try:
@@ -350,8 +354,8 @@ except OSError as e:
 # ### Using a series you already have
 #
 # `set_proxy` takes the series as arrays, which is convenient for exploration and is how
-# this example stays self-contained. It warns, and it should: a par file has nowhere to put
-# several thousand numbers, so a model built this way **cannot** be written to a par file
+# this example works. A warning is thrown since a par file cannot store the proxy data,
+# so a model built this way **cannot** be written to a par file
 # and read back. Writing it out emits `SWPRSOURCE`, and reading that back resolves the
 # named series instead, giving a different model. For anything whose results are to be
 # kept, name a series in `SWPRSOURCE` or pin a file through `$PINT_SOLAR_INDICES`.
@@ -362,7 +366,7 @@ except OSError as e:
 # %%
 np.random.seed(0)  # so the fitted values below are the same on every docs build
 
-proxy_mjd = np.arange(53500.0, 56500.0)
+proxy_mjd = np.arange(53500.0, 60000.0)
 proxy_vals = 100.0 + 60.0 * np.sin(2 * np.pi * (proxy_mjd - 53000) / (11 * 365.25))
 
 with warnings.catch_warnings():
@@ -372,8 +376,8 @@ with warnings.catch_warnings():
 
 toas = make_fake_toas_uniform(
     54000,
-    54000 + 365.25 * 5,
-    500,
+    54000 + 365.25 * 15,
+    1500,
     model=model_proxy,
     freq=np.array([430.0, 1400.0]) * u.MHz,
     multi_freqs_in_epoch=True,
@@ -411,11 +415,10 @@ axdm.legend()
 # %% [markdown]
 # ### Fitting the coefficients
 #
-# `SWPRBETA0` and `SWPRBETA1` are strongly anticorrelated, because the proxy is not
-# mean-subtracted and so the intercept is an extrapolation to zero flux far outside the
-# data. That is geometry, not bias: the combination the data actually constrains is the
-# mean density over the TOAs, and `get_mean_ne` returns it. Quote that rather than either
-# coefficient alone.
+# `SWPRBETA0` and `SWPRBETA1` are strongly anticorrelated, so quite different pairs of
+# values give very similar `n_E(t)` series. Rather than looking at the values of these
+# parameters (which are proxy source dependent as well) it is often more useful to look at
+# `get_mean_ne()` and `total_ne()`, which have a more direct physical interpretation.
 
 # %%
 model_fit = get_model(StringIO(proxy_par))
@@ -457,7 +460,7 @@ print(
 # ### Par files
 #
 # The par file plus a resolvable series determines $n_E(t)$ exactly. Rebuilding the model
-# from the written par file and handing it the same series reproduces the DM bit for bit:
+# from the written par file and handing it the same series reproduces the DM exactly:
 
 # %%
 with warnings.catch_warnings():
