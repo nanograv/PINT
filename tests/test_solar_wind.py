@@ -13,7 +13,10 @@ from astropy import units as u
 from pint.models import get_model, get_model_and_toas
 from pint.fitter import Fitter
 from pint.simulation import make_fake_toas_uniform
-from pint.models.solar_wind_dispersion import SolarWindDispersionX, SolarWindProxyRegression
+from pint.models.solar_wind_dispersion import (
+    SolarWindDispersionX,
+    SolarWindProxyRegression,
+)
 import pint.utils
 from pinttestdata import datadir
 
@@ -458,6 +461,7 @@ def test_expression():
         (m.NE_SW.quantity + dt * m.NE_SW1.quantity),
     )
 
+
 # ---------------------------------------------------------------------------
 # SolarWindProxyRegression tests
 # ---------------------------------------------------------------------------
@@ -530,7 +534,11 @@ def test_sw_proxy_has_no_prefix_parameters():
     assert comp.get_prefix_mapping_component("SWPRBETA") == {}
     assert "SWPRLAG" in comp.params and "SWPRLAG1" not in comp.params
     for par in ("SWPRBETA0", "SWPRBETA1", "SWPRLAG"):
-        assert getattr(model, par).prefix is None if hasattr(getattr(model, par), "prefix") else True
+        assert (
+            getattr(model, par).prefix is None
+            if hasattr(getattr(model, par), "prefix")
+            else True
+        )
 
 
 def test_sw_proxy_does_not_inherit_ne_sw():
@@ -588,9 +596,7 @@ def test_sw_proxy_is_linear_in_the_coefficients():
     c2.SWPRSMOOTH.value = 0.0
     ne_b1 = (c2.solar_wind_dm(toas) / geom).to_value(u.cm**-3)
     mjd, vals = _make_proxy()
-    p_expected = np.interp(
-        np.asarray(toas.table["tdbld"].data, dtype=float), mjd, vals
-    )
+    p_expected = np.interp(np.asarray(toas.table["tdbld"].data, dtype=float), mjd, vals)
     assert_allclose(ne_b1, p_expected, rtol=1e-10)
 
 
@@ -662,9 +668,7 @@ def test_sw_proxy_get_mean_ne():
     model, toas, mjd, vals = _proxy_model()
     comp = model.components["SolarWindProxyRegression"]
     comp.SWPRSMOOTH.value = 0.0  # compare against the raw series, not the smoothed one
-    p_toas = np.interp(
-        np.asarray(toas.table["tdbld"].data, dtype=float), mjd, vals
-    )
+    p_toas = np.interp(np.asarray(toas.table["tdbld"].data, dtype=float), mjd, vals)
     expected = _BETA0_TRUE + _BETA1_TRUE * p_toas.mean()
     assert_allclose(comp.get_mean_ne(toas).to_value(u.cm**-3), expected, rtol=1e-8)
 

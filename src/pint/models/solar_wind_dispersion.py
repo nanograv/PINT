@@ -1273,9 +1273,9 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
 
         \mathrm{DM}_{\mathrm{SW}}(t) = n_E(t) \, S(t).
 
-The proxy enters in its own units, with no scaling constant
-    at all. The coefficients therefore mean the same thing for every pulsar whatever
-    its observing span, they do not move when the proxy series is extended, and a par
+    The proxy enters in its own units, with no scaling constant at all. The
+    coefficients therefore mean the same thing for every pulsar whatever its
+    observing span, they do not move when the proxy series is extended, and a par
     file plus a resolvable proxy series fully determines the model.
 
     Two earlier versions did normalise. The first scaled the proxy to zero mean and
@@ -1439,9 +1439,7 @@ The proxy enters in its own units, with no scaling constant
 
         self.dm_value_funcs += [self.solar_wind_dm]
         self.delay_funcs_component += [self.solar_wind_delay]
-        self.set_special_params(
-            ["SWPRBETA0", "SWPRBETA1", "SWPRSOURCE", "SWM", "SWP"]
-        )
+        self.set_special_params(["SWPRBETA0", "SWPRBETA1", "SWPRSOURCE", "SWM", "SWP"])
 
     # ── proxy data ────────────────────────────────────────────────────────────
 
@@ -1545,7 +1543,10 @@ The proxy enters in its own units, with no scaling constant
             self.load_proxy_from_source()
         width = float(self.SWPRSMOOTH.value or 0.0)
 
-        if self.proxy_smoothed_cache is not None and self.proxy_smoothed_cache[0] == width:
+        if (
+            self.proxy_smoothed_cache is not None
+            and self.proxy_smoothed_cache[0] == width
+        ):
             return self.proxy_mjd, self.proxy_smoothed_cache[1]
 
         vals = self.proxy_vals
@@ -1590,9 +1591,7 @@ The proxy enters in its own units, with no scaling constant
         # choice the user should be making knowingly rather than discovering later.
         from pint.solar_indices import check_coverage
 
-        check_coverage(
-            mjd, shifted, name=f"{self.SWPRSOURCE.value} proxy"
-        )
+        check_coverage(mjd, shifted, name=f"{self.SWPRSOURCE.value} proxy")
 
         return np.interp(shifted, mjd, vals, left=vals[0], right=vals[-1])
 
@@ -1656,9 +1655,7 @@ The proxy enters in its own units, with no scaling constant
                 f"Solar Dispersion Delay not implemented for SWM {self.SWM.value}"
             )
 
-        return (self.total_ne(toas) * self.solar_wind_geometry(toas)).to(
-            u.pc / u.cm**3
-        )
+        return (self.total_ne(toas) * self.solar_wind_geometry(toas)).to(u.pc / u.cm**3)
 
     def solar_wind_delay(self, toas, acc_delay=None):
         """This is a wrapper function to compute solar wind dispersion delay."""
@@ -1697,9 +1694,7 @@ The proxy enters in its own units, with no scaling constant
         """dDM/dSWPRBETA1 = P(t - SWPRLAG) * S(t)."""
         par = getattr(self, param_name)
         p_toas = self.get_proxy_at_toas(toas)
-        return (self.solar_wind_geometry(toas) * p_toas).to(
-            u.pc / u.cm**3 / par.units
-        )
+        return (self.solar_wind_geometry(toas) * p_toas).to(u.pc / u.cm**3 / par.units)
 
     def d_delay_d_swprbeta1(self, toas, param_name, acc_delay=None):
         return self.d_delay_d_dmparam(toas, param_name)
@@ -1724,10 +1719,7 @@ The proxy enters in its own units, with no scaling constant
         dp_dlag = (p_hi - p_lo) / (2.0 * h)
 
         return (
-            self.SWPRBETA1.quantity
-            * dp_dlag
-            / u.day
-            * self.solar_wind_geometry(toas)
+            self.SWPRBETA1.quantity * dp_dlag / u.day * self.solar_wind_geometry(toas)
         ).to(u.pc / u.cm**3 / par.units)
 
     def d_delay_d_swprlag(self, toas, param_name, acc_delay=None):

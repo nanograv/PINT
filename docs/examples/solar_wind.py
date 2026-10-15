@@ -301,8 +301,10 @@ from pint import solar_indices
 proxy_par = "\n".join([par, "SWPRBETA0 2.0\nSWPRBETA1 0.05\nSWPRSOURCE f107"])
 model_proxy = get_model(StringIO(proxy_par))
 proxy_component = model_proxy.components["SolarWindProxyRegression"]
-print(f"SWPRSOURCE = {model_proxy.SWPRSOURCE.value}, "
-      f"SWPRSMOOTH = {model_proxy.SWPRSMOOTH.value} d")
+print(
+    f"SWPRSOURCE = {model_proxy.SWPRSOURCE.value}, "
+    f"SWPRSMOOTH = {model_proxy.SWPRSMOOTH.value} d"
+)
 
 # %% [markdown]
 # ### Where the proxy series comes from
@@ -334,11 +336,15 @@ print(f"SWPRSOURCE = {model_proxy.SWPRSOURCE.value}, "
 # %%
 try:
     f107_mjd, f107 = solar_indices.get_series("f107")
-    print(f"{len(f107_mjd)} daily samples, MJD {f107_mjd.min():.0f} to "
-          f"{f107_mjd.max():.0f}, mean {f107.mean():.1f} sfu")
+    print(
+        f"{len(f107_mjd)} daily samples, MJD {f107_mjd.min():.0f} to "
+        f"{f107_mjd.max():.0f}, mean {f107.mean():.1f} sfu"
+    )
 except OSError as e:
-    print(f"could not reach the DRAO table ({e}); the rest of this example uses a "
-          "synthetic proxy")
+    print(
+        f"could not reach the DRAO table ({e}); the rest of this example uses a "
+        "synthetic proxy"
+    )
 
 # %% [markdown]
 # ### Using a series you already have
@@ -379,14 +385,21 @@ toas = make_fake_toas_uniform(
 mjds = toas.get_mjds().value
 fig, (ax, axdm) = plt.subplots(2, 1, figsize=(16, 9), sharex=True)
 ax.plot(proxy_mjd, proxy_vals, color="0.7", label="proxy P(t)")
-ax.plot(*proxy_component.smoothed_proxy(), color="C3",
-        label=f"smoothed, SWPRSMOOTH = {model_proxy.SWPRSMOOTH.value:.0f} d")
+ax.plot(
+    *proxy_component.smoothed_proxy(),
+    color="C3",
+    label=f"smoothed, SWPRSMOOTH = {model_proxy.SWPRSMOOTH.value:.0f} d",
+)
 ax.set_xlim(mjds.min(), mjds.max())
 ax.set_ylabel("proxy [sfu]")
 ax.legend()
 axdm.plot(mjds, proxy_component.total_ne(toas), ".", label="$n_E(t)$ [cm$^{-3}$]")
-axdm.plot(mjds, 1e4 * proxy_component.solar_wind_dm(toas).value, ".",
-          label="$10^4 \\times \\mathrm{DM}_{\\mathrm{SW}}$ [pc cm$^{-3}$]")
+axdm.plot(
+    mjds,
+    1e4 * proxy_component.solar_wind_dm(toas).value,
+    ".",
+    label="$10^4 \\times \\mathrm{DM}_{\\mathrm{SW}}$ [pc cm$^{-3}$]",
+)
 axdm.set_xlabel("MJD")
 axdm.legend()
 
@@ -418,10 +431,14 @@ f = Fitter.auto(toas, model_fit)
 f.fit_toas()
 fit_component = f.model.components["SolarWindProxyRegression"]
 
-print(f"SWPRBETA0 = {f.model.SWPRBETA0.quantity:.4f} "
-      f"+/- {f.model.SWPRBETA0.uncertainty:.4f}   (true 2.0)")
-print(f"SWPRBETA1 = {f.model.SWPRBETA1.quantity:.5f} "
-      f"+/- {f.model.SWPRBETA1.uncertainty:.5f}   (true 0.05)")
+print(
+    f"SWPRBETA0 = {f.model.SWPRBETA0.quantity:.4f} "
+    f"+/- {f.model.SWPRBETA0.uncertainty:.4f}   (true 2.0)"
+)
+print(
+    f"SWPRBETA1 = {f.model.SWPRBETA1.quantity:.5f} "
+    f"+/- {f.model.SWPRBETA1.uncertainty:.5f}   (true 0.05)"
+)
 print(f"mean n_E  = {fit_component.get_mean_ne(toas):.4f}")
 
 cov = f.parameter_covariance_matrix
@@ -431,8 +448,10 @@ C = cov.matrix[np.ix_(idx, idx)]
 print(f"corr(SWPRBETA0, SWPRBETA1) = {C[0, 1] / np.sqrt(C[0, 0] * C[1, 1]):+.3f}")
 # the uncertainty on the mean density, propagated through that 2x2 covariance
 gradient = np.array([1.0, fit_component.get_proxy_at_toas(toas).mean()])
-print(f"sigma(mean n_E) = {np.sqrt(gradient @ C @ gradient):.4f}, against "
-      f"sigma(SWPRBETA0) = {f.model.SWPRBETA0.uncertainty_value:.4f}")
+print(
+    f"sigma(mean n_E) = {np.sqrt(gradient @ C @ gradient):.4f}, against "
+    f"sigma(SWPRBETA0) = {f.model.SWPRBETA0.uncertainty_value:.4f}"
+)
 
 # %% [markdown]
 # ### Par files

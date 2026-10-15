@@ -77,9 +77,7 @@ ACE_EPOCH_MJD = date(1996, 1, 1).toordinal() - MJD_ORDINAL_OFFSET
 def mjd_from_ymd(yyyymmdd):
     """Integer MJD from an integer or string date of the form YYYYMMDD."""
     s = str(int(yyyymmdd))
-    return (
-        date(int(s[:4]), int(s[4:6]), int(s[6:8])).toordinal() - MJD_ORDINAL_OFFSET
-    )
+    return date(int(s[:4]), int(s[4:6]), int(s[6:8])).toordinal() - MJD_ORDINAL_OFFSET
 
 
 def mjd_from_year_month(tag):
@@ -342,7 +340,9 @@ def get_series(name="f107", download_policy="if_expired", path=None, **parser_kw
 
     local = local_candidate(source.filename)
     if local is not None:
-        log.info(f"Solar index {name} read from {local} because of {pint_solar_env_var}")
+        log.info(
+            f"Solar index {name} read from {local} because of {pint_solar_env_var}"
+        )
         return source.parser(local, **parser_kwargs)
 
     if source.url_base is not None:
@@ -356,7 +356,9 @@ def get_series(name="f107", download_policy="if_expired", path=None, **parser_kw
             log.info(f"Solar index {name} read from {resolved}")
             return source.parser(resolved, **parser_kwargs)
         except (OSError, KeyError) as e:
-            log.warning(f"Could not obtain solar index {name} from {source.url_base}: {e}")
+            log.warning(
+                f"Could not obtain solar index {name} from {source.url_base}: {e}"
+            )
 
     fallback = Path(runtimefile(source.filename))
     if fallback.exists():
