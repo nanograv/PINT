@@ -10,5 +10,6 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Can now use INPOP ephemeris
 ### Fixed
 ### Removed
