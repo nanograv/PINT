@@ -5,15 +5,14 @@ from os.path import basename, join
 import pytest
 
 import astropy.units as u
+from pint.exceptions import MissingParameter, UnknownBinaryModel
 from pint.models.astrometry import AstrometryEquatorial
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
 from pint.models.spindown import Spindown
 from pint.models.model_builder import get_model
 from pint.models.timing_model import (
-    MissingParameter,
     TimingModel,
     Component,
-    UnknownBinaryModel,
 )
 from pinttestdata import datadir
 

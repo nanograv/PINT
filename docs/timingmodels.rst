@@ -13,8 +13,10 @@ file, these are selected based on the parameters present. Binary models are
 selected explicitly using the ``BINARY`` parameter, while each non-binary
 component is selected if some parameter unique to it is included (for example
 if ``ELAT`` is present, :class:`~pint.models.astrometry.AstrometryEcliptic` is
-selected). Ambiguous or contradictory parameter files are possible, and for
-these PINT raises an exception.
+selected). Hierarchical triples may also include an outer orbit selected with
+``BINARY2`` (parameters carry a ``_2`` suffix, e.g. ``PB_2``). Ambiguous or
+contradictory parameter files are possible, and for these PINT raises an
+exception.
 
 .. componentlist::
 

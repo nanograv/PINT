@@ -55,7 +55,7 @@ def test_process_and_accuracy():
     # level by comparison with stored Tempo2 "Fermi plugin" results.
 
     modelin = pint.models.get_model(parfile)
-    get_satellite_observatory("Fermi", ft2file)
+    get_satellite_observatory("Fermi", ft2file, overwrite=True)
     ts = get_Fermi_TOAs(
         eventfileraw,
         weightcolumn="PSRJ0030+0451",

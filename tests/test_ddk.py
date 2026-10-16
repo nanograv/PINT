@@ -19,7 +19,7 @@ from pint.models import get_model
 import pint.simulation
 import pint.toa as toa
 from pint.models.parameter import boolParameter
-from pint.models.timing_model import MissingParameter
+from pint.exceptions import MissingParameter
 from pint.residuals import Residuals
 import pint.fitter
 

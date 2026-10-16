@@ -349,6 +349,18 @@ class DDmodel(PSR_BINARY):
         d_a1_d_A1DOT = self.d_a1_d_A1DOT()
         return d_a1_d_A1DOT / c.c * (1 - eTheta**2) ** 0.5 * cosOmg
 
+    def d_beta_d_A1DOT2(self):
+        """Derivative.
+
+        Computes::
+
+            dBeta/dA1DOT2 = * d_a1_d_A1DOT2/c*(1-eTheta**2)**0.5*cos(omega)
+        """
+        eTheta = self.eTheta()
+        cosOmg = np.cos(self.omega())
+        d_a1_d_A1DOT2 = self.d_a1_d_A1DOT2()
+        return d_a1_d_A1DOT2 / c.c * (1 - eTheta**2) ** 0.5 * cosOmg
+
     def d_beta_d_T0(self):
         """Derivative.
 

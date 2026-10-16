@@ -822,6 +822,10 @@ class FDJumpDM(Dispersion):
     the fact that the templates may not adequately model the frequency-dependent
     profile evolution.
 
+    Sign convention: a positive ``FDJUMPDM`` contributes a positive DM (and thus a
+    positive dispersion delay) on the selected TOAs, matching Tempo2's FDJUMPDM
+    implementation (``+FDJUMPDM`` acts like ``+DM`` on the mask).
+
     Parameters supported:
 
     .. paramtable::
@@ -862,15 +866,15 @@ class FDJumpDM(Dispersion):
     def fdjump_dm(self, toas):
         """Return the system-dependent DM offset.
 
-        The delay value is determined by FDJUMPDM parameter
-        value in the unit of pc / cm ** 3.
+        A positive FDJUMPDM adds a positive DM on the selected TOAs (Tempo2-
+        consistent convention). Units are pc / cm ** 3.
         """
         tbl = toas.table
         jdm = np.zeros(len(tbl))
         for fdjumpdm in self.fdjump_dms:
             fdjumpdm_par = getattr(self, fdjumpdm)
             mask = fdjumpdm_par.select_toa_mask(toas)
-            jdm[mask] += -fdjumpdm_par.value
+            jdm[mask] += fdjumpdm_par.value
         return jdm * fdjumpdm_par.units
 
     def fdjump_dm_delay(self, toas, acc_delay=None):
@@ -883,5 +887,5 @@ class FDJumpDM(Dispersion):
         d_dm_d_j = np.zeros(len(tbl))
         jpar = getattr(self, jump_param)
         mask = jpar.select_toa_mask(toas)
-        d_dm_d_j[mask] = -1.0
+        d_dm_d_j[mask] = 1.0
         return d_dm_d_j * u.dimensionless_unscaled

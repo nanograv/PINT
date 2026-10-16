@@ -1693,6 +1693,31 @@ class TOAs:
         else:
             return self.table["mjd_float"].quantity
 
+    def get_tdb_seconds(self, dtype: type = np.longdouble) -> np.ndarray:
+        """Return the TDB times of the TOAs in seconds.
+
+        The times are taken from the ``tdbld`` column, which is stored as an
+        MJD in ``numpy.longdouble``, and converted to seconds.
+
+        Parameters
+        ----------
+        dtype : data-type, optional
+            The dtype of the returned array. Defaults to ``numpy.longdouble``,
+            which preserves the full precision of the ``tdbld`` column. Callers
+            that only need double precision -- the noise model basis functions,
+            for example -- should pass ``numpy.float64`` explicitly, both to
+            avoid the cost of longdouble arithmetic downstream and because
+            ``scipy`` routines silently downcast longdouble input anyway.
+
+        Returns
+        -------
+        numpy.ndarray
+            TDB times in seconds, of the requested dtype.
+        """
+        return np.asarray(
+            (self.table["tdbld"].quantity * u.day).to(u.s).value, dtype=dtype
+        )
+
     def get_Tspan(self) -> u.Quantity:
         mjds = self.get_mjds()
         return mjds.max() - mjds.min()

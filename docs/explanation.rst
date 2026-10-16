@@ -67,18 +67,22 @@ is that ``numpy`` provides floating-point types, for example,
    >>> (10*u.year*np.finfo(np.longdouble).eps).to(u.ns)
    <Quantity 0.03421482 ns>
 
-These numbers are represented with 80 bits, and most desktop and server
-machines have hardware for computing with these numbers, so they are not
-much slower than ordinary ("double-precision", 64-bit) floating-point
-numbers. Let me warn you about one point of possible confusion: modern
-computers have very complicated cache setups that prefer data to be
-aligned just so in memory, so ``numpy`` generally pads these numbers out
-with zeroes and stores them in larger memory spaces. Thus you will often
-see ``np.float96`` and ``np.float128`` types; these contain only
-numbers with 80-bit precision. Actual 128-bit precision is not currently
-available in ``numpy``, in part because on almost all current machines all
-calculations must be carried out in software, which takes 20-50 times as
-long.
+On typical x86_64 machines these values use 80-bit extended precision, with
+hardware support so they are not much slower than ordinary
+("double-precision", 64-bit) floating-point numbers. Modern CPUs have
+complicated cache alignment preferences, so ``numpy`` often pads these
+numbers in memory; you will therefore often see ``np.float96`` or
+``np.float128`` *dtypes* that still hold only 80-bit precision.
+
+True IEEE binary128 (about 33 decimal digits) *is* available as
+``numpy.longdouble`` on some platforms — notably Linux on aarch64 (including
+Apple Silicon hosts running a native ``linux/arm64`` container). Those
+operations are usually implemented in software and can be slower per
+operation than 80-bit hardware ``longdouble``, but they provide more
+precision. By contrast, native macOS ARM Python builds typically make
+``numpy.longdouble`` an alias of ``float64``, which is not enough for PINT;
+use a Linux arm64 container or an x86_64 (Rosetta) environment instead (see
+:ref:`Installation`).
 
 An alternative approach to dealing with more precision than your machine's
 floating-point numbers natively support is to represent numbers as a pair
@@ -270,7 +274,9 @@ Here are some examples for `DMJUMP` parameters in a par file:
 
 Similar offsets also arise in the case of narrowband TOAs. Unlike the wideband case, these offsets 
 manifest as system-dependent corrections to the DM delay. They are modeled using the `FDJUMPDM` parameters
-(see see :class:`pint.models.dispersion_model.FDJumpDM`)
+(see :class:`pint.models.dispersion_model.FDJumpDM`).
+A positive `FDJUMPDM` contributes a positive DM (and thus a positive dispersion delay) on the
+selected TOAs, matching the Tempo2 convention.
 
 Here are some examples for `FDJUMPDM` parameters in a par file:
     `FDJUMPDM   -f 430_PUPPI       1e-4  1   1e-5`
@@ -588,6 +594,17 @@ components.
 
    - If the ``BINARY`` line is present in the parameter file, its value
      determines which binary model to use; if not, no binary model is used.
+     An optional ``BINARY2`` line selects an outer-orbit component for a
+     hierarchical triple (parameters are suffixed with ``_2``, e.g. ``PB_2``;
+     outer wrappers include ``BinaryDD2``, ``BinaryBT2``, and ``BinaryELL12``).
+     The outer delay is accumulated first, and the inner binary is evaluated at
+     barycentric time minus that accumulated delay, so the outer Rømer delay
+     Doppler-shifts the inner orbit. This is the usual hierarchical
+     light-travel-time coupling of two independent Keplerian orbits; it is not
+     a dynamical three-body model (there is no companion–companion gravity,
+     Kozai–Lidov coupling, or mutual Shapiro delay between the companions).
+     The outer orbit is period-parameterized only: ``FBn`` and ``ORBWAVE`` are
+     not supported for ``BINARY2`` (the inner orbit may still use them).
    - Each model component has one or more "special parameters" or families of
      parameters identified by a common prefix. If a par file contains a special
      parameter, or a known alias of one, then the timing model uses the
@@ -746,6 +763,12 @@ likelihood values of :math:`b` and its uncertainties are given by
 This is what is implemented in PINT's fitters, both the generalized
 least-squares fitter for narrowband data, and the fitter used for all wideband
 data (whether it has correlated errors or not).
+
+Most of PINT's stochastic components describe :math:`\phi` with a Fourier basis
+and a diagonal set of weights, as above. PINT also provides a Gaussian process
+whose covariance is specified directly in the time domain, in which case
+:math:`\phi` is a dense matrix rather than a diagonal one; see
+:ref:`Time-domain solar wind noise`.
 
 It is perhaps worth noting that if :math:`B^{-1}` were zero or omitted, these
 would be the equations for a linear least squares fit for :math:`b` to match
@@ -1018,3 +1041,8 @@ by Tim Peters::
 .. _PEP8: https://www.python.org/dev/peps/pep-0008/
 .. _pytest: https://docs.pytest.org/en/latest/
 .. _pdb: https://docs.python.org/3/library/pdb.html
+
+.. toctree::
+   :maxdepth: 2
+
+   timedomain-solar-wind

@@ -75,14 +75,17 @@ def test_STIGMA():
 def test_A1DOT():
     """Should get changed to XDOT for TEMPO/TEMPO2"""
     m = get_model(os.path.join(datadir, "J1600-3053_test.par"))
-    assert (
-        "A1DOT" in m.as_parfile()
-        and "XDOT" not in m.as_parfile()
-        and "A1DOT" not in m.as_parfile(format="tempo")
-        and "XDOT" in m.as_parfile(format="tempo")
-        and "A1DOT" not in m.as_parfile(format="tempo2")
-        and "XDOT" in m.as_parfile(format="tempo2")
-    )
+
+    def names(fmt="pint"):
+        return {
+            line.split()[0]
+            for line in m.as_parfile(format=fmt).splitlines()
+            if line.strip() and not line.startswith("#")
+        }
+
+    assert "A1DOT" in names() and "XDOT" not in names()
+    assert "A1DOT" not in names("tempo") and "XDOT" in names("tempo")
+    assert "A1DOT" not in names("tempo2") and "XDOT" in names("tempo2")
 
 
 def test_ECL():

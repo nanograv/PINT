@@ -503,6 +503,14 @@ def str_to_mjds(s):
         return it.operands[1], it.operands[2]
 
 
+# Fractional digits for MJD strings: enough that len(mjd_string) covers
+# str(np.longdouble) on this platform. 16 was enough for 80-bit longdouble;
+# true IEEE binary128 (e.g. Linux aarch64) needs ~33 significant digits.
+_mjd_frac_digits = max(16, int(np.finfo(np.longdouble).precision))
+# Room for sign, integer MJD digits, decimal point, and fractional digits.
+_mjd_str_dtype = np.dtype(f"U{_mjd_frac_digits + 20}")
+
+
 def _mjds_to_str(mjd1, mjd2):
     (imjd, fmjd) = day_frac(mjd1, mjd2)
     imjd = int(imjd)
@@ -511,11 +519,11 @@ def _mjds_to_str(mjd1, mjd2):
         imjd -= 1
         fmjd += 1.0
     assert 0 <= fmjd < 1
-    return str(imjd) + "{:.16f}".format(fmjd)[1:]
+    return str(imjd) + f"{{:.{_mjd_frac_digits}f}}".format(fmjd)[1:]
     # return str(imjd) + str(1+fmjd)[1:]
 
 
-_v_mjds_to_str = np.vectorize(_mjds_to_str, otypes=[np.dtype("U30")])
+_v_mjds_to_str = np.vectorize(_mjds_to_str, otypes=[_mjd_str_dtype])
 
 
 def mjds_to_str(mjd1, mjd2):

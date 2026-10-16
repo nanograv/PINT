@@ -34,6 +34,7 @@ class ELL1BaseModel(PSR_BINARY):
         self.ELL1_interVars = ["eps1", "eps2", "Phi", "Dre", "Drep", "Drepp", "nhat"]
         self.add_inter_vars(self.ELL1_interVars)
         self.orbits_func = self.orbits_ELL1
+        self.d_binarydelay_d_prev_delay_par = "TASC"
 
     @property
     def tt0(self):
@@ -51,23 +52,31 @@ class ELL1BaseModel(PSR_BINARY):
         return (t - self.TASC.value * u.day).to("second")
 
     def a1(self):
-        """ELL1 model a1 calculation.
+        """ELL1 projected semi-major axis a1(t).
 
-        This method overrides the a1() method in pulsar_binary.py. Instead of tt0,
-        it uses ttasc.
+        Overrides the generic ``a1()`` to use ``ttasc`` instead of ``tt0``.
+        Includes A1DOT2 so hierarchical-triple prev-delay derivatives are correct.
         """
-        return self.A1 + self.ttasc() * self.A1DOT
+        return (
+            self.A1 + self.ttasc() * self.A1DOT + 0.5 * self.ttasc() ** 2 * self.A1DOT2
+        )
 
     def d_a1_d_A1(self):
         return np.longdouble(np.ones(len(self.ttasc()))) * u.Unit("")
 
+    def d_a1_d_TASC(self):
+        # Critical for d_binarydelay_d_prevdelay (par == "TASC").
+        return (-self.A1DOT - self.A1DOT2 * self.ttasc()).to(self.A1DOT.unit)
+
     def d_a1_d_T0(self):
-        result = np.empty(len(self.ttasc()))
-        result.fill(-self.A1DOT.value)
-        return result * u.Unit(self.A1DOT.unit)
+        # Kept for compatibility; ELL1's epoch parameter is TASC.
+        return self.d_a1_d_TASC()
 
     def d_a1_d_A1DOT(self):
         return self.ttasc()
+
+    def d_a1_d_A1DOT2(self):
+        return 0.5 * self.ttasc() ** 2
 
     def eps1(self):
         return self.EPS1 + self.ttasc() * self.EPS1DOT

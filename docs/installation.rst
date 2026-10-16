@@ -30,15 +30,66 @@ Naming conflict
 PINT has a naming conflict with the `pint <https://pypi.org/project/Pint/>`_ units package available from PyPI (i.e. using pip) and conda.  
 Do **NOT** ``pip install pint`` or ``conda install pint``!  See :ref:`Basic Install via pip` or :ref:`Install with Anaconda`.
 
-Apple Silicon (M1/M2/M3 ...) processors
-'''''''''''''''''''''''''''''''''''''''
+Apple Silicon (M1/M2/M3/M4 ...) processors
+'''''''''''''''''''''''''''''''''''''''''
 
-PINT requires ``longdouble`` (80- or 128-bit floating point) arithmetic within ``numpy``, which is currently not supported natively on Apple Silicon Macs. 
-However, you can use an x86 version of ``conda`` even on an Apple Silicon Mac (which runs under Rosetta). This can be managed most easily 
-using `Pixi <https://pixi.prefix.dev/latest/>`_ 
-by putting ``platforms = ["osx-64"]`` in your ``pixi.toml`` or you can do it manually 
-(see `instructions for using Apple Intel packages on Apple silicon <https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon>`_ and note that
-it is possible to have `parallel versions of conda for x86 and ARM <https://towardsdatascience.com/python-conda-environments-for-both-arm64-and-x86-64-on-m1-apple-silicon-147b943ffa55>`_).
+PINT requires ``longdouble`` (80- or 128-bit floating point) arithmetic within
+``numpy``. On **native macOS ARM** Python builds, ``numpy.longdouble`` is usually
+aliased to ``float64``, which is not enough for high-precision timing.
+
+**Recommended: native-speed Linux containers (arm64)**
+
+Use a multi-arch Linux container. On Apple Silicon Docker pulls the
+``linux/arm64`` image and runs it at native speed (not Rosetta). Such images
+provide true IEEE binary128 ``numpy.longdouble`` — more precision than typical
+x86_64 80-bit ``longdouble``::
+
+    # NANOGrav 20-year analysis environment
+    docker pull nanograv/ng20:cpu
+    docker run --rm -it \
+      -e HOST_UID=$(id -u) -e HOST_GID=$(id -g) \
+      -v "$PWD":/work -w /work \
+      nanograv/ng20:cpu bash
+
+Quick check inside the container::
+
+    python -c "import numpy as np; print(np.finfo(np.longdouble))"
+
+You should see a ``float128`` / binary128-class result (eps around ``1e-34``),
+not ``float64``.
+
+Image and further docs:
+
+* `nanograv/ng20 <https://hub.docker.com/r/nanograv/ng20>`_
+
+This image also works as a VS Code / Cursor Dev Container.
+
+**Optional: ``pintk`` GUI via X11**
+
+To display ``pintk`` from the container on a Mac, run an X server (e.g. XQuartz),
+allow local connections (``xhost + 127.0.0.1``), and pass ``DISPLAY`` into the
+container, for example::
+
+    docker run --rm -it \
+      -e HOST_UID=$(id -u) -e HOST_GID=$(id -g) \
+      -e DISPLAY=host.docker.internal:0 \
+      -v "$PWD":/work -w /work \
+      nanograv/ng20:cpu \
+      pintk your.par your.tim
+
+For Dev Containers, set the same ``DISPLAY`` value (and any needed X11 mounts)
+in a local override such as ``.devcontainer/devcontainer.local.json``; keep that
+file untracked.
+
+
+**Alternative: Rosetta / osx-64 conda or Pixi**
+
+An x86_64 Python stack under Rosetta also provides 80-bit ``longdouble``, but
+is slower than a native arm64 Linux container. With Pixi, set
+``platforms = ["osx-64"]`` in ``pixi.toml``, or follow
+`conda-forge tips for Apple Intel packages on Apple silicon
+<https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon>`_
+(parallel arm64 and x86 conda installs are possible).
 
 
 Basic Install via pip

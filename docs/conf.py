@@ -54,6 +54,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",  # get docstring formatting
+    "matplotlib.sphinxext.plot_directive",  # render `.. plot::` figures at build time
     "nbsphinx",
     "paramtable",
     "componentlist",
@@ -72,6 +73,12 @@ autodoc_mock_imports = ["psr_utils", "fftfit", "pint.cutils.str2ld_py"]
 
 autosummary_generate = True
 autodoc_inherit_docstrings = True
+
+# matplotlib.sphinxext.plot_directive: figures are generated during the build,
+# so no image files need to be committed to the repository.
+plot_html_show_source_link = False
+plot_html_show_formats = False
+plot_formats = [("png", 100)]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

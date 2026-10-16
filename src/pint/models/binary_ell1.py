@@ -220,12 +220,16 @@ class BinaryELL1(PulsarBinary):
         """Validate parameters."""
         super().validate()
 
-        if self.TASC.value is None:
+        if self._bp("TASC").value is None:
             raise MissingParameter("ELL1", "TASC", "TASC is required for ELL1 model.")
-        for p in ["EPS1", "EPS2"]:
-            pm = getattr(self, p)
+        for p in ("EPS1", "EPS2"):
+            pm = self._bp(p)
             if pm.value is None:
                 pm.value = 0
+        for p in ("A1DOT", "A1DOT2"):
+            if self._hasbp(p) and self._bp(p).value is None:
+                self._bp(p).value = 0.0
+                self._bp(p).frozen = True
 
     def change_binary_epoch(self, new_epoch):
         """Change the epoch for this binary model.
@@ -307,6 +311,34 @@ class BinaryELL1(PulsarBinary):
             self.A1.quantity = self.A1.quantity + dA1
 
         return dt_integer_orbits
+
+
+class BinaryELL12(BinaryELL1):
+    """Outer-orbit ELL1 model for a hierarchical triple system.
+
+    This is identical to :class:`pint.models.binary_ell1.BinaryELL1` except that
+    all of its parameters carry a ``_2`` suffix (``PB_2``, ``A1_2``,
+    ``TASC_2``, ...) and it is selected with the ``BINARY2`` parfile parameter
+    instead of ``BINARY``. See :class:`pint.models.binary_dd.BinaryDD2` for a
+    description of how the outer orbit couples into the inner binary.
+
+    Orbital-frequency (``FBn``) and ``ORBWAVE`` parameterizations are not
+    supported for the outer orbit.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_ell1.BinaryELL12
+    """
+
+    register = True
+    category = "pulsar_system_outer"
+    param_suffix = "_2"
+    binary_param_tag = "BINARY2"
+
+    def __init__(self):
+        super().__init__()
+        self._apply_param_suffix()
 
 
 class BinaryELL1H(BinaryELL1):

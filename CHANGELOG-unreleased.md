@@ -12,5 +12,4 @@ the released changes.
 ### Added
 - Can now use INPOP ephemeris
 ### Fixed
-- Jodrell Bank Mark II sites (``jbmk2`` / ``jbmk2roach`` / ``jbmk2dfb``) now follow TEMPO2's clock routing (equivalent to ``jbafb`` / ``jbroach`` / ``jbdfb``) instead of the default empty TEMPO clock path.
 ### Removed

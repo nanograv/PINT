@@ -141,4 +141,31 @@ def test_fdjumpdm_offset(model_and_toas):
     dm2 = model2.total_dm(toas)
 
     assert np.allclose((dm1 - dm2)[not_mask], 0)
-    assert np.allclose((dm1 - dm2)[mask], -model.FDJUMPDM1.quantity)
+    # Positive FDJUMPDM adds positive DM (Tempo2-consistent convention).
+    assert np.allclose((dm1 - dm2)[mask], model.FDJUMPDM1.quantity)
+
+
+@pytest.mark.parametrize("param", ["FDJUMPDM1", "FDJUMPDM2"])
+def test_fdjumpdm_derivative(model_and_toas, param):
+    """Analytic FDJUMPDM derivatives must have the Tempo2-consistent sign.
+
+    ``d(DM)/d(FDJUMPDM)`` is +1 on selected TOAs (0 elsewhere), and the delay
+    derivative must match a symmetric finite difference.
+    """
+    model, toas = model_and_toas
+    mask = getattr(model, param).select_toa_mask(toas)
+    not_mask = np.setdiff1d(np.arange(len(toas)), mask)
+
+    d_dm = model.d_dm_d_param(toas, param)
+    assert np.allclose(d_dm[mask].value, 1.0)
+    assert np.allclose(d_dm[not_mask].value, 0.0)
+
+    analytic = model.d_delay_d_param(toas, param)
+    numerical = model.d_delay_d_param_num(toas, param)
+    # Off-mask TOAs are independent of this FDJUMPDM.
+    assert np.allclose(analytic[not_mask].value, 0.0)
+    assert np.all(analytic[mask].value > 0)
+
+    mean_der = (analytic[mask] + numerical[mask]) / 2.0
+    relative_diff = np.abs(analytic[mask] - numerical[mask]) / np.abs(mean_der)
+    assert np.nanmax(relative_diff).value < 1e-3

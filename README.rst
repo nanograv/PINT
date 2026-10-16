@@ -62,12 +62,19 @@ IMPORTANT Notes!
 PINT has a naming conflict with the `pint <https://pypi.org/project/Pint/>`_ units package available from PyPI (i.e. using pip) and conda.  
 Do **NOT** ``pip install pint`` or ``conda install pint``!  See below!
 
-PINT requires ``longdouble`` (80- or 128-bit floating point) arithmetic within ``numpy``, which is currently not supported natively on M1/M2/M3 Macs. 
-However, you can use an x86 version of ``conda`` even on an M1/M2/M3 Mac (which will run under Rosetta emulation): 
-see `instructions for using Apple Intel packages on Apple 
-silicon <https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon>`_. 
-It's possible to have `parallel versions of conda for x86 and 
-ARM <https://towardsdatascience.com/python-conda-environments-for-both-arm64-and-x86-64-on-m1-apple-silicon-147b943ffa55>`_.
+PINT requires ``longdouble`` (80- or 128-bit floating point) arithmetic within
+``numpy``. On native macOS ARM Python builds, ``numpy.longdouble`` is usually
+just ``float64``, which is not enough for high-precision timing. Prefer one of:
+
+* **Linux containers on Apple Silicon (recommended):** a multi-arch image such as
+  `nanograv/ng20:cpu <https://hub.docker.com/r/nanograv/ng20>`_ provides a native
+  ``linux/arm64`` environment with true IEEE binary128 ``longdouble`` — full
+  PINT precision at native speed (no Rosetta). See the installation docs for
+  short usage examples, including optional ``pintk`` GUI setup.
+* **Rosetta / osx-64 conda or Pixi:** an x86_64 Python stack under Rosetta also
+  works (80-bit ``longdouble``), but is slower than a native arm64 Linux
+  container. See `conda-forge tips for Apple Intel packages on Apple
+  silicon <https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon>`_.
 
 
 Installing

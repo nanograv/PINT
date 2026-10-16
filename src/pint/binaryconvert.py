@@ -7,7 +7,7 @@ Potential issues:
 """
 
 import copy
-from typing import List, Optional, Tuple, Union
+from typing import Tuple
 
 import numpy as np
 from astropy import units as u
@@ -598,9 +598,16 @@ def convert_binary(
     if not model.is_binary:
         raise AttributeError("Input model is not a binary")
 
-    binary_component_name = [
+    binary_component_names = [
         x for x in model.components.keys() if x.startswith("Binary")
-    ][0]
+    ]
+    if len(binary_component_names) > 1:
+        raise ValueError(
+            "convert_binary does not support hierarchical triple systems "
+            f"with multiple binary components ({binary_component_names}); "
+            "convert each orbit separately or remove BINARY2 first."
+        )
+    binary_component_name = binary_component_names[0]
     binary_component = model.components[binary_component_name]
     if binary_component.binary_model_name == output:
         log.debug(

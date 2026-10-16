@@ -348,8 +348,10 @@ class TestParameters:
         m1 = self.m
         t1 = get_TOAs("B1855+09_NANOGrav_dfg+12.tim")
 
-        start_preval = 53358.726464889485214
-        finish_preval = 55108.922917417192366
+        # Par-file digits as longdouble (not float64 literals): on IEEE binary128
+        # platforms, MJDParameter keeps more precision than a Python float.
+        start_preval = np.longdouble("53358.726464889485214")
+        finish_preval = np.longdouble("55108.922917417192366")
         start_postval = 53358.7274648895  # from Tempo2
         finish_postval = 55108.9219174172  # from Tempo2
 
@@ -359,8 +361,10 @@ class TestParameters:
         assert hasattr(m1, "FINISH")
         assert isinstance(m1.FINISH, MJDParameter)
 
-        assert m1.START.value == start_preval
-        assert m1.FINISH.value == finish_preval
+        # MJDParameter stores via Time (jd1/jd2); allow ~1 float64 ulp at this MJD
+        _mjd_atol = np.finfo(float).eps * float(start_preval)
+        assert m1.START.value == pytest.approx(start_preval, abs=_mjd_atol)
+        assert m1.FINISH.value == pytest.approx(finish_preval, abs=_mjd_atol)
         assert m1.START.frozen == True
         assert m1.FINISH.frozen == True
 

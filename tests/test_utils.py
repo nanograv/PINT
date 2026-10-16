@@ -10,6 +10,7 @@ import astropy.units as u
 from astropy.time import Time
 import numpy as np
 import pytest
+import scipy.linalg
 import scipy.stats
 from astropy.time import Time
 from hypothesis import assume, example, given
@@ -62,6 +63,7 @@ from pint.utils import (
     info_string,
     akaike_information_criterion,
     dmx_setup,
+    get_phiinv,
 )
 
 
@@ -968,3 +970,56 @@ def test_dmxsetup(N, mintoas, minwidth):
     assert np.all(R1Time == R1)
     assert np.all(R2Time == R2)
     assert np.all(NTime == N)
+
+
+# get_phiinv
+#
+# `get_phiinv` casts extended-precision input down to double precision (the
+# noise parameters do not need the extra precision, and Cholesky is only
+# available in double) and falls back to a direct inverse when the Cholesky
+# factorization fails.  Both behaviours are exercised here.
+
+
+def test_get_phiinv_1d_is_elementwise_reciprocal():
+    """A 1D phi is the diagonal of a diagonal matrix, so it inverts elementwise."""
+    phi = np.array([1.0, 2.0, 4.0])
+    assert_allclose(get_phiinv(phi), np.array([1.0, 0.5, 0.25]))
+
+
+def test_get_phiinv_2d_matches_direct_inverse():
+    """The Cholesky path must agree with a direct inverse for an SPD matrix."""
+    phi = np.array([[4.0, 1.0, 0.0], [1.0, 3.0, 1.0], [0.0, 1.0, 2.0]])
+    phiinv = get_phiinv(phi)
+    assert_allclose(phiinv, np.linalg.inv(phi), rtol=1e-10)
+    assert_allclose(phi @ phiinv, np.eye(3), atol=1e-12)
+
+
+def test_get_phiinv_longdouble_is_downcast():
+    """A longdouble phi must come back as float64 without losing correctness."""
+    phi = np.array([[4.0, 1.0], [1.0, 3.0]], dtype=np.longdouble)
+    phiinv = get_phiinv(phi)
+    assert phiinv.dtype == np.float64
+    assert_allclose(phi.astype(np.float64) @ phiinv, np.eye(2), atol=1e-12)
+
+
+def test_get_phiinv_clongdouble_is_downcast():
+    """A clongdouble phi must come back as complex128 without losing correctness."""
+    phi = np.array([[2.0 + 0j, 1j], [-1j, 2.0 + 0j]], dtype=np.clongdouble)
+    phiinv = get_phiinv(phi)
+    assert phiinv.dtype == np.complex128
+    assert_allclose(phi.astype(np.complex128) @ phiinv, np.eye(2), atol=1e-12)
+
+
+def test_get_phiinv_falls_back_when_not_positive_definite():
+    """A symmetric but indefinite phi must fall back to the direct inverse.
+
+    ``[[1, 2], [2, 1]]`` has eigenvalues 3 and -1, so ``cho_factor`` raises
+    ``LinAlgError``; the matrix is still invertible, so the fallback succeeds.
+    """
+    phi = np.array([[1.0, 2.0], [2.0, 1.0]])
+    with pytest.raises(scipy.linalg.LinAlgError):
+        scipy.linalg.cho_factor(phi, lower=True)
+
+    phiinv = get_phiinv(phi)
+    assert_allclose(phiinv, np.linalg.inv(phi), rtol=1e-10)
+    assert_allclose(phi @ phiinv, np.eye(2), atol=1e-12)

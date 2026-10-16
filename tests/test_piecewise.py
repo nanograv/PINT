@@ -9,7 +9,7 @@ import pint.models
 import pint.residuals
 import pint.toa
 from pinttestdata import datadir
-from pint.models.timing_model import MissingParameter
+from pint.exceptions import MissingParameter
 from pint import fitter
 
 parfile = os.path.join(datadir, "piecewise.par")
