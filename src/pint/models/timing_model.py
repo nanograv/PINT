@@ -2739,7 +2739,7 @@ class TimingModel:
         verbosity: Literal["max", "med", "min", "check"] = "max",
         usecolor: True = True,
         format: Literal["text", "markdown", "json"] = "text",
-    ) -> str:
+    ) -> Union[str, dict]:
         """Print comparison with another model
 
         Parameters
@@ -2769,12 +2769,12 @@ class TimingModel:
         usecolor : bool, optional
             Use colors on the output to complement use of "!" and "*"
         format : string, optional
-            One of "text" or "markdown"
+            One of "text" or "markdown" or "json
 
         Returns
         -------
-        str
-            Human readable comparison, for printing.
+        str or dict
+            Human readable comparison, for printing if format is "text" or "markdown"
             Formatted as a five column table with titles of
             ``PARAMETER NAME | Model1 | Model2 | Diff_Sigma1 | Diff_Sigma2``
             where ``ModelX`` refer to self and othermodel Timing Model objects,
@@ -2789,6 +2789,8 @@ class TimingModel:
             If ``format="markdown"`` then will be formatted as a markdown table with bold, colored, and highlighted text as appropriate.
 
             For both output formats, warnings and info statements will be printed.
+
+            If ``format="json"`` instead returns a ``dict`` where each parameter has 5 entries like above.
 
         Note
         ----
