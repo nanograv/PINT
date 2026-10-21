@@ -2738,8 +2738,8 @@ class TimingModel:
         unc_rat_threshold: float = 1.05,
         verbosity: Literal["max", "med", "min", "check"] = "max",
         usecolor: True = True,
-        format: Literal["text", "markdown"] = "text",
-    ) -> str:
+        format: Literal["text", "markdown", "json"] = "text",
+    ) -> Union[str, dict]:
         """Print comparison with another model
 
         Parameters
@@ -2769,12 +2769,12 @@ class TimingModel:
         usecolor : bool, optional
             Use colors on the output to complement use of "!" and "*"
         format : string, optional
-            One of "text" or "markdown"
+            One of "text" or "markdown" or "json
 
         Returns
         -------
-        str
-            Human readable comparison, for printing.
+        str or dict
+            Human readable comparison, for printing if format is "text" or "markdown"
             Formatted as a five column table with titles of
             ``PARAMETER NAME | Model1 | Model2 | Diff_Sigma1 | Diff_Sigma2``
             where ``ModelX`` refer to self and othermodel Timing Model objects,
@@ -2789,6 +2789,8 @@ class TimingModel:
             If ``format="markdown"`` then will be formatted as a markdown table with bold, colored, and highlighted text as appropriate.
 
             For both output formats, warnings and info statements will be printed.
+
+            If ``format="json"`` instead returns a ``dict`` where each parameter has 5 entries like above.
 
         Note
         ----
@@ -2813,7 +2815,7 @@ class TimingModel:
         """
         assert verbosity.lower() in ["max", "med", "min", "check"]
         verbosity = verbosity.lower()
-        assert format.lower() in ["text", "markdown"]
+        assert format.lower() in ["text", "markdown", "json"]
         format = format.lower()
 
         model_name = str(self.name).split("/")[-1] if self.name != "" else "Model 1"
@@ -3188,6 +3190,7 @@ class TimingModel:
         diff2[pn] = ""
         modifier[pn] = []
         s = []
+        output = {}
         pad = 2
         longest_parameter = len(max(parameter.values(), key=len))
         longest_value1 = len(max(value1.values(), key=len))
@@ -3221,7 +3224,7 @@ class TimingModel:
             s.append(f"| {p} | {v1} | {v2} | {d1} | {d2} |")
             s.append(f" :--- | ---: | ---: | ---: | ---: |")
         for param in parameter:
-            if param == "TITLE":
+            if param == "TITLE" and format != "json":
                 continue
             p = parameter[param]
             v1 = value1[param]
@@ -3257,17 +3260,32 @@ class TimingModel:
                 if "unc_rat" in m:
                     sout = [f"<mark>{x}</mark>" if len(x) > 0 else x for x in sout]
                 sout = " | ".join(sout).strip()
-            if verbosity == "max":
-                s.append(sout)
-            elif verbosity == "med" and len(d1) > 0:
-                # not frozen so has uncertainty
-                s.append(sout)
-            elif verbosity == "min" and len(m) > 0:
-                # has a modifier
-                s.append(sout)
+            elif format == "json":
+                if (
+                    verbosity == "max"
+                    or (verbosity == "med" and len(d1) > 0)
+                    or (verbosity == "min" and len(m) > 0)
+                    or (p == "PARAMETER")
+                ):
+                    output[p] = {
+                        "value1": v1,
+                        "value2": v2,
+                        "diff1": d1,
+                        "diff2": d2,
+                        "modifier": m,
+                    }
+            if format != "json":
+                if verbosity == "max":
+                    s.append(sout)
+                elif verbosity == "med" and len(d1) > 0:
+                    # not frozen so has uncertainty
+                    s.append(sout)
+                elif verbosity == "min" and len(m) > 0:
+                    # has a modifier
+                    s.append(sout)
 
         if verbosity != "check":
-            return "\n".join(s)
+            return output if format == "json" else "\n".join(s)
 
     def use_aliases(
         self,

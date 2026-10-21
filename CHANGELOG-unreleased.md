@@ -10,5 +10,6 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Can output model comparison as JSON
 ### Fixed
 ### Removed
