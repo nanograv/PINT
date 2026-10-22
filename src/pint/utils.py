@@ -1979,7 +1979,7 @@ def translate_wavex_to_wave(
     In order for a WaveX model to be able to be converted into a Wave model, every WaveX frequency must produce the same value of WAVEOM in the calculation:
 
     WAVEOM = [2 * pi * WXFREQ_000k] / (k + 1)
-    
+
     Parameters
     ----------
     model : pint.models.timing_model.TimingModel
