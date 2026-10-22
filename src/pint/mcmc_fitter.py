@@ -58,7 +58,7 @@ def lnprior_basic(ftr, theta):
 def lnlikelihood_basic(ftr, theta):
     """The log of the likelihood function, basic implementation.
 
-    Assumes that the phase is the last parmameter in the parameter list
+    Assumes that the phase is the last parameter in the parameter list
     """
     ftr.set_parameters(theta)
     phases = ftr.get_event_phases()
@@ -129,7 +129,7 @@ class MCMCFitter(Fitter):
     weights : optional
         Weights for likelihood calculations
     minMJD : optional
-        Minimium MJD in dataset (used sometimes for get_initial_pos)
+        Minimum MJD in dataset (used sometimes for get_initial_pos)
     maxMJD : optional
         Maximum MJD in dataset (used sometimes for get_initial_pos)
 
@@ -316,7 +316,7 @@ class MCMCFitter(Fitter):
         maxiter : int
             The number of iterations to run_mcmc for
         pos
-            The intiial position of the sampler. Default behavior calls
+            The initial position of the sampler. Default behavior calls
                 sampler.get_initial_pos()
         errfact : float, optional
             Multiplicative factor for errors in get_intial_pos

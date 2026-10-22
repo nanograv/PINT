@@ -472,7 +472,7 @@ def companion_mass(
     i: u.Quantity = 60.0 * u.deg,
     mp: u.Quantity = 1.4 * u.solMass,
 ) -> u.Msun:
-    r"""Commpute the companion mass from the orbital parameters
+    r"""Compute the companion mass from the orbital parameters
 
     Compute companion mass for a binary system from orbital mechanics,
     not Shapiro delay.
