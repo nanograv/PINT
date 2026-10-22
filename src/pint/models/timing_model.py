@@ -712,7 +712,7 @@ class TimingModel:
 
             cp = compdict[cat]
             for cpp in cp:
-                pend += cpp.parms
+                pend += cpp.params
             used_cats.add(cat)
         # Now collect any components that haven't already been included in the list
         pmid = []
