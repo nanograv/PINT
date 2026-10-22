@@ -65,7 +65,7 @@ for p in model.params:
     printed.append(type(par))
 
 # %% [markdown]
-# Note that DMX_nnnn is an example of a `prefixParameter`. These are parameters that are indexed by a numerical value and a componenent can have an arbitrary number of them.
+# Note that DMX_nnnn is an example of a `prefixParameter`. These are parameters that are indexed by a numerical value and a component can have an arbitrary number of them.
 # In some cases, like `Fn` they are coefficients of a Taylor expansion and so all indices up to the maximum must be present. For others, like `DMX_nnnn` some indices can be missing without a problem.
 #
 # `prefixParameter`s can be used to hold indexed parameters of various types ( float, bool, str, MJD, angle ). Each one will instantiate a parameter of that type as `par.param_comp`.
@@ -83,7 +83,7 @@ print("Printing gives : ", model.DMX_0016)
 # You can make a Parameter instance by calling its constructor
 
 # %% {"jupyter": {"outputs_hidden": false}}
-# You can specify the vaue as a number
+# You can specify the value as a number
 t = pp.floatParameter(
     name="TEST",
     value=100,
@@ -190,7 +190,7 @@ par.quantity
 # %% [markdown]
 # ### AngleParameters
 #
-# These store quanities as angles using astropy coordinates
+# These store quantities as angles using astropy coordinates
 
 # %% {"jupyter": {"outputs_hidden": false}}
 # The unit for RAJ is hourangle
@@ -219,7 +219,7 @@ print(par)
 par.quantity
 
 # %% {"jupyter": {"outputs_hidden": false}}
-# And the units can be anything that is convertable to hourangle
+# And the units can be anything that is convertible to hourangle
 print(par)
 par.quantity = 30 * u.deg
 print("Quantity       ", par.quantity, type(par.quantity))
