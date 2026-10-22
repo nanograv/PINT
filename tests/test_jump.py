@@ -245,7 +245,7 @@ class TestJUMP:
     def test_derivative(self):
         log = logging.getLogger("Jump phase test")
         p = "JUMP2"
-        log.debug("Runing derivative for %s", f"d_delay_d_{p}")
+        log.debug("Running derivative for %s", f"d_delay_d_{p}")
         ndf = self.JUMPm.d_phase_d_param_num(self.toas, p)
         adf = self.JUMPm.d_phase_d_param(self.toas, self.JUMPm.delay(self.toas), p)
         diff = adf - ndf

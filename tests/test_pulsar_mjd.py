@@ -23,11 +23,11 @@ class TestPsrMjd:
 
         assert np.isscalar(
             p_one_mjd.value
-        ), "Pulsar one mjd did not return the right lenght."
+        ), "Pulsar one mjd did not return the right length."
         assert np.isclose(
             np.modf(p_one_mjd.value)[0], 0.5, atol=1e-14
         ), "Pulsar mjd did not give the right fractional day at leapsecond day"
-        assert len(p_mjds) == 2, "Pulsar mjds did not return the right lenght."
+        assert len(p_mjds) == 2, "Pulsar mjds did not return the right length."
         assert np.all(
             np.isclose(np.modf(p_mjds.value)[0], 0.5, atol=1e-14)
         ), "Pulsar mjd did not give the right fractional day at leapsecond day"
@@ -44,11 +44,11 @@ class TestPsrMjd:
 
         assert np.isscalar(
             p_one_mjd.value
-        ), "Pulsar one mjd did not return the right lenght."
+        ), "Pulsar one mjd did not return the right length."
         assert np.isclose(
             np.modf(p_one_mjd.value)[0], 0.5, atol=1e-14
         ), "Pulsar mjd did not give the right fractional day at leapsecond day"
-        assert len(p_mjds) == 2, "Pulsar mjds did not return the right lenght."
+        assert len(p_mjds) == 2, "Pulsar mjds did not return the right length."
         assert np.all(
             np.isclose(np.modf(p_mjds.value)[0], 0.5, atol=1e-14)
         ), "Pulsar mjd did not give the right fractional day at leapsecond day"
