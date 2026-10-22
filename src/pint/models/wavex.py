@@ -40,7 +40,7 @@ class WaveX(DelayComponent):
     can be used to go back and forth between two model.
 
     WARNING: If the choice of ``WaveX`` frequencies in a :class:`~pint.models/timing_model.TimingModel` doesn't correspond to harmonics of some base
-    freqeuncy, it will not be possible to convert it to a :class:`~pint.models.wave.Wave` model.
+    frequency, it will not be possible to convert it to a :class:`~pint.models.wave.Wave` model.
 
     To set up a ``WaveX`` model, users can use the :mod:`pint.utils` function :func:`~pint.utils.wavex_setup` with either a list of frequencies or a choice
     of harmonics of a base frequency determined by ``2 * pi /Timespan``
@@ -79,7 +79,7 @@ class WaveX(DelayComponent):
         wxfreq : float or astropy.quantity.Quantity
             Base frequency for WaveX component
         index : int, None
-            Interger label for WaveX component. If None, will increment largest used index by 1.
+            Integer label for WaveX component. If None, will increment largest used index by 1.
         wxsin : float or astropy.quantity.Quantity
             Sine amplitude for WaveX component
         wxcos : float or astropy.quantity.Quantity
@@ -159,7 +159,7 @@ class WaveX(DelayComponent):
         wxfreqs : iterable of float or astropy.quantity.Quantity
             Base frequencies for WaveX components
         indices : iterable of int, None
-            Interger labels for WaveX components. If None, will increment largest used index by 1.
+            Integer labels for WaveX components. If None, will increment largest used index by 1.
         wxsins : iterable of float or astropy.quantity.Quantity
             Sine amplitudes for WaveX components
         wxcoses : iterable of float or astropy.quantity.Quantity
@@ -287,7 +287,7 @@ class WaveX(DelayComponent):
 
     def get_indices(self):
         """
-        Returns an array of intergers corresponding to WaveX component parameters using WXFREQs
+        Returns an array of integers corresponding to WaveX component parameters using WXFREQs
 
         Returns
         -------
