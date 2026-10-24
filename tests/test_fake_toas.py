@@ -485,6 +485,34 @@ def test_simulate_corrnoise(tmp_path):
     assert np.isclose(np.mean(x), 0, atol=0.01)
 
 
+def test_simulate_corrnoise_no_noise_components():
+    # Model has no correlated-noise component (no PLRedNoise, PLDMNoise,
+    # EcorrNoise, etc.), so add_correlated_noise=True should be a no-op
+    # rather than crash.
+    model = get_model(
+        io.StringIO(
+            """
+        PSRJ J1234+5678
+        ELAT 0
+        ELONG 0
+        DM 10
+        F0 1
+        PEPOCH 58000
+        """
+        )
+    )
+    toas = pint.simulation.make_fake_toas_uniform(
+        57001,
+        58000,
+        200,
+        model=model,
+        error=1 * u.us,
+        add_noise=True,
+        add_correlated_noise=True,
+    )
+    assert len(toas) == 200
+
+
 @pytest.mark.parametrize("multifreq", [True, False])
 def test_simulate_uniform_multifreq(multifreq):
     parfile = os.path.join(datadir, "NGC6440E.par")
