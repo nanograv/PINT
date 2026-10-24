@@ -416,6 +416,7 @@ class BinaryELL1H(BinaryELL1):
                 units="",
                 # value=7,
                 description="Number of harmonics for ELL1H shapiro delay.",
+                aliases=["NHARM"],
             )
         )
         self.remove_param("M2")
