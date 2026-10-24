@@ -118,7 +118,7 @@ class TopoObs(Observatory):
         values).
     clock_dir : str or pathlib.Path, optional
         Where to look for the clock files. "PINT", the default, means to use
-        PINT's usual seach approach; "TEMPO" or "TEMPO2" mean to look in those
+        PINT's usual search approach; "TEMPO" or "TEMPO2" mean to look in those
         programs' usual location (pointed to by their environment variables),
         while a path means to look in that specific directory.
     apply_gps2utc : bool, optional
@@ -325,7 +325,7 @@ class TopoObs(Observatory):
         Parameters
         ----------
         t : astropy.time.Time
-            The time when the clock correcions are applied.
+            The time when the clock corrections are applied.
         """
 
         corr = super().clock_corrections(
@@ -374,7 +374,7 @@ class TopoObs(Observatory):
 
         """
         geo_tdb_tt = get_tdb_tt_ephem_geocenter(t.tt, ephem)
-        # NOTE The earth velocity is need to compute the time correcion from
+        # NOTE The earth velocity is needed to compute the time correction from
         # Topocenter to Geocenter
         # Since earth velocity is not going to change a lot in 3ms. The
         # differences between TT and TDB can be ignored.

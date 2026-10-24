@@ -107,7 +107,7 @@ class ELL1BaseModel(PSR_BINARY):
         return self.ttasc()
 
     # NOTE in ELL1 the orbit phase is modeled as Phi.
-    # But pulsar_binary function M() is a generic function ot computes the
+    # But pulsar_binary function M() is a generic function that computes the
     # orbit phase in the range [0,1], So Phi can be computed by M(). But
     # the attribute .orbits_func needs to be set as orbits_ELL1
     def Phi(self):

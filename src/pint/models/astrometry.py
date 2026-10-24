@@ -466,7 +466,7 @@ class AstrometryEquatorial(Astrometry):
             self.register_deriv_funcs(func, param)
 
     def _astrometric_params_tuple(self):
-        """Return the current astrometric parameters as a tuple of primatives for caching"""
+        """Return the current astrometric parameters as a tuple of primitives for caching"""
         return (
             float(self.RAJ.value),
             float(self.DECJ.value),
@@ -1013,7 +1013,7 @@ class AstrometryEcliptic(Astrometry):
             self.register_deriv_funcs(func, param)
 
     def _astrometric_params_tuple(self):
-        """Return the current astrometric parameters as a tuple of primatives for caching"""
+        """Return the current astrometric parameters as a tuple of primitives for caching"""
         return (
             float(self.ELONG.value),
             float(self.ELAT.value),

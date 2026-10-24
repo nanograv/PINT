@@ -159,7 +159,7 @@ d_matrix, labels, units = fitter.get_designmatrix()
 
 # %%
 print("Number of TOAs:", toas.ntoas)
-print("Number of DM measurments:", len(fitter.resids.dm.dm_data))
+print("Number of DM measurements:", len(fitter.resids.dm.dm_data))
 print("Number of fit params:", len(fitter.model.free_params))
 print("Shape of design matrix:", d_matrix.shape)
 

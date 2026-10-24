@@ -1482,7 +1482,7 @@ def wavex_setup(
         Time span used to calculate WaveX frequencies when using n_freqs
         Usually to be set as the length of the timing baseline the model is being used for
     freqs : iterable of float or astropy.quantity.Quantity, None
-        User inputed base frequencies
+        User input base frequencies
     n_freqs : int, None
         Number of wave frequencies to calculate using the equation: freq_n = 2 * pi * n / T_span
         Where n is the wave number, and T_span is the total time span of the toas in the fitter object
@@ -1576,7 +1576,7 @@ def dmwavex_setup(
         Time span used to calculate DMWaveX frequencies when using n_freqs
         Usually to be set as the length of the timing baseline the model is being used for
     freqs : iterable of float or astropy.quantity.Quantity, None
-        User inputed base frequencies
+        User input base frequencies
     n_freqs : int, None
         Number of wave frequencies to calculate using the equation: freq_n = 2 * pi * n / T_span
         Where n is the wave number, and T_span is the total time span of the toas in the fitter object
@@ -1671,7 +1671,7 @@ def cmwavex_setup(
         Time span used to calculate CMWaveX frequencies when using n_freqs
         Usually to be set as the length of the timing baseline the model is being used for
     freqs : iterable of float or astropy.quantity.Quantity, None
-        User inputed base frequencies
+        User input base frequencies
     n_freqs : int, None
         Number of wave frequencies to calculate using the equation: freq_n = 2 * pi * n / T_span
         Where n is the wave number, and T_span is the total time span of the toas in the fitter object
@@ -1818,8 +1818,8 @@ def translate_wave_to_wavex(
 
     WaveX amplitudes are taken from the WAVE pair parameters
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     model : pint.models.timing_model.TimingModel
         TimingModel containing a Wave model to be converted to a WaveX model
 
@@ -1872,7 +1872,7 @@ def get_wavex_freqs(
     index : float, int, list, np.ndarray, None
         Number or list/array of numbers corresponding to WaveX frequencies to return
     quantity : bool
-        If set to True, returns a list of astropy.quanitity.Quantity rather than a list of prefixParameters
+        If set to True, returns a list of astropy.quantity.Quantity rather than a list of prefixParameters
 
     Returns
     -------
@@ -1922,7 +1922,7 @@ def get_wavex_amps(
     index : float, int, list, np.ndarray, None
         Number or list/array of numbers corresponding to WaveX amplitudes to return
     quantity : bool
-        If set to True, returns a list of tuples of astropy.quanitity.Quantity rather than a list of prefixParameters tuples
+        If set to True, returns a list of tuples of astropy.quantity.Quantity rather than a list of prefixParameters tuples
 
     Returns
     -------
@@ -1979,8 +1979,9 @@ def translate_wavex_to_wave(
     In order for a WaveX model to be able to be converted into a Wave model, every WaveX frequency must produce the same value of WAVEOM in the calculation:
 
     WAVEOM = [2 * pi * WXFREQ_000k] / (k + 1)
-    Paramters
-    ---------
+
+    Parameters
+    ----------
     model : pint.models.timing_model.TimingModel
         TimingModel containing a WaveX model to be converted to a Wave model
 
@@ -2700,7 +2701,7 @@ def get_conjunction(
     ecl: str = "IERS2010",
 ) -> Time:
     """
-    Find first time of Solar conjuction after t0 and approximate elongation at conjunction
+    Find first time of Solar conjunction after t0 and approximate elongation at conjunction
 
     Offers a low-precision version (based on analytic expression of Solar longitude)
     Or a higher-precision version (based on interpolating :func:`astropy.coordinates.get_sun`)
@@ -2735,7 +2736,7 @@ def get_conjunction(
     # Low precision solar coordinates (27.4.1)
     # number of days since J2000
     n = tt.jd - 2451545
-    # mean longitude of Sun, corrected for abberation
+    # mean longitude of Sun, corrected for aberration
     L = 280.460 * u.deg + 0.9854674 * u.deg * n
     # Mean anomaly
     g = 357.528 * u.deg + 0.9856003 * u.deg * n
@@ -3096,7 +3097,7 @@ def sherman_morrison_dot(
     Additionally,
         det[C] = det[N] * (1 + w (v| N^-1 |v)) )
 
-    Paremeters
+    Parameters
     ----------
     Ndiag: array-like
         Diagonal elements of the diagonal matrix N
@@ -3148,7 +3149,7 @@ def woodbury_dot(
     Additionally,
         det[C] = det[N] * det[Phi] * det[Sigma]
 
-    Paremeters
+    Parameters
     ----------
     Ndiag: array-like
         Diagonal elements of the diagonal matrix N

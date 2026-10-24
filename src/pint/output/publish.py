@@ -53,21 +53,21 @@ def publish(
     toas: TOAs
         Input TOAs
     include_dmx: bool
-        Whether to include DMX paremeters (default is False)
+        Whether to include DMX parameters (default is False)
     include_noise: bool
-        Whether to include noise paremeters (default is False)
+        Whether to include noise parameters (default is False)
     include_jumps: bool
-        Whether to include jump paremeters (JUMPs, DMJUMPs) (default is False)
+        Whether to include jump parameters (JUMPs, DMJUMPs) (default is False)
     include_zeros: bool
-        Whether to include paremeters which are zero (default is False)
+        Whether to include parameters which are zero (default is False)
     include_fd: bool
-        Whether to include FD paremeters (default is False)
+        Whether to include FD parameters (default is False)
     include_glitches: bool
-        Whether to include glitch paremeters (default is False)
+        Whether to include glitch parameters (default is False)
     include_swx: bool
-        Whether to include SWX paremeters (default is False)
+        Whether to include SWX parameters (default is False)
     include_tzr: bool
-        Whether to include TZR paremeters (default is False)
+        Whether to include TZR parameters (default is False)
     include_prefix_summary: bool
         Whether to include a summary of prefix and mask parameters (default is True)
     include_set_params: bool

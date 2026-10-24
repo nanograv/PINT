@@ -63,7 +63,7 @@ def test_commenting_toas(tmpdir):
     ts.table[0]["flags"]["cut"] = "do_not_like"  # cut flag
     ts.table[1]["flags"]["ignore"] = str(1)  # ignore flag
     ts.write_TOA_file(outnm)
-    ts3 = toa.get_TOAs(outnm)  # defaut is to not comment
+    ts3 = toa.get_TOAs(outnm)  # default is to not comment
     assert ts3.ntoas == 2  # none should be commented by default
     ts.write_TOA_file(outnm, commentflag="cut")
     ts4 = toa.get_TOAs(outnm)

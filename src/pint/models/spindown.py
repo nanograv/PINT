@@ -212,7 +212,7 @@ class Spindown(SpindownBase):
         pn, idxf, idxv = split_prefixed_name(param)
         order = idxv + 1
         fterms = [0.0 * u.Unit("")] + self.get_spin_terms()
-        # make the choosen fterms 1 others 0
+        # make the chosen fterms 1 others 0
         fterms = [ft * numpy.longdouble(0.0) / unit for ft in fterms]
         fterms[order] += numpy.longdouble(1.0)
         dt = self.get_dt(toas, delay)

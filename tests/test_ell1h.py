@@ -107,7 +107,7 @@ def test_derivative(toasJ1853, modelJ1853):
     #    testp["H4"] = 1e-2
     #    testp["STIGMA"] = 1e-2
     for p in test_params:
-        log.debug(f"Runing derivative for {p}: d_delay_d_{p}")
+        log.debug(f"Running derivative for {p}: d_delay_d_{p}")
         ndf = modelJ1853.d_phase_d_param_num(toasJ1853, p, testp[p])
         adf = modelJ1853.d_phase_d_param(toasJ1853, delay, p)
         diff = adf - ndf

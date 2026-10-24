@@ -280,7 +280,7 @@ class LCPrimitive:
         return deepcopy(self)
 
     def integrate(self, x1=0, x2=1, log10_ens=3):
-        """Base implemention with scipy quad."""
+        """Base implementation with scipy quad."""
         if not isvector(log10_ens):
             f = lambda ph: self(ph, log10_ens)
             return quad(f, x1, x2)[0]
@@ -569,7 +569,7 @@ class LCWrappedFunction(LCPrimitive):
     In order to preserve normalization, the pdf is slightly adjusted:
     f(phi) = sum_(i,-N,N,g(phi+i)) + (1 - int(phi,-N,N,g(phi)) ).
 
-    This introduces an additional parameteric dependence which must
+    This introduces an additional parametric dependence which must
     be accounted for by computation of the gradient.
     """
 
@@ -1007,7 +1007,7 @@ class LCLorentzian(LCPrimitive):
     Parameters
     ----------
     Width
-        the width paramater of the wrapped Cauchy distribution, namely HWHM*2PI
+        the width parameter of the wrapped Cauchy distribution, namely HWHM*2PI
         for narrow distributions
     Location
         the center of the peak in phase

@@ -105,7 +105,7 @@ class Wave(PhaseComponent):
         ----------
 
         index : int
-            Interger label for Wave components.
+            Integer label for Wave components.
         amps : tuple of float or astropy.quantity.Quantity
             Sine and cosine amplitudes
 

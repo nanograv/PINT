@@ -46,7 +46,7 @@ def model_no_pieces(scope="session"):
     TZRSITE                                 1
     """
     model = get_model(StringIO(par_base))
-    # lurking bug: T0X_0000/A1X_0000 and boundaries are not automatically deleted on intialisation
+    # lurking bug: T0X_0000/A1X_0000 and boundaries are not automatically deleted on initialisation
     model.remove_range(0)
     return model
 

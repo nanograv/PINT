@@ -56,7 +56,7 @@ m.has_correlated_errors
 # * `DownhillGLSFitter` - A generalized least squares fitter, like "tempo -G", that can handle noise processes like ECORR and red noise that are specified by their correlation function properties.
 # * `WidebandDownhillFitter` - A fitter that uses DM estimates associated with each TOA. Also supports generalized least squares.
 # * `PowellFitter` - A very simple example fitter that uses the Powell method implemented in scipy. One notable feature is that it does not require evaluating derivatives w.r.t the model parameters.
-# * `MCMCFitter` - A fitter that does an MCMC fit using the [emcee](https://emcee.readthedocs.io/en/stable/) package. This can be very slow, but accomodates Priors on the parameter values and can produce corner plots and other analyses of the posterior distributions of the parameters.
+# * `MCMCFitter` - A fitter that does an MCMC fit using the [emcee](https://emcee.readthedocs.io/en/stable/) package. This can be very slow, but accommodates Priors on the parameter values and can produce corner plots and other analyses of the posterior distributions of the parameters.
 # * `WLSFitter`, `GLSFitter`, `WidebandFitter` - Simpler fitters that make no attempt to ensure convergence.
 #
 # You can normally use the function `pint.fitter.Fitter.auto(toas, model)` to construct an appropriate fitter for your model and data.

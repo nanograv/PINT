@@ -276,7 +276,7 @@ def load_fits_TOAs(
     timesys : str, default None
         Force this time system
     timeref : str, default None
-        Forse this time reference
+        Force this time reference
     minmjd : float, default "-infinity"
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
