@@ -167,7 +167,7 @@ def marginalize_over_phase(
     """Find the best fit pulse profile
 
     a pulse profile comprised of combined photon phases.  A maximum
-    likelood technique is used.  The shift and the max log likehood
+    likelihood technique is used.  The shift and the max log likelihood
     are returned.  You probably want to use "minimize" rathre than
     "fftfit" unless you are only sampling very close to your known min.
     """
@@ -434,7 +434,7 @@ class emcee_fitter(Fitter):
 
     def lnprior(self, theta):
         """
-        The log prior evaulated at the parameter values specified
+        The log prior evaluated at the parameter values specified
         """
         lnsum = 0.0
         for val, key in zip(theta[:-1], self.fitkeys[:-1]):
@@ -622,7 +622,7 @@ def main(argv=None):
     )
     parser.add_argument(
         "--testWeights",
-        help="Make plots to evalute weight cuts?",
+        help="Make plots to evaluate weight cuts?",
         default=False,
         action="store_true",
     )
@@ -766,7 +766,7 @@ def main(argv=None):
             log.warning(f"Clobber flag is on: Preexisting files will be overwritten")
         else:
             log.warning(
-                f"Clobber flag is not on: Preexisting files will not be overwritten. Change the basename or filepath to avoid overwritting previous results"
+                f"Clobber flag is not on: Preexisting files will not be overwritten. Change the basename or filepath to avoid overwriting previous results"
             )
             raise Exception
 

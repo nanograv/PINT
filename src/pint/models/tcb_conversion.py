@@ -32,7 +32,7 @@ def scale_parameter(model: TimingModel, param: str, n: int, backwards: bool) -> 
 
     The power n depends on the "effective dimensionality" of
     the parameter as it appears in the timing model. Some examples
-    are given bellow:
+    are given below:
 
         1. F0 has effective dimensionality of frequency and n = 1
         2. F1 has effective dimensionality of frequency^2 and n = 2

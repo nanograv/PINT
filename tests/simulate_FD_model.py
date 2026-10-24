@@ -16,7 +16,7 @@ def add_FD_model(freq_range, FD, toas):
     freq_range : ndarray
         The range of frequency, [start_frequency, end_frequency] in MHz
     FD : ndarray
-        FD model coefficents [FDn, FDn-1, ..., FD2, FD1]
+        FD model coefficients [FDn, FDn-1, ..., FD2, FD1]
     toas : PINT toa class
         The toas need to be changed.
     """

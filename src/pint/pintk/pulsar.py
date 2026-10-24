@@ -429,7 +429,7 @@ class Pulsar:
             log.info(f"New jump {retval} added for {selected.sum()} toas.")
             return retval
         # if gets here, has at least one jump param already
-        # and iif it doesn't overlap or cancel, add the param
+        # and if it doesn't overlap or cancel, add the param
         numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
         if numjumps == 0:
             log.warning(

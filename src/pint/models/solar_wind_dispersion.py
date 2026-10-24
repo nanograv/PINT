@@ -286,7 +286,7 @@ class SolarWindDispersion(SolarWindDispersionBase):
 
     References
     ----------
-    - Edwards et al. 2006, MNRAS, 372, 1549; Setion 2.5.4
+    - Edwards et al. 2006, MNRAS, 372, 1549; Section 2.5.4
     - Madison et al. 2019, ApJ, 872, 150; Section 3.1.
     - Hazboun et al. (2022, ApJ, 929, 39)
     - You et al. (2012, MNRAS, 422, 1160)
@@ -619,7 +619,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
     So it really represents a Delta DM.  This is to make it easier to join multiple segments.
     However, to get the peak to still be the requested max DM the values are scaled compared
     to the standard model: the standard model goes from opposition (min) to conjunction (max),
-    while this model goes from 0 to conjunction (max), so the scaling is ``((conjunction - opposition)/conjuction)``.
+    while this model goes from 0 to conjunction (max), so the scaling is ``((conjunction - opposition)/conjunction)``.
 
     Also note that fitting for SWXP is possible but not advised.
 

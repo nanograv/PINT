@@ -18,7 +18,7 @@
 # Basic loading and use of observatories in PINT, including loading custom observatories.
 #
 # PINT needs to know where telescopes are, what clock corrections are necessary, and
-# a bunch of other information in order to correctly process TOAs.  In many cases this will be seemlessly handled
+# a bunch of other information in order to correctly process TOAs.  In many cases this will be seamlessly handled
 # when you load in a set of TOAs.  But if you want to look at how/where the observatories are defined or add your own, this is the place to learn.
 
 

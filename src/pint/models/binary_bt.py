@@ -293,7 +293,7 @@ class BinaryBTPiecewise(PulsarBinary):
                         paramx = paramx
                     else:
                         raise ValueError(
-                            f"Unspported data type '{type(paramx)}' for piecewise A1. Ensure the piecewise parameter value is a np.float64 or astropy.quantity.Quantity"
+                            f"Unsupported data type '{type(paramx)}' for piecewise A1. Ensure the piecewise parameter value is a np.float64 or astropy.quantity.Quantity"
                         )
                 elif key == "T0":
                     param_unit = u.d
@@ -544,7 +544,7 @@ class BinaryBTPiecewise(PulsarBinary):
         Returns
         -------
         list
-           str elements, look like ['0000','0001'] for two TOAs where one refences T0X/A1X.
+           str elements, look like ['0000','0001'] for two TOAs where one references T0X/A1X.
         """
         #        if isinstance(toa, pint.toa.TOAs):
         #           pass

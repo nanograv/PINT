@@ -38,8 +38,8 @@ def _M2SINI_to_orthometric(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
 
     Note that both STIGMA and H4 should not be used
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     model : pint.models.timing_model.TimingModel
 
     Returns
@@ -88,8 +88,8 @@ def _orthometric_to_M2SINI(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
     If STIGMA is present will use that.  Otherwise will use H4.
     If neither is present, will leave M2, SINI unset.
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     model : pint.models.timing_model.TimingModel
 
     Returns
@@ -147,8 +147,8 @@ def _SINI_to_SHAPMAX(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
 
     Also propagates uncertainties if present
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     model : pint.models.timing_model.TimingModel
 
     Returns
@@ -169,8 +169,8 @@ def _SHAPMAX_to_SINI(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
 
     Also propagates uncertainties if present
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     model : pint.models.timing_model.TimingModel
 
     Returns

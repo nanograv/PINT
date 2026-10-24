@@ -304,7 +304,7 @@ def fortran_float(x):
     notation in tempo1-generated parfiles.
     """
     try:
-        # First treat it as a string, wih d->e
+        # First treat it as a string, with d->e
         return float(x.translate(maketrans("Dd", "ee")))
     except AttributeError:
         # If that didn't work it may already be a numeric type

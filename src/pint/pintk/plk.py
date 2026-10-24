@@ -934,7 +934,7 @@ class PlkWidget(tk.Frame):
         fit the selected points using the current pre-fit model
         """
         if self.psr is not None:
-            # check jumps wont cancel fit, if so, exit here
+            # check jumps won't cancel fit, if so, exit here
             if self.check_jump_invalid():
                 return None
             if self.psr.fitted:

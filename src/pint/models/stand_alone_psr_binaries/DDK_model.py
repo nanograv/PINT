@@ -384,9 +384,9 @@ class DDKmodel(DDmodel):
 
         .. math::
 
-            x_{obs} = \\frac{a_p}{c}(\sin(i)_{\\rm intrisic} + \delta_{\sin(i)})
+            x_{obs} = \\frac{a_p}{c}(\sin(i)_{\\rm intrinsic} + \delta_{\sin(i)})
 
-            \delta_{\sin(i)} = \sin(i)_{\\rm intrisic}  \\frac{\cot(i)_{\\rm intrisic}}{d} (\Delta_{I0} \sin KOM - \Delta_{J0}  \cos KOM)
+            \delta_{\sin(i)} = \sin(i)_{\\rm intrinsic}  \\frac{\cot(i)_{\\rm intrinsic}}{d} (\Delta_{I0} \sin KOM - \Delta_{J0}  \cos KOM)
 
         """
         PX_kpc = self.PX.to(u.kpc, equivalencies=u.parallax())

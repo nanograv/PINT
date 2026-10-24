@@ -110,7 +110,7 @@ class PeriodSpindown(SpindownBase):
                 tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
-        # Add spin period derivative P1. Since it is not all rquired, we are setting the
+        # Add spin period derivative P1. Since it is not all required, we are setting the
         # default value to 0.0
         self.add_param(
             p.floatParameter(
@@ -139,7 +139,7 @@ class PeriodSpindown(SpindownBase):
     def setup(self):
         """Setup the model. Register the derivative functions"""
         super().setup()  # This will run the setup in the Component class.
-        # The following lines are resgistering the derivative functions to the timingmodel.
+        # The following lines are registering the derivative functions to the timingmodel.
         self.register_deriv_funcs(self.d_phase_d_P0, "P0")
         self.register_deriv_funcs(self.d_phase_d_P1, "P1")
 
