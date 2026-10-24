@@ -52,7 +52,7 @@ def test_derivative(modelJ0023, toasJ0023):
     testp = tdu.get_derivative_params(modelJ0023)
     delay = modelJ0023.delay(toasJ0023)
     for p in testp.keys():
-        print("Runing derivative for %s", f"d_delay_d_{p}")
+        print("Running derivative for %s", f"d_delay_d_{p}")
         if p in ["EPS2", "EPS1"]:
             testp[p] = 15
         ndf = modelJ0023.d_phase_d_param_num(toasJ0023, p, testp[p])

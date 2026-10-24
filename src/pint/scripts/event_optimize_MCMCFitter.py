@@ -92,7 +92,7 @@ def main(argv=None):
     )
     parser.add_argument(
         "--testWeights",
-        help="Make plots to evalute weight cuts?",
+        help="Make plots to evaluate weight cuts?",
         default=False,
         action="store_true",
     )

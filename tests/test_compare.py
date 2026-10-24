@@ -167,3 +167,13 @@ class TestCompare:
         )
         modelcp = cp(model)
         model.compare(modelcp)
+
+    def test_json(self):
+
+        m1 = mod.get_model(
+            pathlib.Path(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+        )
+        m2 = mod.get_model(
+            pathlib.Path(os.path.join(datadir, "B1855+09_NANOGrav_dfg+12_modified.par"))
+        )
+        result = m1.compare(m2, format="json", verbosity="min")

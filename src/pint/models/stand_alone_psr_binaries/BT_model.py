@@ -47,7 +47,7 @@ class BTmodel(PSR_BINARY):
     as an independent module for binary delay calculation.
     To interact with PINT platform, a pulsar_binary wrapper is needed.
     See the source file pint/models/binary_bt.py
-    Refence
+    Reference
     ---------
     The 'BT' binary model for the pulse period. Model as in:
     W.M. Smart, (1962), "Spherical Astronomy", p35
@@ -55,7 +55,7 @@ class BTmodel(PSR_BINARY):
 
     Return
     ----------
-    A bt binary model class with paramters, delay calculations and derivatives.
+    A bt binary model class with parameters, delay calculations and derivatives.
     Example
     ----------
     >>> import numpy

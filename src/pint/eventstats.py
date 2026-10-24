@@ -208,7 +208,7 @@ def best_m(phases, weights=None, m=100):
 
 def em_four(phases, m=2, weights=None):
     """Return the empirical Fourier coefficients up to the mth harmonic.
-    These are derived from the empirical trignometric moments."""
+    These are derived from the empirical trigonometric moments."""
 
     phases = np.asarray(phases) * TWOPI  # phase in radians
 

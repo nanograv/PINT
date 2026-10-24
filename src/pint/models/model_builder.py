@@ -498,7 +498,7 @@ class ModelBuilder:
         param_count = Counter()
         # 1. iteration read parfile with a no component timing_model to get
         # the overall control parameters. This will get us the binary model name
-        # build the base fo the timing model
+        # build the base of the timing model
         # pint_param_dict, unknown_param = self._pintify_parfile(param_inpar)
         binary = param_inpar.get("BINARY", None)
 

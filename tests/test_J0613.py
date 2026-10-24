@@ -62,7 +62,7 @@ class TestJ0613:
         testp["PMDEC"] = 1
         testp["PMRA"] = 1
         for p in testp.keys():
-            log.debug("Runing derivative for %s", f"d_delay_d_{p}")
+            log.debug("Running derivative for %s", f"d_delay_d_{p}")
             ndf = self.modelJ0613.d_phase_d_param_num(self.toasJ0613, p, testp[p])
             adf = self.modelJ0613.d_phase_d_param(self.toasJ0613, delay, p)
             diff = adf - ndf

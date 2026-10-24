@@ -155,7 +155,7 @@ class TestDDK:
             par = getattr(self.ECLmodelJ1713, p)
             if isinstance(par, boolParameter):
                 continue
-            print(f"Runing derivative for d_phase_d_{p}")
+            print(f"Running derivative for d_phase_d_{p}")
             ndf = self.ECLmodelJ1713.d_phase_d_param_num(self.toasJ1713, p, testp[p])
             adf = self.ECLmodelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
             diff = adf - ndf

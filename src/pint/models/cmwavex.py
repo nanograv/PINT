@@ -57,7 +57,7 @@ class CMWaveX(Chromatic):
         cmwxfreq : float or astropy.quantity.Quantity
             Base frequency for CMWaveX component
         index : int, None
-            Interger label for CMWaveX component. If None, will increment largest used index by 1.
+            Integer label for CMWaveX component. If None, will increment largest used index by 1.
         cmwxsin : float or astropy.quantity.Quantity
             Sine amplitude for CMWaveX component
         cmwxcos : float or astropy.quantity.Quantity
@@ -137,7 +137,7 @@ class CMWaveX(Chromatic):
         cmwxfreqs : iterable of float or astropy.quantity.Quantity
             Base frequencies for CMWaveX components
         indices : iterable of int, None
-            Interger labels for CMWaveX components. If None, will increment largest used index by 1.
+            Integer labels for CMWaveX components. If None, will increment largest used index by 1.
         cmwxsins : iterable of float or astropy.quantity.Quantity
             Sine amplitudes for CMWaveX components
         cmwxcoses : iterable of float or astropy.quantity.Quantity
@@ -265,7 +265,7 @@ class CMWaveX(Chromatic):
 
     def get_indices(self):
         """
-        Returns an array of intergers corresponding to CMWaveX component parameters using CMWXFREQs
+        Returns an array of integers corresponding to CMWaveX component parameters using CMWXFREQs
 
         Returns
         -------

@@ -117,7 +117,7 @@ release = pint.__version__
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-# exclude some notebooks that take too long to run and are not needed for the docs bulid
+# exclude some notebooks that take too long to run and are not needed for the docs build
 exclude_patterns = [
     "_build",
     "examples/.ipynb_checkpoints",

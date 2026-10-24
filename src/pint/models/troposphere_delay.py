@@ -287,7 +287,7 @@ class TroposphereDelay(DelayComponent):
             if absLat <= self.LAT[lInd]:
                 return lInd - 1
         # else this is an invalid latitude... huh?
-        raise ValueError(f"Invaid latitude: {lat} must be between -90 and 90 degrees")
+        raise ValueError(f"Invalid latitude: {lat} must be between -90 and 90 degrees")
 
     def mapping_function(
         self, alt: u.Quantity, lat: u.Quantity, H: u.Quantity, mjd: Time

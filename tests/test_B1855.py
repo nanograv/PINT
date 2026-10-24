@@ -50,7 +50,7 @@ class TestB1855:
         testp = tdu.get_derivative_params(self.modelB1855)
         delay = self.modelB1855.delay(self.toasB1855)
         for p in testp.keys():
-            log.debug("Runing derivative for %s", f"d_delay_d_{p}")
+            log.debug("Running derivative for %s", f"d_delay_d_{p}")
             ndf = self.modelB1855.d_phase_d_param_num(self.toasB1855, p, testp[p])
             adf = self.modelB1855.d_phase_d_param(self.toasB1855, delay, p)
             diff = adf - ndf

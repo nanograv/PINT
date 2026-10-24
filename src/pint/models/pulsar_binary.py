@@ -33,7 +33,7 @@ from pint.utils import parse_time, taylor_horner_deriv
 
 
 class PulsarBinary(DelayComponent):
-    """Base class for binary models in PINT.
+    r"""Base class for binary models in PINT.
 
     This class provides a wrapper for internal classes that do the actual calculations.
     The calculations are done by the classes located in

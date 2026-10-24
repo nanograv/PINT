@@ -158,7 +158,7 @@ def test_ICRS_to_ECL_uncertainties():
         tol = 1e-12 if p in ["RAJ", "DECJ"] else 1e-3
         assert np.isclose(
             m1.__getitem__(p).value, m2.__getitem__(p).value, atol=tol
-        ), f"Paramter {p} with values {m1.__getitem__(p).value}, {m2.__getitem__(p).value} was too far apart (difference={m1.__getitem__(p).value-m2.__getitem__(p).value})"
+        ), f"Parameter {p} with values {m1.__getitem__(p).value}, {m2.__getitem__(p).value} was too far apart (difference={m1.__getitem__(p).value-m2.__getitem__(p).value})"
         # do a generous test here since the uncertainties could change
         assert np.isclose(
             m1.__getitem__(p).uncertainty, m2.__getitem__(p).uncertainty, rtol=0.5
