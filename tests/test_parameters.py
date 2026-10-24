@@ -48,7 +48,7 @@ The behavior we want for numerical Parameter variables (p):
 
     p.quantity = (anything) acts the same as setting p.value
 
-    p.uncertainty acts analagous to p.quantity.  p.uncertainty_value acts
+    p.uncertainty acts analogous to p.quantity.  p.uncertainty_value acts
     like p.value.
 
     p.unit = u.NewCompatibleUnit changes all internal representations of
@@ -644,7 +644,7 @@ def test_fitter_construction_success_after_remove_param():
 
 
 def test_fitter_construction_success_after_remove_param_toplevel():
-    """Checks that remove_param succeeds when removing a paramter from the top-level model (not always meaningful)"""
+    """Checks that remove_param succeeds when removing a parameter from the top-level model (not always meaningful)"""
     m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     t = get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
     m.remove_component("BinaryDD")

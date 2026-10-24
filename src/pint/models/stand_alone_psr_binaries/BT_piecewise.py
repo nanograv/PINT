@@ -35,7 +35,7 @@ class BTpiecewise(BTmodel):
 
     Can add more pieces here...
 
-    Overide default values values if desired
+    Override default values if desired
     >>updates = {'T0X_0000':60000.*u.d,'XR1_0000':50000.*u.d,'XR2_0000': 55000*u.d}
 
     update the model with the piecewise parameter value(s) and piece ranges
@@ -108,7 +108,7 @@ class BTpiecewise(BTmodel):
                 1e9 * u.d,
             ]
         else:
-            # initialise array used to count the number of pieces. Operates by seaching for "A1X_i/T0X_i" and appending i to the array.
+            # initialise array used to count the number of pieces. Operates by searching for "A1X_i/T0X_i" and appending i to the array.
             piece_index = []
             # Searches through updates for keys prefixes matching T0X/A1X, can be allowed to be more flexible with param+"X_" provided param is defined earlier.
             for key, value in valDict.items():
@@ -119,7 +119,7 @@ class BTpiecewise(BTmodel):
                 ):
                     # appends index to array
                     piece_index.append((key[4:8]))
-                    # makes sure only one instance of each index is present returns order indeces
+                    # makes sure only one instance of each index is present returns order indices
             piece_index = np.unique(piece_index)
             # initialise array that will be 5 x n in shape. Where n is the number of pieces required by the model
             piecewise_parameter_information = []
@@ -168,7 +168,7 @@ class BTpiecewise(BTmodel):
     def piecewise_parameter_from_information_array(self, t):
         """Creates a list of piecewise orbital parameters to use in calculations. It is the same dimensions as the TOAs loaded in. Each entry is the piecewise parameter value from the group it belongs to.
         ----------
-        t : Quantity. TOA, not necesserily barycentered
+        t : Quantity. TOA, not necessarily barycentered
         Returns
         -------
         list
@@ -275,7 +275,7 @@ class BTpiecewise(BTmodel):
         )
 
     def get_tt0(self, barycentricTOA):
-        """Finds (barycentricTOA - T0_x). Where T0_x is the piecewise T0 value, if it exists, correponding to the group the TOA belongs to. If T0_x does not exist, use the global T0 vlaue.
+        """Finds (barycentricTOA - T0_x). Where T0_x is the piecewise T0 value, if it exists, corresponding to the group the TOA belongs to. If T0_x does not exist, use the global T0 value.
         ----------
         Returns
         -------
@@ -462,7 +462,7 @@ class BTpiecewise(BTmodel):
             return result * derU
 
     def d_M_d_par(self, par):
-        """derivative for M respect to bianry parameter.
+        """derivative for M respect to binary parameter.
         Parameters
         ----------
         par : string

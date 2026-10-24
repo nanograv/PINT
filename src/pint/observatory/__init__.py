@@ -118,7 +118,7 @@ def _load_bipm_clock(bipm_version):
         try:
             log.info(f"Loading BIPM clock version {bipm_version}")
             # FIXME: error handling?
-            # FIXME: BIPM2019 and earlier come fromm the TEMPO2 repository and have a bogus last correction
+            # FIXME: BIPM2019 and earlier come from the TEMPO2 repository and have a bogus last correction
             # later ones are generated and don't; how to manage this?
             bogus_last_correction = bipm_version.lower() <= "bipm2019"
             _bipm_clock_versions[bipm_version] = find_clock_file(

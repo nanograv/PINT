@@ -57,7 +57,7 @@ class DMWaveX(Dispersion):
         dmwxfreq : float or astropy.quantity.Quantity
             Base frequency for DMWaveX component
         index : int, None
-            Interger label for DMWaveX component. If None, will increment largest used index by 1.
+            Integer label for DMWaveX component. If None, will increment largest used index by 1.
         dmwxsin : float or astropy.quantity.Quantity
             Sine amplitude for DMWaveX component
         dmwxcos : float or astropy.quantity.Quantity
@@ -137,7 +137,7 @@ class DMWaveX(Dispersion):
         dmwxfreqs : iterable of float or astropy.quantity.Quantity
             Base frequencies for DMWaveX components
         indices : iterable of int, None
-            Interger labels for DMWaveX components. If None, will increment largest used index by 1.
+            Integer labels for DMWaveX components. If None, will increment largest used index by 1.
         dmwxsins : iterable of float or astropy.quantity.Quantity
             Sine amplitudes for DMWaveX components
         dmwxcoses : iterable of float or astropy.quantity.Quantity
@@ -265,7 +265,7 @@ class DMWaveX(Dispersion):
 
     def get_indices(self):
         """
-        Returns an array of intergers corresponding to DMWaveX component parameters using DMWXFREQs
+        Returns an array of integers corresponding to DMWaveX component parameters using DMWXFREQs
 
         Returns
         -------

@@ -238,7 +238,7 @@ class LCELorentzian(LCEWrappedFunction, LCLorentzian):
     Parameters
     ----------
     Width :
-        the width paramater of the wrapped Cauchy distribution, namely HWHM*2PI for narrow distributions
+        the width parameter of the wrapped Cauchy distribution, namely HWHM*2PI for narrow distributions
     Location :
         the center of the peak in phase
     """

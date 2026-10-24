@@ -840,7 +840,7 @@ class CovarianceMatrixMaker:
 
 
 def combine_covariance_matrix(covariance_matrices, crossterm={}, crossterm_padding=0.0):
-    """A fast method to combine two covariance matrix diagonaly.
+    """A fast method to combine two covariance matrix diagonally.
 
     Parameters
     ----------
@@ -848,9 +848,9 @@ def combine_covariance_matrix(covariance_matrices, crossterm={}, crossterm_paddi
         The design matrices needs to combine.
     crossterm : dictionary, optional
         The padding matrix of the cross area of two type of covariance matrices.
-        The input formate is {(label1, label2): numpy.ndarray}. Default is {}.
+        The input format is {(label1, label2): numpy.ndarray}. Default is {}.
     crossterm_padding : float
-        If the corss term is not give, use the given padding number. Default is
+        If the cross term is not given, use the given padding number. Default is
         0.0.
     """
     new_size = 0

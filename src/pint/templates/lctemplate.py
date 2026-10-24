@@ -120,7 +120,7 @@ class LCTemplate:
         In all cases, ncache sets the phase resolution.  If it is desired
         to have energy dependence, en_edges must be specified as a set of
         edges in log10 space which fully encompass all possible photon
-        energies that wil be used.
+        energies that will be used.
 
         Interpolation is always linear (bilinear in energy if applicable.)
         """

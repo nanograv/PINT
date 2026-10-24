@@ -102,7 +102,7 @@ class PolycoEntry:
     ncoeff : int
         Number of coefficients
     coeff : numpy.ndarray
-        Polynomial coefficents
+        Polynomial coefficients
     """
 
     def __init__(self, tmid, mjdspan, rph_int, rph_frac, f0, ncoeff, coeffs):

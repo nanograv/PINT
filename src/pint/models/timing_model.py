@@ -712,7 +712,7 @@ class TimingModel:
 
             cp = compdict[cat]
             for cpp in cp:
-                pend += cpp.parms
+                pend += cpp.params
             used_cats.add(cat)
         # Now collect any components that haven't already been included in the list
         pmid = []
@@ -2738,8 +2738,8 @@ class TimingModel:
         unc_rat_threshold: float = 1.05,
         verbosity: Literal["max", "med", "min", "check"] = "max",
         usecolor: True = True,
-        format: Literal["text", "markdown"] = "text",
-    ) -> str:
+        format: Literal["text", "markdown", "json"] = "text",
+    ) -> Union[str, dict]:
         """Print comparison with another model
 
         Parameters
@@ -2769,12 +2769,12 @@ class TimingModel:
         usecolor : bool, optional
             Use colors on the output to complement use of "!" and "*"
         format : string, optional
-            One of "text" or "markdown"
+            One of "text" or "markdown" or "json
 
         Returns
         -------
-        str
-            Human readable comparison, for printing.
+        str or dict
+            Human readable comparison, for printing if format is "text" or "markdown"
             Formatted as a five column table with titles of
             ``PARAMETER NAME | Model1 | Model2 | Diff_Sigma1 | Diff_Sigma2``
             where ``ModelX`` refer to self and othermodel Timing Model objects,
@@ -2789,6 +2789,8 @@ class TimingModel:
             If ``format="markdown"`` then will be formatted as a markdown table with bold, colored, and highlighted text as appropriate.
 
             For both output formats, warnings and info statements will be printed.
+
+            If ``format="json"`` instead returns a ``dict`` where each parameter has 5 entries like above.
 
         Note
         ----
@@ -2813,7 +2815,7 @@ class TimingModel:
         """
         assert verbosity.lower() in ["max", "med", "min", "check"]
         verbosity = verbosity.lower()
-        assert format.lower() in ["text", "markdown"]
+        assert format.lower() in ["text", "markdown", "json"]
         format = format.lower()
 
         model_name = str(self.name).split("/")[-1] if self.name != "" else "Model 1"
@@ -3188,6 +3190,7 @@ class TimingModel:
         diff2[pn] = ""
         modifier[pn] = []
         s = []
+        output = {}
         pad = 2
         longest_parameter = len(max(parameter.values(), key=len))
         longest_value1 = len(max(value1.values(), key=len))
@@ -3221,7 +3224,7 @@ class TimingModel:
             s.append(f"| {p} | {v1} | {v2} | {d1} | {d2} |")
             s.append(f" :--- | ---: | ---: | ---: | ---: |")
         for param in parameter:
-            if param == "TITLE":
+            if param == "TITLE" and format != "json":
                 continue
             p = parameter[param]
             v1 = value1[param]
@@ -3257,17 +3260,32 @@ class TimingModel:
                 if "unc_rat" in m:
                     sout = [f"<mark>{x}</mark>" if len(x) > 0 else x for x in sout]
                 sout = " | ".join(sout).strip()
-            if verbosity == "max":
-                s.append(sout)
-            elif verbosity == "med" and len(d1) > 0:
-                # not frozen so has uncertainty
-                s.append(sout)
-            elif verbosity == "min" and len(m) > 0:
-                # has a modifier
-                s.append(sout)
+            elif format == "json":
+                if (
+                    verbosity == "max"
+                    or (verbosity == "med" and len(d1) > 0)
+                    or (verbosity == "min" and len(m) > 0)
+                    or (p == "PARAMETER")
+                ):
+                    output[p] = {
+                        "value1": v1,
+                        "value2": v2,
+                        "diff1": d1,
+                        "diff2": d2,
+                        "modifier": m,
+                    }
+            if format != "json":
+                if verbosity == "max":
+                    s.append(sout)
+                elif verbosity == "med" and len(d1) > 0:
+                    # not frozen so has uncertainty
+                    s.append(sout)
+                elif verbosity == "min" and len(m) > 0:
+                    # has a modifier
+                    s.append(sout)
 
         if verbosity != "check":
-            return "\n".join(s)
+            return output if format == "json" else "\n".join(s)
 
     def use_aliases(
         self,
@@ -3323,7 +3341,7 @@ class TimingModel:
             Additional comment string to include in parfile
         format : str, optional
              Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
-             formats. The defaul format is `pint`.
+             formats. The default format is `pint`.
         """
         if format.lower() not in _parfile_formats:
             raise ValueError(f"parfile format must be one of {_parfile_formats}")
@@ -3404,7 +3422,7 @@ class TimingModel:
             Additional comment string to include in parfile
         format : str, optional
              Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
-             formats. The defaul format is `pint`.
+             formats. The default format is `pint`.
         """
         with open_or_use(filename, "wt") as f:
             f.write(
@@ -3962,10 +3980,10 @@ class Component(metaclass=ModelMeta):
         """Return all the aliases and map to the PINT parameter name.
 
         This property returns a dictionary from the current in timing model
-        parameters' aliase to the pint defined parameter names. For the aliases
-        of a prefixed parameter, the aliase with an existing prefix index maps
+        parameters' aliases to the pint defined parameter names. For the aliases
+        of a prefixed parameter, the alias with an existing prefix index maps
         to the PINT defined parameter name with the same index. Behind the scenes,
-        the indexed parameter adds the indexed aliase to its aliase list.
+        the indexed parameter adds the indexed alias to its aliase list.
         """
         ali_map = {}
         for p in self.params:
@@ -3994,7 +4012,7 @@ class Component(metaclass=ModelMeta):
             Derivative function for parameter.
         """
         # This is the case for add "JUMP" like parameters, It will add an
-        # index to the parameter name for avoding the conflicts
+        # index to the parameter name for avoiding the conflicts
         # TODO: this is a work around in the current system, but it will be
         # optimized in the future release.
         if isinstance(param, maskParameter):
@@ -4132,7 +4150,7 @@ class Component(metaclass=ModelMeta):
         please use :py:meth:`TimingModel.match_param_aliase`.
         """
         pname = self.aliases_map.get(alias, None)
-        # Split the alias prefix, see if it is a perfix alias
+        # Split the alias prefix, see if it is a prefix alias
         try:
             prefix, idx_str, idx = split_prefixed_name(alias)
         except PrefixError as e:  # Not a prefixed name
@@ -4144,7 +4162,7 @@ class Component(metaclass=ModelMeta):
             par = getattr(self, pname)
             if par.is_prefix:
                 raise UnknownParameter(
-                    f"Prefix {alias} maps to mulitple parameters"
+                    f"Prefix {alias} maps to multiple parameters"
                     ". Please specify the index as well."
                 ) from e
         if pname is not None:
@@ -4217,7 +4235,7 @@ class Component(metaclass=ModelMeta):
             pass
         else:
             return bmn == para_dict["BINARY"][0] if "BINARY" in para_dict else False
-        # Compare the componets parameter names with par file parameters
+        # Compare the components parameter names with par file parameters
         compr = list(set(pNames_inpar).intersection(pNames_inModel))
 
         if compr == []:
@@ -4243,7 +4261,7 @@ class Component(metaclass=ModelMeta):
         ----------
         format : str, optional
              Parfile output format. PINT outputs the 'tempo', 'tempo2' and 'pint'
-             format. The defaul format is `pint`.  Actual formatting done elsewhere.
+             format. The default format is `pint`.  Actual formatting done elsewhere.
 
         Returns
         -------
@@ -4283,9 +4301,9 @@ class AllComponents:
     This class constructs the available component instances, but without any
     valid parameter values (parameters are initialized when a component instance
     gets constructed, however, the parameter values are unknown to the components
-    at the moment). Thus, runing `.validate()` function in the component instance
+    at the moment). Thus, running `.validate()` function in the component instance
     will fail. This class is designed for helping model building and parameter
-    seraching, not for direct data analysis.
+    searching, not for direct data analysis.
 
     Note
     ----
@@ -4306,7 +4324,7 @@ class AllComponents:
 
         This property returns the all PINT defined parameters to their host
         components. The parameter aliases are not included in this map. If
-        searching the host component for a parameter alias, pleaase use
+        searching the host component for a parameter alias, please use
         `alias_to_pint_param` method to translate the alias to PINT parameter
         name first.
         """
@@ -4329,11 +4347,11 @@ class AllComponents:
     def _check_alias_conflict(
         self, alias: str, param_name: str, alias_map: dict
     ) -> None:
-        """Check if a aliase has conflict in the alias map.
+        """Check if an alias has conflict in the alias map.
 
         This function checks if an alias already have record in the alias_map.
         If there is a record, it will check if the record matches the given
-        paramter name, `param_name`. If not match, it will raise a AliasConflict
+        parameter name, `param_name`. If not match, it will raise a AliasConflict
         error.
 
         Parameter
@@ -4431,7 +4449,7 @@ class AllComponents:
         Return
         ------
         dict
-            The mapping from categories to the componens belongs to the categore.
+            The mapping from categories to the components belongs to the category.
             The key is the categore name, and the value is a list of all the
             components in the categore.
         """
@@ -4589,7 +4607,7 @@ class AllComponents:
             try:
                 prefix, idx_str, idx = split_prefixed_name(alias)
                 # assume the index 1 parameter is in the alias map
-                # count length of idx_str and dectect leading zeros
+                # count length of idx_str and detect leading zeros
                 # TODO fix the case for searching `DMX`
                 num_lzero = len(idx_str) - len(str(idx))
                 fmt = len(idx_str) if num_lzero > 0 else 0

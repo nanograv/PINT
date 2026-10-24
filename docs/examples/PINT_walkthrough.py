@@ -19,7 +19,7 @@
 # %% [markdown]
 # The PINT homepage is at:  https://github.com/nanograv/PINT.
 #
-# The documentation is availble here: https://nanograv-pint.readthedocs.io/en/latest/index.html
+# The documentation is available here: https://nanograv-pint.readthedocs.io/en/latest/index.html
 #
 # PINT can be run via a Python script, in an interactive session with ipython or jupyter, or using one of the command-line tools provided.
 
@@ -27,7 +27,7 @@
 # ## Times of Arrival (TOAs)
 
 # %% [markdown]
-# The raw data for PINT are TOAs, which can be read in from files in a variety of formats, or constructed programatically. PINT currently can read TEMPO, Tempo2, and ITOA text files, as well as a range of spacecraft FITS format event files (e.g. Fermi "FT1" and NICER .evt files).
+# The raw data for PINT are TOAs, which can be read in from files in a variety of formats, or constructed programmatically. PINT currently can read TEMPO, Tempo2, and ITOA text files, as well as a range of spacecraft FITS format event files (e.g. Fermi "FT1" and NICER .evt files).
 #
 # Note:  The first time TOAs get read in, lots of processing (can) happen, which can take some time. However, a  "pickle" file can be saved, so the next time the same file is loaded (if nothing has changed), the TOAs will be loaded from the pickle file, which is much faster.
 
