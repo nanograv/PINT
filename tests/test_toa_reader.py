@@ -4,6 +4,7 @@ import pytest
 from io import StringIO
 from pathlib import Path
 
+import astropy.units as u
 import numpy as np
 import pytest
 
@@ -11,6 +12,7 @@ import pytest
 from astropy.utils.iers import conf
 import astropy.table
 from hypothesis import given, settings
+from loguru import logger as log
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import floats, integers, sampled_from
 from pinttestdata import datadir
@@ -677,3 +679,217 @@ def test_parse_toa_line_exceptions():
     garbage = "asdg skfgs dj"
     with pytest.raises(RuntimeError):
         toa._parse_TOA_line(garbage)
+
+
+def _write_tims(tmp_path, files):
+    for name, text in files.items():
+        (tmp_path / name).write_text(text)
+    return tmp_path / "main.tim"
+
+
+def _read_tims(tmp_path, files, include_semantics=None):
+    # include_semantics=None: use the default without passing the keyword
+    kwargs = (
+        {} if include_semantics is None else {"include_semantics": include_semantics}
+    )
+    toas, _ = toa.read_toa_file(_write_tims(tmp_path, files), **kwargs)
+    return toas
+
+
+def _mjds(toas):
+    return [round(float(t.mjd.mjd), 1) for t in toas]
+
+
+@pytest.fixture
+def warnings_logged():
+    messages = []
+    handler = log.add(lambda m: messages.append(str(m)), level="WARNING")
+    yield messages
+    log.remove(handler)
+
+
+@pytest.mark.parametrize(
+    "include_semantics, expected",
+    [
+        (None, [55000.1, 55003.1]),
+        ("tempo", [55000.1, 55003.1]),
+        ("tempo2", [55000.1, 55003.1, 55001.1, 55002.1]),
+    ],
+)
+def test_include_end_nested(tmp_path, include_semantics, expected):
+    files = {
+        "main.tim": "FORMAT 1\nINCLUDE a.tim\nm1 1400 55002.1 1 @\n",
+        "a.tim": "FORMAT 1\na1 1400 55000.1 1 @\nINCLUDE c.tim\na2 1400 55001.1 1 @\n",
+        "c.tim": "FORMAT 1\nc1 1400 55003.1 1 @\nEND\nc2 1400 55004.1 1 @\n",
+    }
+    assert _mjds(_read_tims(tmp_path, files, include_semantics)) == expected
+
+
+# Parent sets the command before INCLUDE; the included file reads x1, sets the
+# command again and reads x2; the parent then reads p1. Errors are 2 us.
+# Expected (MJD, error in us, TIME offset) of the TOAs that are read.
+_scoped = {
+    "TIME 0.5|TIME -0.002": {
+        "tempo": [(55011.1, 2, "0.5"), (55012.1, 2, "0.498"), (55010.1, 2, "0.498")],
+        "tempo2": [(55011.1, 2, None), (55012.1, 2, "-0.002"), (55010.1, 2, "0.5")],
+    },
+    "EFAC 2|EFAC 3": {
+        "tempo": [(55011.1, 4, None), (55012.1, 6, None), (55010.1, 6, None)],
+        "tempo2": [(55011.1, 2, None), (55012.1, 6, None), (55010.1, 4, None)],
+    },
+    "EQUAD 1.5|EQUAD 4.8": {
+        "tempo": [(55011.1, 2.5, None), (55012.1, 5.2, None), (55010.1, 5.2, None)],
+        "tempo2": [(55011.1, 2, None), (55012.1, 5.2, None), (55010.1, 2.5, None)],
+    },
+}
+# Commands that select TOAs: the parent's value rejects, the child's accepts
+for _cmd in (
+    "EMIN 3|EMIN 1",
+    "EMAX 1|EMAX 10",
+    "FMIN 2000|FMIN 0",
+    "FMAX 1000|FMAX 1e4",
+):
+    _scoped[_cmd] = {
+        "tempo": [(55012.1, 2, None), (55010.1, 2, None)],
+        "tempo2": [(55011.1, 2, None), (55012.1, 2, None)],
+    }
+
+
+@pytest.mark.parametrize("include_semantics", [None, "tempo", "tempo2"])
+@pytest.mark.parametrize("commands", list(_scoped))
+def test_include_command_scope(tmp_path, include_semantics, commands):
+    parent_cmd, child_cmd = commands.split("|")
+    files = {
+        "main.tim": f"FORMAT 1\n{parent_cmd}\nINCLUDE a.tim\np1 1400 55010.1 2 @\n",
+        "a.tim": f"FORMAT 1\nx1 1400 55011.1 2 @\n{child_cmd}\nx2 1400 55012.1 2 @\n",
+    }
+    toas = _read_tims(tmp_path, files, include_semantics)
+    expected = _scoped[commands][include_semantics or "tempo"]
+    assert _mjds(toas) == [m for m, _, _ in expected]
+    assert [t.error.to_value(u.us) for t in toas] == pytest.approx(
+        [e for _, e, _ in expected]
+    )
+    assert [t.flags.get("to") for t in toas] == [o for _, _, o in expected]
+
+
+@pytest.mark.parametrize("include_semantics", [None, "tempo", "tempo2"])
+def test_include_shared_state(tmp_path, include_semantics):
+    # JUMP, PHASE and INFO are shared across INCLUDE in TEMPO and TEMPO2
+    files = {
+        "main.tim": (
+            "FORMAT 1\nJUMP\nINFO x\nPHASE 1\nINCLUDE a.tim\n"
+            "p1 1400 55010.1 1 @\nJUMP\np2 1400 55010.2 1 @\n"
+        ),
+        "a.tim": "FORMAT 1\na1 1400 55011.1 1 @\nPHASE 1\nINFO y\na2 1400 55011.2 1 @\n",
+    }
+    toas = _read_tims(tmp_path, files, include_semantics)
+    assert _mjds(toas) == [55011.1, 55011.2, 55010.1, 55010.2]
+    assert [t.flags.get("jump") for t in toas] == ["1", "1", "1", None]
+    assert [t.flags.get("info") for t in toas] == ["x", "y", "y", "y"]
+    assert [float(t.flags["phase"]) for t in toas] == [1, 2, 2, 2]
+
+
+@pytest.mark.parametrize("include_semantics", [None, "tempo", "tempo2"])
+def test_skip_ignores_everything(tmp_path, include_semantics):
+    files = {
+        "main.tim": (
+            "FORMAT 1\nSKIP\nTIME 1.0\nEFAC 2\nINCLUDE b.tim\nEND\n"
+            "this is deliberately invalid text\nEFLOOR 1\nNOSKIP\n"
+            "p1 1400 55020.1 1 @\n"
+        ),
+        "b.tim": "FORMAT 1\nb1 1400 55002.1 1 @\n",
+    }
+    toas = _read_tims(tmp_path, files, include_semantics)
+    assert _mjds(toas) == [55020.1]
+    assert "to" not in toas[0].flags
+    assert toas[0].error.to_value(u.us) == pytest.approx(1)
+
+
+@pytest.mark.parametrize("include_semantics", [None, "tempo", "tempo2"])
+def test_skip_local_to_included_file(tmp_path, include_semantics):
+    files = {
+        "main.tim": "FORMAT 1\nINCLUDE a.tim\np1 1400 55020.1 1 @\n",
+        "a.tim": "FORMAT 1\na1 1400 55021.1 1 @\nSKIP\na2 1400 55022.1 1 @\n",
+    }
+    assert _mjds(_read_tims(tmp_path, files, include_semantics)) == [55021.1, 55020.1]
+
+
+@pytest.mark.parametrize(
+    "include_semantics, after_include, warn",
+    [
+        (None, "p1 1400 55020.1 1 @\n", True),
+        (None, "INCLUDE b.tim\n", True),
+        (None, "C nothing more\n", False),
+        (None, "END\np1 1400 55020.1 1 @\n", False),
+        (None, "SKIP\np1 1400 55020.1 1 @\nNOSKIP\n", False),
+        ("tempo2", "p1 1400 55020.1 1 @\n", False),
+    ],
+)
+def test_include_end_warning(
+    tmp_path, warnings_logged, include_semantics, after_include, warn
+):
+    files = {
+        "main.tim": "FORMAT 1\nINCLUDE a.tim\n" + after_include,
+        "a.tim": "FORMAT 1\na1 1400 55000.1 1 @\nEND\n",
+        "b.tim": "FORMAT 1\nb1 1400 55002.1 1 @\n",
+    }
+    _read_tims(tmp_path, files, include_semantics)
+    assert any("END in" in m for m in warnings_logged) == warn
+
+
+def test_include_semantics_invalid(tmp_path):
+    files = {"main.tim": "FORMAT 1\np1 1400 55020.1 1 @\n"}
+    with pytest.raises(ValueError):
+        _read_tims(tmp_path, files, include_semantics="tempo3")
+
+
+@pytest.fixture
+def end_in_include(tmp_path):
+    files = {
+        "main.tim": "FORMAT 1\nINCLUDE a.tim\np1 1400 55020.1 1 @\n",
+        "a.tim": "FORMAT 1\nTIME 1.0\na1 1400 55021.1 1 @\nEND\n",
+    }
+    return _write_tims(tmp_path, files)
+
+
+def test_get_TOAs_include_semantics(end_in_include):
+    t = toa.get_TOAs(end_in_include, ephem="DE421", include_semantics="tempo2")
+    assert t.include_semantics == "tempo2"
+    assert list(t.get_flag_value("to")[0]) == ["1.0", None]
+    t = toa.get_TOAs(end_in_include, ephem="DE421")
+    assert t.include_semantics == "tempo"
+    assert len(t) == 1
+
+
+def test_pickle_include_semantics(end_in_include):
+    def load(semantics):
+        return toa.get_TOAs(
+            str(end_in_include),
+            ephem="DE421",
+            usepickle=True,
+            include_semantics=semantics,
+        )
+
+    assert len(load("tempo")) == 1
+    t = load("tempo")
+    assert t.was_pickled and len(t) == 1
+    t = load("tempo2")  # mode changed: re-read
+    assert not t.was_pickled and len(t) == 2
+    t = load("tempo2")
+    assert t.was_pickled and len(t) == 2
+    t = load("tempo")  # and back
+    assert not t.was_pickled and len(t) == 1
+
+    # pickles written before include_semantics existed are re-read
+    t = toa.load_pickle(str(end_in_include))
+    del t.include_semantics
+    toa.save_pickle(t)
+    t = load("tempo")
+    assert not t.was_pickled and t.include_semantics == "tempo"
+
+
+def test_merge_include_semantics(end_in_include):
+    t1 = toa.get_TOAs(end_in_include, ephem="DE421")
+    t2 = toa.get_TOAs(end_in_include, ephem="DE421", include_semantics="tempo2")
+    assert toa.merge_TOAs([t1, t1]).include_semantics == "tempo"
+    assert toa.merge_TOAs([t1, t2]).include_semantics == "mixed"

@@ -10,6 +10,13 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
-- Can output model comparison as JSON
+- Support for hierarchical triple systems: a second (outer) binary component can be added via a `BINARY2` line with `_2`-suffixed orbital parameters (e.g. `PB_2`, `A1_2`). Outer orbit delay is computed before, and propagated into, the inner binary. Outer wrappers `BinaryDD2`, `BinaryBT2`, and `BinaryELL12` are provided. Delay derivatives account for the outer→inner coupling (chain rule through the previous delay). The projected semi-major axis includes a second time derivative `A1DOT2` (alias `X2DOT`).
+- Time-domain solar wind GP noise components: ridge, squared-exponential, Matérn, and quasi-periodic kernels
+- Documentation page explaining the time-domain solar wind noise model, its interpolation basis, and how it differs from the Fourier-basis noise models
+- `TOAs.get_tdb_seconds()`, returning the TDB times of the TOAs in seconds with a selectable dtype
+- `include_semantics` option of `get_TOAs`, `get_model_and_toas`, `TOAs` and `read_toa_file`: with `"tempo2"`, the `.tim` file commands `TIME`, `EFAC`, `EQUAD`, `EMIN`, `EMAX`, `FMIN`, `FMAX` and `END` apply only to the file in which they appear, as in TEMPO2, instead of being shared with INCLUDEd files as in TEMPO (the default). A warning is emitted when `END` in an INCLUDEd file causes later TOAs to be ignored
 ### Fixed
+- Place ``solar_windx`` before the binary in ``DEFAULT_ORDER`` so SolarWindDispersionX delays and derivatives chain-rule through the binary the same way as ``solar_wind``.
+- Everything between `SKIP` and `NOSKIP` in `.tim` files, including commands such as `TIME`, `INCLUDE` and `END` and unparsable lines, is now ignored, as in TEMPO and TEMPO2. A `SKIP` without `NOSKIP` now ends at the end of its file instead of continuing into the including file. Pickles written by earlier versions are re-read
+- Can output model comparison as JSON
 ### Removed

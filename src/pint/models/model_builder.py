@@ -944,6 +944,7 @@ def get_model_and_toas(
     force_binary_model: str = None,
     add_tzr_to_model: bool = True,
     ell1h_shapiro: str = "full",
+    include_semantics: str = "tempo",
     **kwargs,
 ) -> Tuple[TimingModel, TOAs]:
     """Load a timing model and a related TOAs, using model commands as needed
@@ -1004,6 +1005,10 @@ def get_model_and_toas(
         Freire & Wex convention for ELL1H with H3+STIGMA. "full" (default)
         uses Eq. (29). "absorbed" uses Eq. (28), matching Tempo2 ELL1H/T2
         mode 1. Ignored for ELL1H models that are not on the H3+STIGMA path.
+    include_semantics : {"tempo", "tempo2"}, optional
+        How ``.tim`` file commands (``TIME``, ``EFAC``, ``END``, ...) are scoped
+        across ``INCLUDE``: shared with included files as in TEMPO (default), or
+        local to each file as in TEMPO2. See :func:`pint.toa.read_toa_file`.
     kwargs : dict
         Any additional parameter/value pairs that will add to or override those in the parfile.
 
@@ -1034,6 +1039,7 @@ def get_model_and_toas(
         tdb_method=tdb_method,
         picklefilename=picklefilename,
         limits=limits,
+        include_semantics=include_semantics,
     )
 
     if "AbsPhase" not in mm.components and add_tzr_to_model:
