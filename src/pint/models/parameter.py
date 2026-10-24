@@ -538,6 +538,9 @@ class Parameter:
         * NAME value fit_flag
         * NAME value fit_flag uncertainty
         * NAME value uncertainty
+
+        A missing fit flag means frozen (TEMPO2 also defaults missing fit
+        flags to zero).
         """
         try:
             k = line.split()
@@ -553,6 +556,9 @@ class Parameter:
         if name != self.name:
             # FIXME: what about prefix/mask parameters?
             self.use_alias = name
+        # No fit flag means frozen; the default can be False for some
+        # template parameters such as DMX_0001
+        self.frozen = True
         if len(k) >= 3:
             try:
                 # FIXME! this is not right
@@ -2013,6 +2019,8 @@ class maskParameter(floatParameter):
                 self.key_value[ii] = key_value_info[0](kval)
         if len(k) >= 3 + len_key_v:
             self.value = k[2 + len_key_v]
+            # No fit flag means frozen
+            self.frozen = True
         if len(k) >= 4 + len_key_v:
             try:
                 fit_flag = int(k[3 + len_key_v])
