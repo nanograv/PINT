@@ -728,7 +728,8 @@ class Residuals:
         :meth:`~pint.residuals.Residuals.whitened_resids_adtest`
         """
         rw = self.calc_whitened_resids().astype(float)
-        ks = kstest(rw, norm(loc=0, scale=1).cdf)
+        loc, scale = 0, 1
+        ks = kstest(rw, norm.cdf, args=(loc, scale))
         return ks.statistic, ks.pvalue
 
     def whitened_resids_adtest(self) -> Tuple[float, float]:
@@ -1533,7 +1534,8 @@ class WidebandTOAResiduals(CombinedResiduals):
         :meth:`~pint.residuals.WidebandTOAResiduals.whitened_resids_adtest`
         """
         rw = self.calc_wideband_whitened_resids().astype(float)
-        ks = kstest(rw, norm(loc=0, scale=1).cdf)
+        loc, scale = 0, 1
+        ks = kstest(rw, norm.cdf, args=(loc, scale))
         return ks.statistic, ks.pvalue
 
     def whitened_resids_adtest(self) -> Tuple[float, float]:
