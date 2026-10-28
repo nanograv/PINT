@@ -496,6 +496,50 @@ def test_whitened_res(par):
     assert ftr.resids.whitened_resids_adtest()[1] > 0.1
 
 
+@pytest.mark.parametrize(
+    "par",
+    [
+        """
+        PSRJ J1234+5678
+        ELAT 0
+        ELONG 0
+        DM 10
+        F0 1
+        PEPOCH 58000
+        EFAC mjd 57000 58000 2
+        """,
+        """
+        PSRJ J1234+5678
+        ELAT 0
+        ELONG 0
+        DM 10
+        F0 1
+        PEPOCH 58000
+        TNRedAmp -14.227505410948254
+        TNRedGam 4.91353
+        TNRedC 45
+        """,
+    ],
+)
+def test_whitened_res_prefit(par):
+    m = get_model(StringIO(par))
+    t = make_fake_toas_uniform(
+        57000,
+        59000,
+        20,
+        model=m,
+        error=1 * u.us,
+        add_noise=True,
+        add_correlated_noise=m.has_correlated_errors,
+    )
+
+    ftr = Fitter.auto(t, m)
+
+    assert np.isclose(ftr.resids.calc_whitened_resids().std(), 1, atol=0.75)
+    assert ftr.resids.whitened_resids_kstest()[1] > 0.1
+    assert ftr.resids.whitened_resids_adtest()[1] > 0.1
+
+
 def test_ecorr_chi2():
     m = get_model(
         StringIO(
