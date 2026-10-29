@@ -12,4 +12,5 @@ the released changes.
 ### Added
 - Can output model comparison as JSON
 ### Fixed
+- Derivative tests skipped any parameter whose numerical and analytic derivatives matched exactly at even one TOA, so JUMP and DMX parameters were never checked (``test_jump`` and ``test_dmx`` never checked anything) and F0 was skipped in ``test_B1855_9yrs`` and ``test_fbx``; a parameter is now skipped only if they match at every TOA, and DMX parameters use a numerical step large enough to rise above numerical noise
 ### Removed
