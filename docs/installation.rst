@@ -14,7 +14,7 @@ is more complicated (but not too much).
 Prerequisites
 -------------
 
-PINT requires Python 3.10+ [1]_
+PINT requires Python 3.9+, although testing is done with 3.11+ [1]_
 
 Your Python must have the package installation tool pip_ installed.  Also make sure your ``setuptools`` are up to date (e.g. ``pip install -U setuptools``).
 
