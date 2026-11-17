@@ -31,6 +31,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 from pinttestdata import datadir
 
 import pint.models as tm
+import pint.simulation
 from pint import fitter, toa, dmu
 from pint.pulsar_mjd import (
     jds_to_mjds,
@@ -634,6 +635,73 @@ def test_dmxparse():
     f = fitter.WLSFitter(toas=t, model=m)
     f.fit_toas()
     dmx = dmxparse(f, save=False)
+    # DMX_0001 has no fit flag, so it is frozen and only carries the
+    # uncertainty of the mean
+    assert m.DMX_0001.frozen
+    assert dmx["dmx_verrs"][0].value == pytest.approx(dmx["avg_dm_err"].value)
+    assert np.all(np.isfinite(dmx["dmx_verrs"]))
+
+
+_dmx_par = """
+PSR J1234+5678
+ELAT 10
+ELONG 20
+F0 100 1
+PEPOCH 55000
+DM 10
+EPHEM DE421
+CLOCK TT(TAI)
+UNITS TDB
+DMX 14
+"""
+_dmx_values = [0.1, 0.002, 0.004, 0.003]
+
+
+def _dmx_fit(frozen):
+    lines = [_dmx_par]
+    for i, value in enumerate(_dmx_values, start=1):
+        flag = 0 if i in frozen else 1
+        lines.append(
+            f"DMX_{i:04d} {value} {flag}\n"
+            f"DMXR1_{i:04d} {55000 + 100 * (i - 1)}\nDMXR2_{i:04d} {55000 + 100 * i}\n"
+        )
+    m = tm.get_model(io.StringIO("".join(lines)))
+    t = pint.simulation.make_fake_toas_uniform(
+        55001, 55399, 80, m, obs="@", freq=np.array([800, 1600]) * u.MHz
+    )
+    f = fitter.WLSFitter(t, m)
+    f.fit_toas()
+    return f
+
+
+@pytest.mark.parametrize("frozen", [set(), {1}, {2}, {2, 3}, {3, 4}])
+def test_dmxparse_frozen_bins(frozen):
+    f = _dmx_fit(frozen)
+    dmx = dmxparse(f, save=False)
+    n = len(_dmx_values)
+    fitted = np.array([i not in frozen for i in range(1, n + 1)])
+    values = np.array([getattr(f.model, f"DMX_{i:04d}").value for i in range(1, 5)])
+    # the mean uses all bins, with the frozen ones as constants
+    mean = values.mean()
+    assert dmx["mean_dmx"].value == pytest.approx(mean)
+    labels = [f"DMX_{i:04d}" for i, fit in zip(range(1, 5), fitted) if fit]
+    cov = f.parameter_covariance_matrix.get_label_matrix(labels).matrix
+    mean_err = np.sqrt(cov.sum()) / n
+    assert dmx["avg_dm_err"].value == pytest.approx(mean_err)
+    assert_allclose(dmx["dmxs"].value, values - mean)
+    # var(DMX_i - mean) = C_ii - 2/n sum_j C_ij + sum(C)/n^2, with C_ij = 0
+    # for frozen bins
+    expected = np.full(n, mean_err)
+    expected[fitted] = np.sqrt(
+        np.diag(cov) - 2 * cov.sum(axis=1) / n + cov.sum() / n**2
+    )
+    assert_allclose(dmx["dmx_verrs"].value, expected, rtol=1e-10)
+
+
+def test_dmxparse_all_frozen():
+    f = _dmx_fit({1, 2, 3, 4})
+    with pytest.raises(ValueError, match="fitted DMX"):
+        dmxparse(f, save=False)
 
 
 def test_dmxparse_write():
