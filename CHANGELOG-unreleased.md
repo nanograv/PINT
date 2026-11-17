@@ -18,4 +18,5 @@ the released changes.
 - ``CHROMNOISE_FREF``: reference frequency (MHz) of the ``PLChromNoise`` amplitude, default 1400 MHz.
 - ``DMNOISE_FREF``: reference frequency (MHz) of the ``PLDMNoise`` amplitude, default 1400 MHz.
 ### Fixed
+- Updated coordinates of Keck in CI testing to reflect new astropy values
 ### Removed

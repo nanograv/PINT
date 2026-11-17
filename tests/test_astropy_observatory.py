@@ -16,7 +16,7 @@ class TestAstropyObservatory:
         cls.pint_itrf = [882589.65, -4924872.32, 3943729.348]
         # name and ITRF of an observatory that only astropy should know about
         cls.astropy_obsname = "keck"
-        cls.astropy_itrf = [-5464487.81759887, -2492806.59108569, 2151240.19451846]
+        cls.astropy_itrf = [-5464390.74640961, -2493206.72544401, 2151023.32731856]
         # name of an observatory that none of them should know about
         cls.none_obsname = "not_an_observatory"
 
