@@ -249,9 +249,10 @@ class TestJUMP:
         ndf = self.JUMPm.d_phase_d_param_num(self.toas, p)
         adf = self.JUMPm.d_phase_d_param(self.toas, self.JUMPm.delay(self.toas), p)
         diff = adf - ndf
-        if np.all(diff.value) != 0.0:
+        if np.any(diff.value != 0.0):
             mean_der = (adf + ndf) / 2.0
-            relative_diff = np.abs(diff) / np.abs(mean_der)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                relative_diff = np.abs(diff) / np.abs(mean_der)
             # print "Diff Max is :", np.abs(diff).max()
             msg = (
                 "Derivative test failed at d_phase_d_%s with max relative difference %lf"

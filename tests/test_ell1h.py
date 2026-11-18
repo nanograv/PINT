@@ -111,9 +111,10 @@ def test_derivative(toasJ1853, modelJ1853):
         ndf = modelJ1853.d_phase_d_param_num(toasJ1853, p, testp[p])
         adf = modelJ1853.d_phase_d_param(toasJ1853, delay, p)
         diff = adf - ndf
-        if np.all(diff.value) != 0.0:
+        if np.any(diff.value != 0.0):
             mean_der = (adf + ndf) / 2.0
-            relative_diff = np.abs(diff) / np.abs(mean_der)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                relative_diff = np.abs(diff) / np.abs(mean_der)
             # print "Diff Max is :", np.abs(diff).max()
             msg = (
                 "Derivative test failed at d_delay_d_%s with max relative difference %lf"

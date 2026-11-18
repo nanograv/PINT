@@ -70,6 +70,9 @@ def get_derivative_params(model):
             h = 3e-2
         elif p in ["F1", "M2", "PMELONG", "PMELAT", "PMRA", "PMDEC"]:
             h = 2
+        elif p.startswith("DMX_"):
+            # Phase is linear in DMX, so a large step only reduces numerical noise.
+            h = 2
         elif p in ["PBDOT"]:
             h = 200
         elif p in ["FB1"]:
