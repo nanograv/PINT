@@ -94,7 +94,7 @@ jobs:
 #      with:
 #          name: documentation
 #          path: .tox/docs_out/
-  macos-latest-py313:
+  macos-latest-py315:
     runs-on: macos-latest
     steps:
         - uses: actions/checkout@v4
