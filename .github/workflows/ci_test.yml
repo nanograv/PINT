@@ -24,16 +24,16 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            python: '3.13'
+            python: '3.15'
             tox_env: 'ephemeris_connection'
           - os: ubuntu-latest
-            python: '3.13'
+            python: '3.15'
             tox_env: 'black'
           - os: ubuntu-latest
-            python: '3.13'
-            tox_env: 'py313-test-cov'
+            python: '3.15'
+            tox_env: 'py315-test-cov'
           - os: ubuntu-latest
-            python: '3.13'
+            python: '3.15'
             tox_env: 'notebooks'
 #          - os: ubuntu-latest
 #            python: '3.8'
@@ -94,7 +94,7 @@ jobs:
 #      with:
 #          name: documentation
 #          path: .tox/docs_out/
-  macos-latest-py313:
+  macos-latest-py315:
     runs-on: macos-latest
     steps:
         - uses: actions/checkout@v4
@@ -108,7 +108,7 @@ jobs:
             create-args: >-
               --platform osx-64
               -c conda-forge
-              python=3.13
+              python=3.15
               astropy
               git
         - name: Install base dependencies
