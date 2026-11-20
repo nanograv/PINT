@@ -1,3 +1,4 @@
+from typing import Callable, List, Optional, Sequence, Union
 from warnings import warn
 
 import astropy.units as u
@@ -10,6 +11,7 @@ from pint import DMconst
 from pint.exceptions import MissingParameter, MissingTOAs
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.timing_model import DelayComponent
+from pint.toa import TOAs
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
@@ -27,15 +29,27 @@ class Chromatic(DelayComponent):
 
         self.alpha_deriv_funcs = {}
 
-    def chromatic_time_delay(self, cm, alpha, freq):
+    def chromatic_time_delay(
+        self,
+        cm: u.Quantity,
+        alpha: Union[float, u.Quantity],
+        freq: u.Quantity,
+        fref: Optional[u.Quantity] = None,
+    ) -> u.Quantity:
         """Return the chromatic time delay for a set of frequencies.
 
-        delay_chrom = cm * DMconst * (freq / 1 MHz)**alpha
+        delay_chrom = cm * DMconst * (freq / CM_FREF)**(-alpha)
+
+        If *fref* is None, the reference frequency is taken from the CM_FREF
+        parameter of the parent model.
         """
-        cmdelay = cm * DMconst * (freq / u.MHz) ** (-alpha)
+        if fref is None:
+            fref = self._parent["CM_FREF"].quantity
+        fratio = (freq / fref).to_value(u.dimensionless_unscaled)
+        cmdelay = cm * DMconst * fratio ** (-alpha)
         return cmdelay.to(u.s)
 
-    def chromatic_type_delay(self, toas):
+    def chromatic_type_delay(self, toas: TOAs) -> u.Quantity:
         try:
             bfreq = self._parent.barycentric_radio_freq(toas)
         except AttributeError:
@@ -44,9 +58,10 @@ class Chromatic(DelayComponent):
 
         cm = self.cm_value(toas)
         alpha = self._parent["TNCHROMIDX"].quantity
-        return self.chromatic_time_delay(cm, alpha, bfreq)
+        fref = self._parent["CM_FREF"].quantity
+        return self.chromatic_time_delay(cm, alpha, bfreq, fref)
 
-    def cm_value(self, toas):
+    def cm_value(self, toas: Union[TOAs, Table]) -> u.Quantity:
         """Compute modeled CM value at given TOAs.
 
         Parameters
@@ -66,7 +81,9 @@ class Chromatic(DelayComponent):
             cm += cm_f(toas)
         return cm
 
-    def d_delay_d_cmparam(self, toas, param_name, acc_delay=None):
+    def d_delay_d_cmparam(
+        self, toas: TOAs, param_name: str, acc_delay=None
+    ) -> u.Quantity:
         """Derivative of delay wrt to CM parameter.
 
         Parameters
@@ -88,13 +105,15 @@ class Chromatic(DelayComponent):
         param_unit = getattr(self, param_name).units
         d_cm_d_cmparam = np.zeros(toas.ntoas) * cmu / param_unit
         alpha = self._parent["TNCHROMIDX"].quantity
+        fref = self._parent["CM_FREF"].quantity
 
         for df in self.cm_deriv_funcs[param_name]:
             d_cm_d_cmparam += df(toas, param_name)
 
-        return DMconst * d_cm_d_cmparam * (bfreq / u.MHz) ** (-alpha)
+        fratio = (bfreq / fref).to_value(u.dimensionless_unscaled)
+        return DMconst * d_cm_d_cmparam * fratio ** (-alpha)
 
-    def register_cm_deriv_funcs(self, func, param):
+    def register_cm_deriv_funcs(self, func: Callable, param: str) -> None:
         """Register the derivative function in to the deriv_func dictionaries.
 
         Parameters
@@ -120,6 +139,10 @@ class ChromaticCM(Chromatic):
 
     This model uses Taylor expansion to model CM variation over time. It
     can also be used for a constant CM.
+
+    The delay is ``CM * DMconst * (freq / CM_FREF)**(-TNCHROMIDX)``, i.e. CM is
+    the chromatic measure at the reference frequency CM_FREF (1 MHz by
+    default).
 
     Fitting for the chromatic index is not supported because the fit is too
     unstable when fit simultaneously with the DM.
@@ -175,11 +198,22 @@ class ChromaticCM(Chromatic):
                 convert_tcb2tdb=False,
             )
         )
+        self.add_param(
+            floatParameter(
+                name="CM_FREF",
+                units=u.MHz,
+                value=1.0,
+                frozen=True,
+                description="Reference frequency of the chromatic measure",
+                long_double=False,
+                convert_tcb2tdb=False,
+            )
+        )
 
         self.cm_value_funcs += [self.base_cm]
         self.delay_funcs_component += [self.constant_chromatic_delay]
 
-    def setup(self):
+    def setup(self) -> None:
         super().setup()
         base_cms = list(self.get_prefix_mapping_component("CM").values())
         base_cms += ["CM"]
@@ -188,7 +222,7 @@ class ChromaticCM(Chromatic):
             self.register_deriv_funcs(self.d_delay_d_cmparam, cm_name)
             self.register_cm_deriv_funcs(self.d_cm_d_CMs, cm_name)
 
-    def validate(self):
+    def validate(self) -> None:
         """Validate the CM parameters input."""
         super().validate()
         # If CM1 is set, we need CMEPOCH
@@ -205,18 +239,20 @@ class ChromaticCM(Chromatic):
                     "CMEPOCH",
                     "CMEPOCH or PEPOCH is required if CM1 or higher are set",
                 )
+        if self.CM_FREF.value <= 0:
+            raise ValueError("CM_FREF must be positive")
 
-    def CM_derivative_unit(self, n):
+    def CM_derivative_unit(self, n: int) -> str:
         return f"pc cm^-3 MHz^-2 / yr^{n:d}" if n else "pc cm^-3 MHz^-2"
 
-    def CM_derivative_description(self, n):
+    def CM_derivative_description(self, n: int) -> str:
         return f"{n:d}'th time derivative of the chromatic measure"
 
-    def get_CM_terms(self):
+    def get_CM_terms(self) -> List[u.Quantity]:
         """Return a list of CM term values in the model: [CM, CM1, ..., CMn]"""
         return [self.CM.quantity] + self._parent.get_prefix_list("CM", start_index=1)
 
-    def base_cm(self, toas):
+    def base_cm(self, toas: Union[TOAs, Table]) -> u.Quantity:
         cm = np.zeros(len(toas))
         cm_terms = self.get_CM_terms()
         if any(cmi.value != 0 for cmi in cm_terms[1:]):
@@ -235,14 +271,14 @@ class ChromaticCM(Chromatic):
         cm = taylor_horner(dt_value, cm_terms_value)
         return cm * cmu
 
-    def alpha_value(self, toas):
+    def alpha_value(self, toas: TOAs) -> u.Quantity:
         return np.ones(len(toas)) * self.CMIDX.quantity
 
-    def constant_chromatic_delay(self, toas, acc_delay=None):
+    def constant_chromatic_delay(self, toas: TOAs, acc_delay=None) -> u.Quantity:
         """This is a wrapper function for interacting with the TimingModel class"""
         return self.chromatic_type_delay(toas)
 
-    def print_par(self, format="pint"):
+    def print_par(self, format: str = "pint") -> str:
         prefix_cm = list(self.get_prefix_mapping_component("CM").values())
         cms = ["CM"] + prefix_cm
         result = "".join(getattr(self, cm).as_parfile_line(format=format) for cm in cms)
@@ -255,7 +291,7 @@ class ChromaticCM(Chromatic):
                 result += getattr(self, pm).as_parfile_line(format=format)
         return result
 
-    def d_cm_d_CMs(self, toas, param_name, acc_delay=None):
+    def d_cm_d_CMs(self, toas: TOAs, param_name: str, acc_delay=None) -> u.Quantity:
         """Derivatives of CM wrt the CM taylor expansion coefficients."""
         par = getattr(self, param_name)
         if param_name == "CM":
@@ -277,7 +313,7 @@ class ChromaticCM(Chromatic):
         dt_value = (dt.to(u.yr)).value
         return taylor_horner(dt_value, cm_terms) * (cmu / par.units)
 
-    def change_cmepoch(self, new_epoch):
+    def change_cmepoch(self, new_epoch: Union[float, Time]) -> None:
         """Change CMEPOCH to a new value and update CM accordingly.
 
         Parameters
@@ -337,7 +373,14 @@ class ChromaticCMX(Chromatic):
         self.set_special_params(["CMX_0001", "CMXR1_0001", "CMXR2_0001"])
         self.delay_funcs_component += [self.CMX_chromatic_delay]
 
-    def add_CMX_range(self, mjd_start, mjd_end, index=None, cmx=0, frozen=True):
+    def add_CMX_range(
+        self,
+        mjd_start: Optional[Union[float, u.Quantity, Time]],
+        mjd_end: Optional[Union[float, u.Quantity, Time]],
+        index: Optional[int] = None,
+        cmx: Union[float, u.Quantity] = 0,
+        frozen: bool = True,
+    ) -> int:
         """Add CMX range to a chromatic model with specified start/end MJDs and CMX value.
 
         Parameters
@@ -426,7 +469,14 @@ class ChromaticCMX(Chromatic):
         self.validate()
         return index
 
-    def add_CMX_ranges(self, mjd_starts, mjd_ends, indices=None, cmxs=0, frozens=True):
+    def add_CMX_ranges(
+        self,
+        mjd_starts: Sequence[Optional[Union[float, u.Quantity, Time]]],
+        mjd_ends: Sequence[Optional[Union[float, u.Quantity, Time]]],
+        indices: Optional[Sequence[Optional[int]]] = None,
+        cmxs: Union[float, u.Quantity, Sequence[Union[float, u.Quantity]]] = 0,
+        frozens: Union[bool, Sequence[bool]] = True,
+    ) -> List[int]:
         """Add CMX ranges to a dispersion model with specified start/end MJDs and CMXs.
 
         Parameters
@@ -544,7 +594,7 @@ class ChromaticCMX(Chromatic):
         self.validate()
         return added_indices
 
-    def remove_CMX_range(self, index):
+    def remove_CMX_range(self, index: Union[float, int, List[int], np.ndarray]) -> None:
         """Removes all CMX parameters associated with a given index/list of indices.
 
         Parameters
@@ -568,7 +618,7 @@ class ChromaticCMX(Chromatic):
                 self.remove_param(prefix + index_rf)
         self.validate()
 
-    def get_indices(self):
+    def get_indices(self) -> np.ndarray:
         """Returns an array of integers corresponding to CMX parameters.
 
         Returns
@@ -579,7 +629,7 @@ class ChromaticCMX(Chromatic):
         inds = [int(p.split("_")[-1]) for p in self.params if "CMX_" in p]
         return np.array(inds)
 
-    def setup(self):
+    def setup(self) -> None:
         super().setup()
         # Get CMX mapping.
         # Register the CMX derivatives
@@ -588,7 +638,7 @@ class ChromaticCMX(Chromatic):
                 self.register_deriv_funcs(self.d_delay_d_cmparam, prefix_par)
                 self.register_cm_deriv_funcs(self.d_cm_d_CMX, prefix_par)
 
-    def validate(self):
+    def validate(self) -> None:
         """Validate the CMX parameters."""
         super().validate()
         CMX_mapping = self.get_prefix_mapping_component("CMX_")
@@ -632,7 +682,7 @@ class ChromaticCMX(Chromatic):
                         f"End of CMX_{index:04d} ({r1[j]}-{r2[j]}) overlaps with CMX_{indices[kk]:04d} ({r1[kk]}-{r2[kk]})"
                     )
 
-    def validate_toas(self, toas):
+    def validate_toas(self, toas: TOAs) -> None:
         CMX_mapping = self.get_prefix_mapping_component("CMX_")
         CMXR1_mapping = self.get_prefix_mapping_component("CMXR1_")
         CMXR2_mapping = self.get_prefix_mapping_component("CMXR2_")
@@ -649,7 +699,7 @@ class ChromaticCMX(Chromatic):
         if bad_parameters:
             raise MissingTOAs(bad_parameters)
 
-    def cmx_cm(self, toas):
+    def cmx_cm(self, toas: TOAs) -> u.Quantity:
         condition = {}
         tbl = toas.table
         if not hasattr(self, "cmx_toas_selector"):
@@ -670,11 +720,11 @@ class ChromaticCMX(Chromatic):
             cm[v] += getattr(self, k).quantity
         return cm
 
-    def CMX_chromatic_delay(self, toas, acc_delay=None):
+    def CMX_chromatic_delay(self, toas: TOAs, acc_delay=None) -> u.Quantity:
         """This is a wrapper function for interacting with the TimingModel class"""
         return self.chromatic_type_delay(toas)
 
-    def d_cm_d_CMX(self, toas, param_name, acc_delay=None):
+    def d_cm_d_CMX(self, toas: TOAs, param_name: str, acc_delay=None) -> u.Quantity:
         condition = {}
         tbl = toas.table
         if not hasattr(self, "cmx_toas_selector"):
@@ -695,7 +745,7 @@ class ChromaticCMX(Chromatic):
             cmx[v] = 1.0
         return cmx * (u.pc / u.cm**3) / (u.pc / u.cm**3)
 
-    def print_par(self, format="pint"):
+    def print_par(self, format: str = "pint") -> str:
         result = ""
         CMX_mapping = self.get_prefix_mapping_component("CMX_")
         CMXR1_mapping = self.get_prefix_mapping_component("CMXR1_")

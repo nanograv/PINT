@@ -3230,7 +3230,11 @@ def _get_wx2pl_lnlike(
         else (
             DMconst / (1400 * u.MHz) ** 2
             if component_name == "DMWaveX"
-            else DMconst / 1400**model.TNCHROMIDX.value
+            else DMconst
+            * (model.CM_FREF.quantity / (1400 * u.MHz)).to_value(
+                u.dimensionless_unscaled
+            )
+            ** model.TNCHROMIDX.value
         )
     )
 

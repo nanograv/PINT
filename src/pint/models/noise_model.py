@@ -523,6 +523,12 @@ class PLDMNoise(CorrelatedNoiseComponent):
     variations will scale with the inverse of the square of the (Earth Doppler
     corrected) radio frequency.
 
+    The noise basis is scaled by ``(DMNOISE_FREF / f)**2``, where f is the radio
+    frequency, so TNDMAMP is the amplitude of the DM noise delays at the
+    reference radio frequency DMNOISE_FREF (1400 MHz by default). DMNOISE_FREF
+    should not be confused with the reference Fourier frequency (1/yr) at which
+    the power-law amplitude is defined.
+
     Parameters supported:
 
     .. paramtable::
@@ -600,9 +606,24 @@ class PLDMNoise(CorrelatedNoiseComponent):
                 tcb2tdb_scale_factor=1,
             )
         )
+        self.add_param(
+            floatParameter(
+                name="DMNOISE_FREF",
+                units=u.MHz,
+                value=1400.0,
+                frozen=True,
+                description="Reference radio frequency of the DM noise amplitude",
+                convert_tcb2tdb=False,
+            )
+        )
 
         self.covariance_matrix_funcs += [self.pl_dm_cov_matrix]
         self.basis_funcs += [self.pl_dm_basis_weight_pair]
+
+    def validate(self) -> None:
+        super().validate()
+        if self.DMNOISE_FREF.value <= 0:
+            raise ValueError("DMNOISE_FREF must be positive")
 
     def get_plc_vals(self) -> Tuple[float, float, int, int, float]:
         """
@@ -646,7 +667,7 @@ class PLDMNoise(CorrelatedNoiseComponent):
         t, f = self.get_time_frequencies(toas)
         Fmat = create_fourier_design_matrix(t, f)
         freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
-        fref = 1400 * u.MHz
+        fref = self.DMNOISE_FREF.quantity.to(u.MHz)
         D = (fref.value / freqs.value) ** 2
 
         return Fmat * D[:, None]
@@ -667,8 +688,10 @@ class PLDMNoise(CorrelatedNoiseComponent):
 
         A Fourier design matrix contains the sine and cosine basis_functions
         in a Fourier series expansion. Here we scale the design matrix by
-        (fref/f)**2, where fref = 1400 MHz to match the convention used in
-        enterprise.
+        (fref/f)**2, where fref is the DMNOISE_FREF parameter (1400 MHz by default,
+        matching the convention used in enterprise). TNDMAMP is the amplitude
+        of the DM noise delays at fref, so changing DMNOISE_FREF rescales TNDMAMP
+        by (DMNOISE_FREF/1400 MHz)**2.
 
         The weights used are the power-law PSD values at frequencies n/T,
         where n is in [1, TNDMC] and T is the total observing duration of
@@ -859,6 +882,12 @@ class PLChromNoise(CorrelatedNoiseComponent):
     it has been often modeled using a delay that is proportional to f^-alpha where alpha
     is known as the chromatic index.
 
+    The noise basis is scaled by ``(CHROMNOISE_FREF / f)**TNCHROMIDX``, where f
+    is the radio frequency, so TNCHROMAMP is the amplitude of the chromatic noise
+    delays at the reference radio frequency CHROMNOISE_FREF (1400 MHz by
+    default). CHROMNOISE_FREF should not be confused with the reference Fourier
+    frequency (1/yr) at which the power-law amplitude is defined.
+
     This model should be used in combination with the ChromaticCM model.
 
     Parameters supported:
@@ -938,9 +967,24 @@ class PLChromNoise(CorrelatedNoiseComponent):
                 tcb2tdb_scale_factor=1,
             )
         )
+        self.add_param(
+            floatParameter(
+                name="CHROMNOISE_FREF",
+                units=u.MHz,
+                value=1400.0,
+                frozen=True,
+                description="Reference radio frequency of the chromatic noise amplitude",
+                convert_tcb2tdb=False,
+            )
+        )
 
         self.covariance_matrix_funcs += [self.pl_chrom_cov_matrix]
         self.basis_funcs += [self.pl_chrom_basis_weight_pair]
+
+    def validate(self) -> None:
+        super().validate()
+        if self.CHROMNOISE_FREF.value <= 0:
+            raise ValueError("CHROMNOISE_FREF must be positive")
 
     def get_plc_vals(self) -> Tuple[float, float, int, int, float]:
         """
@@ -988,7 +1032,7 @@ class PLChromNoise(CorrelatedNoiseComponent):
         t, f = self.get_time_frequencies(toas)
         Fmat = create_fourier_design_matrix(t, f)
         freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
-        fref = 1400 * u.MHz
+        fref = self.CHROMNOISE_FREF.quantity.to(u.MHz)
         alpha = self._parent.TNCHROMIDX.value
         D = (fref.value / freqs.value) ** alpha
 
@@ -1010,8 +1054,9 @@ class PLChromNoise(CorrelatedNoiseComponent):
 
         A Fourier design matrix contains the sine and cosine basis_functions
         in a Fourier series expansion. Here we scale the design matrix by
-        (fref/f)**2, where fref = 1400 MHz to match the convention used in
-        enterprise.
+        (fref/f)**TNCHROMIDX, where fref is the CHROMNOISE_FREF parameter
+        (1400 MHz by default, matching the convention used in enterprise).
+        TNCHROMAMP is the amplitude of the chromatic noise delays at fref.
 
         The weights used are the power-law PSD values at frequencies n/T,
         where n is in [1, TNCHROMC] and T is the total observing duration of
