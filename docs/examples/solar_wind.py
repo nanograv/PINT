@@ -255,3 +255,307 @@ print(
 # The scaled values above agree between the `SWM=0` and `SWX` models.
 
 # %%
+
+# %% [markdown]
+# ## Solar wind as a regression on a solar activity proxy
+
+# %% [markdown]
+# The models above let the density vary in time only by fitting it piecewise (`SWX`). The
+# other option is to tie it to something measured independently. Solar wind density
+# tracks the solar cycle, and so do several published activity indices, so
+# `SolarWindProxyRegression` makes the density at 1 AU a linear regression on one of them:
+#
+# $$n_E(t) = \mathrm{SWPRBETA0} + \mathrm{SWPRBETA1} \times P(t - \mathrm{SWPRLAG})$$
+#
+# with the usual geometry on top, $\mathrm{DM}_\mathrm{SW}(t) = n_E(t) S(t)$. Two free
+# parameters can model a density that moves with the solar cycle over a long data set, against one
+# for `NE_SW` and one per segment for `SWX`.
+#
+# | parameter | units | meaning |
+# |---|---|---|
+# | `SWPRBETA0` | cm$^{-3}$ | intercept, the density at zero proxy flux |
+# | `SWPRBETA1` | cm$^{-3}$ per proxy unit | slope |
+# | `SWPRLAG` | day | lag applied to the proxy before interpolation |
+# | `SWPRSMOOTH` | day | width of the smoothing applied to the proxy, default 81 |
+# | `SWPRSMOOTHKERNEL` | - | which kernel, a key of `pint.solar_indices.SMOOTHING_KERNELS` |
+# | `SWPRSOURCE` | - | which series to use, a key of `pint.solar_indices.SOURCES` |
+# | `SWM`, `SWP` | - | geometry, same meaning as in the standard model |
+#
+# Since each proxy has its own units and the proxies are not normalized, `SWPRBETA1` is
+# cm$^{-3}$ per sfu for F10.7 and cm$^{-3}$ per sunspot for the sunspot number.
+# This makes the coefficients mean the same thing for every pulsar whatever its observing
+# span, and keeps them from changing when the proxy file grows, but
+# it means that swapping in a series in different units rescales `SWPRBETA1`.
+#
+# This component shares `category = "solar_wind"` with the standard model, so a model
+# holds one or the other, never both: `SWPRBETA0` and `NE_SW` are exactly degenerate,
+# being constants multiplying the same geometry.
+#
+# Deviations of the solar wind dispersive delay from the inferred proxy regression can be
+# handled by a correlated noise component such as `PLSWNoise` or `TimeDomainSWNoise`.
+
+# %%
+import warnings
+
+import astropy.units as u
+
+from pint import solar_indices
+
+proxy_par = "\n".join([par, "SWPRBETA0 2.0\nSWPRBETA1 0.05\nSWPRSOURCE F107"])
+model_proxy = get_model(StringIO(proxy_par))
+proxy_component = model_proxy.components["SolarWindProxyRegression"]
+print(
+    f"SWPRSOURCE = {model_proxy.SWPRSOURCE.value}, "
+    f"SWPRSMOOTH = {model_proxy.SWPRSMOOTH.value} d"
+)
+
+# %% [markdown]
+# ### Where the proxy series comes from
+#
+# `SWPRSOURCE` is resolved on first evaluation, by `pint.solar_indices`, so
+# `get_model(par)` gives a model that evaluates with no further setup: the par file on its
+# own still specifies the model completely. The series are downloaded and cached:
+#
+# | key | series | cadence |
+# |---|---|---|
+# | `f107` | 10.7 cm radio flux adjusted to 1 AU, [DRAO Penticton](https://www.spaceweather.gc.ca/forecast-prevision/solar-solaire/solarflux/sx-en.php) | daily |
+# | `ssn` | international sunspot number, [NOAA SWPC](https://services.swpc.noaa.gov/json/solar-cycle/) | monthly |
+# | `ace_density` | in-situ proton density, [ACE SWEPAM](https://izw1.caltech.edu/ACE/ASC/level2/) | daily, manual export |
+#
+# `get_series` returns a `SolarIndexSeries`: the epochs as an `astropy.time.Time`, the
+# values as an `astropy.units.Quantity`, and the meta-data of the file it read, with
+# interpolation, bounds checking and smoothing as methods.
+#
+# Resolution goes through two tiers, the same way clock files do: an explicit `path=` or a
+# directory in `$PINT_SOLAR_INDICES`, then the cached download. `set_proxy` below takes input arrays
+# directly, but cannot write a par file that no longer determines the model.
+# Downloading, caching, expiration and failure handling are all done through
+# `pint.observatory.global_clock_corrections.get_file`.
+#
+# `SWPRSMOOTH` is in days and is converted to samples using the series' median cadence, so
+# 81 days means 81 samples of daily F10.7 and 3 samples of the monthly sunspot number. The
+# default of 81 is the conventional F10.7A window, about 3 rotations of the sun, which
+# averages over associated rotational structure while leaving the longer trends in the data.
+#
+# `SWPRSMOOTHKERNEL` names the kernel itself, an entry of
+# `pint.solar_indices.SMOOTHING_KERNELS`, built from
+# [astropy convolution kernels](https://docs.astropy.org/en/stable/convolution/):
+# `BOX` is an unweighted mean, `GAUSSIAN`, `TRIANGLE` and `HANN` are tapered, and
+# `TRAPEZOID` keeps a flat top over three quarters of the width. `SWPRSMOOTH` is the
+# full width at half maximum for all of them, so they are comparable at one width.
+
+# %%
+try:
+    f107 = solar_indices.get_series("f107")
+    print(f107)
+    print(f"mean {f107.values.mean():.1f}, cadence {f107.cadence_days:.0f} d")
+    # what a reproducible result records about its input
+    for key in ("url", "retrieved", "sha256"):
+        print(f"  {key}: {f107.get_metadata()[key]}")
+except OSError as e:
+    print(
+        f"could not reach the DRAO table ({e}); the rest of this example uses a "
+        "synthetic proxy"
+    )
+
+# %% [markdown]
+# ### Choosing the smoothing
+#
+# Smoothing is what separates the deterministic mean function from whatever stochastic
+# model is used alongside it. Unsmoothed daily F10.7 carries structure on the ~27 day
+# solar rotation which is better modeled as a correlated noise process than a deterministic function.
+#
+# The kernel is applied with `boundary="extend"`, so the series is padded with its own
+# endpoint value. Within half a kernel of either end the smoothed value is partly an
+# average of that padding, which matters at the start of a data set that begins before
+# the proxy record does.
+
+# %%
+print(
+    "kernels a par file can name:",
+    sorted(k.upper() for k in solar_indices.SMOOTHING_KERNELS),
+)
+print("any astropy Kernel1D also works from Python, but a par file cannot name it")
+
+if "f107" in dir():
+    fig, axes = plt.subplots(2, 1, figsize=(16, 8))
+
+    # top: one kernel, several widths, over the whole record
+    lo, hi = f107.mjd.min(), f107.mjd.max()
+    inside = (f107.mjd >= lo) & (f107.mjd <= hi)
+    axes[0].plot(f107.mjd, f107.values.value, color="0.8", lw=0.6, label="raw")
+    for width in (27, 81, 365):
+        box = f107.smoothed(width)
+        axes[0].plot(box.mjd, box.values.value, lw=1.4, label=f"BOX, {width} d")
+    axes[0].set_xlim(lo, hi)
+    axes[0].set_title("one kernel, several widths")
+
+    # bottom: every kernel at the same width, where the width is the FWHM
+    lo, hi = 57500, 58230
+    inside = (f107.mjd >= lo) & (f107.mjd <= hi)
+    axes[1].plot(
+        f107.mjd[inside], f107.values.value[inside], color="0.8", lw=0.7, label="raw"
+    )
+    for name in sorted(solar_indices.SMOOTHING_KERNELS):
+        series = f107.smoothed(81, name)
+        axes[1].plot(
+            series.mjd[inside], series.values.value[inside], lw=1.4, label=name.upper()
+        )
+    axes[1].set_xlim(lo, hi)
+    axes[1].set_title(
+        "every kernel at SWPRSMOOTH = 81 d, two years on the cycle-24 decline"
+    )
+
+    for ax in axes:
+        ax.set_ylabel(f"F10.7 [{f107.unit}]")
+        ax.legend(ncol=6, fontsize=9)
+    axes[-1].set_xlabel("MJD")
+    plt.tight_layout()
+else:
+    print("no series fetched above, so there is nothing to smooth here")
+
+# %% [markdown]
+# **Use the defaults for F10.7**: `SWPRSMOOTHKERNEL BOX` with `SWPRSMOOTH 81`. An
+# unweighted 81 day mean is the F10.7A convention, three synodic solar rotations, so the
+# smoothed proxy is the same quantity the literature means by smoothed F10.7, and
+# `SWPRBETA1` is comparable with a published value.
+#
+# The tapered kernels suppress the solar rotation more sharply at the same width,
+# because a flat window has sidelobes in frequency and a tapered one does not.
+
+# Note that the published smoothing for the monthly sunspot number is a tapered 13 month mean,
+# and it is not offered here, but `BOX` on `SSN` is a reasonable choice.
+
+# %% [markdown]
+# ### Using a series you already have
+#
+# `set_proxy` takes the series as arrays, which is convenient for exploration and is how
+# this example works. A warning is thrown since a par file cannot store the proxy data,
+# so a model built this way **cannot** be written to a par file
+# and read back. Writing it out emits `SWPRSOURCE`, and reading that back resolves the
+# named series instead, giving a different model. For anything whose results are to be
+# kept, name a series in `SWPRSOURCE` or pin a file through `$PINT_SOLAR_INDICES`.
+#
+# The synthetic series below is a sinusoid at the 11 year cycle period, in the right
+# ballpark for F10.7 in sfu.
+
+# %%
+np.random.seed(0)  # so the fitted values below are the same on every docs build
+
+proxy_mjd = np.arange(53500.0, 60000.0)
+proxy_vals = 100.0 + 60.0 * np.sin(2 * np.pi * (proxy_mjd - 53000) / (11 * 365.25))
+
+with warnings.catch_warnings():
+    # The non-serialisable warning is the point of the paragraph above, not news here.
+    warnings.simplefilter("ignore", UserWarning)
+    proxy_component.set_proxy(proxy_mjd, proxy_vals)
+
+toas = make_fake_toas_uniform(
+    54000,
+    54000 + 365.25 * 15,
+    1500,
+    model=model_proxy,
+    freq=np.array([430.0, 1400.0]) * u.MHz,
+    multi_freqs_in_epoch=True,
+    obs="gbt",
+    error=1 * u.us,
+    add_noise=True,
+)
+
+mjds = toas.get_mjds().value
+fig, (ax, axdm) = plt.subplots(2, 1, figsize=(16, 9), sharex=True)
+ax.plot(proxy_mjd, proxy_vals, color="0.7", label="proxy P(t)")
+smoothed = proxy_component.smoothed_proxy()
+ax.plot(
+    smoothed.mjd,
+    smoothed.values,
+    color="C3",
+    label=f"smoothed, SWPRSMOOTH = {model_proxy.SWPRSMOOTH.value:.0f} d",
+)
+ax.set_xlim(mjds.min(), mjds.max())
+ax.set_ylabel("proxy [sfu]")
+ax.legend()
+axdm.plot(mjds, proxy_component.sw_proxy_ne(toas), ".", label="$n_E(t)$ [cm$^{-3}$]")
+axdm.plot(
+    mjds,
+    1e4 * proxy_component.solar_wind_dm(toas).value,
+    ".",
+    label="$10^4 \\times \\mathrm{DM}_{\\mathrm{SW}}$ [pc cm$^{-3}$]",
+)
+axdm.set_xlabel("MJD")
+axdm.legend()
+
+# %% [markdown]
+# The density follows the cycle while the DM also carries the annual conjunction spikes,
+# which is the point: the two parameters set the level and its long-term trend, and the
+# geometry does the rest.
+
+# %% [markdown]
+# ### Fitting the coefficients
+#
+# `SWPRBETA0` and `SWPRBETA1` are strongly anticorrelated, so quite different pairs of
+# values give very similar `n_E(t)` series. Rather than looking at the values of these
+# parameters (which are proxy source dependent as well) it is often more useful to look at
+# `get_mean_ne()` and `sw_proxy_ne()`, which have a direct physical interpretation.
+
+# %%
+model_fit = get_model(StringIO(proxy_par))
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", UserWarning)
+    model_fit.components["SolarWindProxyRegression"].set_proxy(proxy_mjd, proxy_vals)
+# start away from the injected values so the fit has something to do
+model_fit.SWPRBETA0.value, model_fit.SWPRBETA1.value = 5.0, 0.02
+for parname in ("F0", "DM", "SWPRBETA0", "SWPRBETA1"):
+    getattr(model_fit, parname).frozen = False
+
+f = Fitter.auto(toas, model_fit)
+f.fit_toas()
+fit_component = f.model.components["SolarWindProxyRegression"]
+
+print(
+    f"SWPRBETA0 = {f.model.SWPRBETA0.quantity:.4f} "
+    f"+/- {f.model.SWPRBETA0.uncertainty:.4f}   (true 2.0)"
+)
+print(
+    f"SWPRBETA1 = {f.model.SWPRBETA1.quantity:.5f} "
+    f"+/- {f.model.SWPRBETA1.uncertainty:.5f}   (true 0.05)"
+)
+print(f"mean n_E  = {fit_component.get_mean_ne(toas):.4f}")
+
+cov = f.parameter_covariance_matrix
+names = [label[0] for label in cov.labels[0]]
+idx = [names.index("SWPRBETA0"), names.index("SWPRBETA1")]
+C = cov.matrix[np.ix_(idx, idx)]
+print(f"corr(SWPRBETA0, SWPRBETA1) = {C[0, 1] / np.sqrt(C[0, 0] * C[1, 1]):+.3f}")
+# the uncertainty on the mean density, propagated through that 2x2 covariance
+gradient = np.array([1.0, fit_component.get_proxy_at_toas(toas).mean()])
+print(
+    f"sigma(mean n_E) = {np.sqrt(gradient @ C @ gradient):.4f}, against "
+    f"sigma(SWPRBETA0) = {f.model.SWPRBETA0.uncertainty_value:.4f}"
+)
+
+# %% [markdown]
+# ### Par files
+#
+# The par file plus a resolvable series determines $n_E(t)$ exactly. Rebuilding the model
+# from the written par file and handing it the same series reproduces the DM exactly:
+
+# %%
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", UserWarning)
+    par_text = f.model.as_parfile()
+print("\n".join(line for line in par_text.splitlines() if line.startswith("SWPR")))
+
+rebuilt = get_model(StringIO(par_text))
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", UserWarning)
+    rebuilt.components["SolarWindProxyRegression"].set_proxy(proxy_mjd, proxy_vals)
+print(
+    "max |difference| in solar wind DM: "
+    f"{np.abs(fit_component.solar_wind_dm(toas) - rebuilt.solar_wind_dm(toas)).max():.3e}"
+)
+
+# %% [markdown]
+# With `SWPRSOURCE` naming a downloadable series, the `set_proxy` calls above are not
+# needed at all and `get_model(par)` on its own is enough. That is the configuration to
+# use for a result anyone else has to reproduce.
