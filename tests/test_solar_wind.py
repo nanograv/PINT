@@ -778,16 +778,30 @@ def test_sw_proxy_delay_positive():
     assert np.all(delay.to_value(u.s) > 0)
 
 
-def test_sw_proxy_warns_on_toas_outside_proxy_coverage():
-    """A TOA past the end of the proxy is held at the endpoint, and says so."""
+def test_sw_proxy_reports_coverage_once_when_it_meets_the_toas():
+    """A TOA past the end of the proxy is held at the endpoint, and says so once.
+
+    The report belongs in validate_toas, which runs when the model is paired with
+    TOAs and before a fit starts. get_proxy_at_toas runs once per fit iteration and
+    again per finite-difference step of the SWPRLAG derivative, so warning there
+    repeated the same message tens of times in a real fit.
+    """
     model, toas, mjd, vals = _proxy_model()
     comp = model.components["SolarWindProxyRegression"]
     keep = mjd < (_TSTART + _TEND) / 2
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         comp.set_proxy(mjd[keep], vals[keep])
-    with pytest.warns(UserWarning, match="does not cover every epoch"):
-        comp.get_proxy_at_toas(toas)
+
+    with pytest.warns(UserWarning, match="does not cover"):
+        model.validate_toas(toas)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        for _ in range(3):
+            comp.get_proxy_at_toas(toas)
+            comp.d_dm_d_swprlag(toas, "SWPRLAG")
+    assert not [w for w in caught if "does not cover" in str(w.message)]
 
 
 def _rippled_proxy(

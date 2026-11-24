@@ -351,7 +351,7 @@ class SolarIndexSeries:
         )
 
     def evaluate(
-        self, mjd: time_like, limits: Literal["warn", "error"] = "warn"
+        self, mjd: time_like, limits: Literal["warn", "error", "ignore"] = "warn"
     ) -> u.Quantity:
         """The series interpolated to *mjd*, held flat beyond either end.
 
@@ -359,11 +359,10 @@ class SolarIndexSeries:
         ----------
         mjd : array_like or astropy.time.Time
             Epochs to evaluate at.
-        limits : "warn" or "error"
+        limits : "warn", "error" or "ignore"
             What to do about epochs the series does not cover. ``"warn"``, the
             default, holds the endpoint value and says so, which models the missing
-            stretch as a constant. ``"error"`` raises instead, which is what a long
-            unattended fit usually wants.
+            stretch as a constant. ``"error"`` raises instead.
 
         Returns
         -------
@@ -373,7 +372,8 @@ class SolarIndexSeries:
         if len(self) == 0:
             raise ValueError(f"solar index series {self.name or '?'} is empty")
         epochs = mjd.mjd if isinstance(mjd, Time) else np.asarray(mjd, dtype=float)
-        self.check_coverage(epochs, limits=limits)
+        if limits != "ignore":
+            self.check_coverage(epochs, limits=limits)
         raw = self._value.value
         return np.interp(epochs, self.mjd, raw, left=raw[0], right=raw[-1]) * self.unit
 
@@ -381,7 +381,7 @@ class SolarIndexSeries:
         self,
         mjd: time_like,
         tolerance_days: float = 0.0,
-        limits: Literal["warn", "error"] = "warn",
+        limits: Literal["warn", "error", "ignore"] = "warn",
     ) -> Tuple[int, int]:
         """How many of *mjd* fall off each end of the series. See :func:`check_coverage`."""
         epochs = mjd.mjd if isinstance(mjd, Time) else mjd
@@ -867,7 +867,7 @@ def check_coverage(
     toas_mjd: time_like,
     name: str = "solar index",
     tolerance_days: float = 0.0,
-    limits: Literal["warn", "error"] = "warn",
+    limits: Literal["warn", "error", "ignore"] = "warn",
 ) -> Tuple[int, int]:
     """Warn when a series does not span the epochs it will be evaluated at.
 
@@ -885,15 +885,17 @@ def check_coverage(
         Used in the message.
     tolerance_days : float
         Gaps no larger than this are not reported.
-    limits : "warn" or "error"
-        Whether an uncovered epoch is a warning, the default, or a
-        :exc:`ValueError`. Holding a covariate flat outside its range is a
-        modelling choice, so an unattended fit may prefer to refuse.
+    limits : "warn", "error" or "ignore"
+        Whether an uncovered epoch is a warning, the default, a
+        :exc:`ValueError`, or neither. Holding a covariate flat outside its range
+        is a modelling choice, so an unattended fit may prefer to refuse.
 
     Returns
     -------
     (n_before, n_after) : tuple of int
-        How many epochs fall off each end. ``(0, 0)`` when fully covered.
+        How many of *toas_mjd* fall off each end. ``(0, 0)`` when fully covered.
+        These count entries of *toas_mjd*, so passing TOAs counts TOAs, of which
+        there are usually several per observing epoch.
     """
     mjd = np.asarray(mjd, dtype=float)
     toas_mjd = np.asarray(toas_mjd, dtype=float)
@@ -905,23 +907,28 @@ def check_coverage(
     after = toas_mjd > hi + tolerance_days
     n_before, n_after = int(before.sum()), int(after.sum())
 
-    if n_before or n_after:
+    def quantify_coverage(mask: np.ndarray) -> str:
+        """Count TOAs and observing epochs to report mismatches in coverage"""
+        n = int(mask.sum())
+        # count epochs on a per-day basis
+        n_epochs = len(np.unique(np.floor(toas_mjd[mask])))
+        return f"{n} TOA(s)" + (f" on {n_epochs} epoch(s)" if n_epochs != n else "")
+
+    if (n_before or n_after) and limits != "ignore":
         parts = []
         if n_before:
             parts.append(
-                f"{n_before} epoch(s) up to {lo - float(toas_mjd.min()):.0f} d before "
-                f"it starts (MJD {lo:.1f})"
+                f"{quantify_coverage(before)} up to {lo - float(toas_mjd.min()):.0f} d "
+                f"before MJD {lo:.1f}"
             )
         if n_after:
             parts.append(
-                f"{n_after} epoch(s) up to {float(toas_mjd.max()) - hi:.0f} d after "
-                f"it ends (MJD {hi:.1f})"
+                f"{quantify_coverage(after)} up to {float(toas_mjd.max()) - hi:.0f} d "
+                f"after MJD {hi:.1f}"
             )
         message = (
-            f"The {name} series does not cover every epoch it is evaluated at: "
-            + ", and ".join(parts)
-            + ". Those epochs are modelled with the value held flat at the nearest "
-            "endpoint. Extend the series to cover them."
+            f"{name} does not cover " + " and ".join(parts) + "; held flat at the "
+            "nearest endpoint."
         )
         if limits == "error":
             raise ValueError(message)

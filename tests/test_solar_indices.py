@@ -233,12 +233,17 @@ def test_series_evaluate_holds_the_endpoints_or_refuses():
     assert_allclose(series.evaluate([15.0]).value, [1.5])
     assert series.evaluate([15.0]).unit == si.sfu
 
-    with pytest.warns(UserWarning, match="does not cover every epoch"):
+    with pytest.warns(UserWarning, match="does not cover"):
         held = series.evaluate([5.0, 25.0])
     assert_allclose(held.value, [1.0, 2.0])  # held flat, not extrapolated
 
-    with pytest.raises(ValueError, match="does not cover every epoch"):
+    with pytest.raises(ValueError, match="does not cover"):
         series.evaluate([5.0], limits="error")
+
+    # "ignore" is for multiple calls in a loop that have already checked coverage
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        assert_allclose(series.evaluate([5.0, 25.0], limits="ignore").value, [1.0, 2.0])
 
 
 def test_series_builds_its_time_lazily():
@@ -415,7 +420,7 @@ def test_check_coverage_silent_when_contained():
 
 
 def test_check_coverage_reports_both_ends():
-    with pytest.warns(UserWarning, match="does not cover every epoch"):
+    with pytest.warns(UserWarning, match="does not cover"):
         n_before, n_after = si.check_coverage(
             np.arange(100.0, 200.0), np.array([50.0, 150.0, 250.0, 260.0])
         )
@@ -425,6 +430,26 @@ def test_check_coverage_reports_both_ends():
 def test_check_coverage_reports_the_gap_size():
     with pytest.warns(UserWarning, match="90 d before"):
         si.check_coverage(np.arange(100.0, 200.0), np.array([10.0, 150.0]))
+
+
+def test_check_coverage_counts_toas_and_the_epochs_they_fall_on():
+    """Check toa count vs epoch count"""
+    toas = np.concatenate([np.full(20, 50.2), np.full(16, 57.4), [150.0]])
+    with pytest.warns(UserWarning, match=r"36 TOA\(s\) on 2 epoch\(s\)"):
+        n_before, n_after = si.check_coverage(np.arange(100.0, 200.0), toas)
+    assert (n_before, n_after) == (36, 0)
+
+    # One TOA per epoch
+    with pytest.warns(UserWarning, match=r"2 TOA\(s\) up to"):
+        si.check_coverage(np.arange(100.0, 200.0), np.array([50.0, 60.0, 150.0]))
+
+
+def test_check_coverage_can_be_silenced():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        assert si.check_coverage(
+            np.arange(100.0, 200.0), np.array([50.0, 250.0]), limits="ignore"
+        ) == (1, 1)
 
 
 def test_check_coverage_handles_empty_input():

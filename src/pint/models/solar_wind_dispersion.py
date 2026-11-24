@@ -1692,8 +1692,12 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
         series = self.smoothed_proxy()
         toas_mjd = np.asarray(toas.table["tdbld"].data, dtype=float)
 
-        # Held at the endpoints outside the series
-        return series.evaluate(toas_mjd - lag_days).to_value(series.unit)
+        # Held at the endpoints outside the series. validate_toas() reports the
+        # coverage once; checking here would repeat it on every fit iteration and
+        # once more per finite-difference step in the SWPRLAG derivative.
+        return series.evaluate(toas_mjd - lag_days, limits="ignore").to_value(
+            series.unit
+        )
 
     def sw_proxy_ne(self, toas: TOAs) -> u.Quantity:
         r"""The modelled electron density at 1 AU [cm^-3] at the TOA epochs.
@@ -1917,6 +1921,18 @@ class SolarWindProxyRegression(SolarWindDispersionBase):
         self.register_deriv_funcs(self.d_delay_d_swprlag, "SWPRLAG")
         self.register_dm_deriv_funcs(self.d_dm_d_swp, "SWP")
         self.register_deriv_funcs(self.d_delay_d_swp, "SWP")
+
+    def validate_toas(self, toas: TOAs) -> None:
+        """Call `check_coverage` to throw a warning if the TOAs and proxy don't completely overlap.
+
+        ``TimingModel.validate_toas`` runs when the model is paired with TOAs.
+        """
+        super().validate_toas(toas)
+
+        series = self.smoothed_proxy()
+        lag_days = self.SWPRLAG.quantity.to_value(u.day)
+        toas_mjd = np.asarray(toas.table["tdbld"].data, dtype=float)
+        series.check_coverage(toas_mjd - lag_days)
 
     def validate(self) -> None:
         super().validate()
