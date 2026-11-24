@@ -54,7 +54,11 @@ from pint.models.noise_model import (
 from pint.models.phase_offset import PhaseOffset
 from pint.models.piecewise import PiecewiseSpindown
 from pint.models.solar_system_shapiro import SolarSystemShapiro
-from pint.models.solar_wind_dispersion import SolarWindDispersion, SolarWindDispersionX
+from pint.models.solar_wind_dispersion import (
+    SolarWindDispersion,
+    SolarWindDispersionX,
+    SolarWindProxyRegression,
+)
 from pint.models.spindown import Spindown
 
 # Import the main timing model classes
