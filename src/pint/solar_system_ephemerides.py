@@ -27,7 +27,7 @@ ephemeris_mirrors = [
     # DE440 is here, officially
     "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/",
     # add this on 2026-11-24: older links seem to fail
-    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/",
+    "https://ssd.jpl.nasa.gov/ftp/eph/planets/bsp/",
 ]
 
 jpl_obj_code = {
