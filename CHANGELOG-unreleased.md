@@ -13,10 +13,12 @@ the released changes.
 - ``PLChromNoise`` scales its Fourier basis by ``(CHROMNOISE_FREF/f)**TNCHROMIDX`` instead of a hard-coded 1400 MHz reference (unchanged for the default ``CHROMNOISE_FREF``).
 - ``PLDMNoise`` scales its Fourier basis by ``(DMNOISE_FREF/f)**2`` instead of a hard-coded 1400 MHz reference (unchanged for the default ``DMNOISE_FREF``).
 - Python version for CI changed to 3.15
+- Oldestdeps is now python 3.10
 ### Added
 - Can output model comparison as JSON
 - ``CM_FREF``: reference frequency (MHz) of the chromatic measure, default 1 MHz.
 - ``CHROMNOISE_FREF``: reference frequency (MHz) of the ``PLChromNoise`` amplitude, default 1400 MHz.
 - ``DMNOISE_FREF``: reference frequency (MHz) of the ``PLDMNoise`` amplitude, default 1400 MHz.
 ### Fixed
+- Updated coordinates of Keck in CI testing to reflect new astropy values
 ### Removed
