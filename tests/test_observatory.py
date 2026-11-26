@@ -264,6 +264,7 @@ def test_list_last_correction_mjds_runs():
 def test_TopoObs_EarthLocation(sandbox):
     gbt_orig = get_observatory("gbt")
     gbt_new = TopoObs(name="gbt_new", location=gbt_orig.location)
+    print(gbt_orig, gbt_new)
     assert gbt_orig.separation(gbt_new) < 1 * u.cm
 
 
