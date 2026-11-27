@@ -277,7 +277,7 @@ class TopoObs(Observatory):
         """
         print("other: ", other, other.__class__)
         assert method.lower() in ["cartesian", "geodesic"]
-        assert isinstance(other, TopoObs)
+        # assert isinstance(other, TopoObs)
 
         if method.lower() == "cartesian":
             return earth_location_distance(self.location, other.location)
