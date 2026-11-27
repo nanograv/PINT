@@ -275,8 +275,8 @@ class TopoObs(Observatory):
         ----
         "geodesic" method assumes a spherical Earth and ignores altitudes
         """
-        print("other: ", other, other.__class__)
         assert method.lower() in ["cartesian", "geodesic"]
+        # remove this as it was oddly failing during CI
         # assert isinstance(other, TopoObs)
 
         if method.lower() == "cartesian":

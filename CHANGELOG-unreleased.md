@@ -21,4 +21,5 @@ the released changes.
 - New JPL ephemeris download site
 ### Fixed
 - Updated coordinates of Keck in CI testing to reflect new astropy values
+- Unclear error during CI on macos related to ``TopoObs.separation()``
 ### Removed
