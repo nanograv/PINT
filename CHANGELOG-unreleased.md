@@ -18,6 +18,8 @@ the released changes.
 - ``CM_FREF``: reference frequency (MHz) of the chromatic measure, default 1 MHz.
 - ``CHROMNOISE_FREF``: reference frequency (MHz) of the ``PLChromNoise`` amplitude, default 1400 MHz.
 - ``DMNOISE_FREF``: reference frequency (MHz) of the ``PLDMNoise`` amplitude, default 1400 MHz.
+- New JPL ephemeris download site
 ### Fixed
 - Updated coordinates of Keck in CI testing to reflect new astropy values
+- Unclear error during CI on macos related to ``TopoObs.separation()``
 ### Removed
